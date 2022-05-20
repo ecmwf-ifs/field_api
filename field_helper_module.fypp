@@ -69,8 +69,8 @@ CONTAINS
 
     IF (ASSOCIATED (SELF)) THEN
       IF (.NOT. ASSOCIATED (SELF%DEVPTR)) THEN
-!       CALL SET_DEVICE_${field_type_name}$ (SELF%PTR, SELF%DEVPTR)
-!       ALLOCATE (SELF%DEVPTR, SOURCE=SELF%PTR)
+        ALLOCATE (SELF%DEVPTR, MOLD=SELF%PTR)
+        CALL COPY (SELF%PTR, SELF%DEVPTR)
 !       !$acc enter data create (SELF%DEVPTR)
       ENDIF
       PTR (${lbptr (rank)}$) => SELF%DEVPTR (${','.join(':' for _ in range(rank))}$)
@@ -79,23 +79,41 @@ CONTAINS
     ENDIF
 
   CONTAINS
-    INTEGER FUNCTION CONTIGUOUS_DIM (PTR)
-    ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
+    SUBROUTINE COPY (SRC, DST)
+    ${dtype}$, POINTER :: SRC (${shapes[rank]}$), DST (${shapes[rank]}$)
+    INTEGER*8 :: ISTRIDE (${rank}$)
+    ISTRIDE (1) = KIND (SRC)
+    DO J = 2, ${rank}$
+      ISTRIDE (J) = ISTRIDE (J-1) * SIZE (SRC, J-1) 
+    ENDDO
+    PRINT *, " ISTRIDE = ", ISTRIDE
 #:for d in range (rank, 0, -1)
   #:set ind0 = ['1'] * rank
   #:set ind1 = ['1'] * (d - 1) + ['2'] + ['1'] * (rank - d)
-    IF (LOC (PTR (${', '.join (ind0)}$)) - LOC (PTR (${', '.join (ind1)}$)) == KIND (PTR)) THEN
-      CONTIGUOUS_DIM = ${d}$
+    PRINT *, ${d}$, " ", LOC (PTR (${', '.join (ind1)}$)) - LOC (PTR (${', '.join (ind0)}$)), ISTRIDE (${d}$)
+    IF (LOC (PTR (${', '.join (ind1)}$)) - LOC (PTR (${', '.join (ind0)}$)) == ISTRIDE (${d}$)) THEN
+      CALL COPY_DIM${d}$_CONTIGUOUS (SRC, DST)
       RETURN
     ENDIF
 #:endfor
-    CONTIGUOUS_DIM = 0
-    END FUNCTION 
+    CALL COPY_DIM0_CONTIGUOUS (SRC, DST)
+    END SUBROUTINE
+
 #:for d in range (0, rank+1)
     SUBROUTINE COPY_DIM${d}$_CONTIGUOUS (SRC, DST)
     ${dtype}$, POINTER :: SRC (${shapes[rank]}$), DST (${shapes[rank]}$)
     INTEGER :: ${', '.join (['J'] + list (map (lambda i: 'J' + str (i+1), range (d, rank))))}$
+    PRINT *, " DIMENSION ", ${d}$, " CONTIGUOUS "
+  #:for e in range (rank, d, -1)
+    ${'  ' * (rank - e)}$DO J${e}$ = LBOUND (SRC, ${e}$), UBOUND (SRC, ${e}$)
+  #:endfor
+  #:set ar = ', '.join ([':'] * d  + list (map (lambda i: 'J' + str (i+1), range (d, rank))))
+    ${'  ' * (rank - d)}$DST (${ar}$) = SRC (${ar}$)
+  #:for e in range (d, rank)
+    ${'  ' * (rank - e - 1)}$ENDDO
+  #:endfor
     END SUBROUTINE
+
 #:endfor
 
   END FUNCTION ${field_type_name}$_GET_DEVICE_DATA_RDONLY
