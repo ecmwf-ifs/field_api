@@ -1,0 +1,135 @@
+#:include "field_definition.fypp"
+
+MODULE FIELD_HELPER_MODULE
+
+USE FIELD_MODULE
+USE YOMHOOK
+
+INTERFACE CREATE_TEMPORARY_LU
+#:for d in [2, 3, 4, 5]
+  MODULE PROCEDURE CREATE_TEMPORARY_${d}$D_LU
+#:endfor
+#:for d in [2, 3]
+  MODULE PROCEDURE CREATE_TEMPORARY_INT${d}$D_LU
+#:endfor
+#:for d in [2]
+  MODULE PROCEDURE CREATE_TEMPORARY_LOG${d}$D_LU
+#:endfor
+END INTERFACE CREATE_TEMPORARY_LU
+
+INTERFACE GET_DEVICE_DATA_RDONLY
+#:for dtype, suffix, rank, default in field_descriptors
+#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
+  MODULE PROCEDURE :: ${field_type_name}$_GET_DEVICE_DATA_RDONLY
+#:endfor
+END INTERFACE GET_DEVICE_DATA_RDONLY
+
+INTERFACE GET_HOST_DATA_RDONLY
+#:for dtype, suffix, rank, default in field_descriptors
+#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
+  MODULE PROCEDURE :: ${field_type_name}$_GET_HOST_DATA_RDONLY
+#:endfor
+END INTERFACE GET_HOST_DATA_RDONLY
+
+INTERFACE GET_HOST_DATA_WRONLY
+#:for dtype, suffix, rank, default in field_descriptors
+#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
+  MODULE PROCEDURE :: ${field_type_name}$_GET_HOST_DATA_WRONLY
+#:endfor
+END INTERFACE GET_HOST_DATA_WRONLY
+
+INTERFACE GET_HOST_DATA_RDWR
+#:for dtype, suffix, rank, default in field_descriptors
+#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
+  MODULE PROCEDURE :: ${field_type_name}$_GET_HOST_DATA_RDWR
+#:endfor
+END INTERFACE GET_HOST_DATA_RDWR
+
+CONTAINS
+
+#:for dtype, suffix, rank, default in field_descriptors
+#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
+  FUNCTION ${field_type_name}$_GET_HOST_DATA_RDONLY(SELF) RESULT(PTR)
+    TYPE(${field_type_name}$), POINTER, INTENT (IN) :: SELF
+    ${dtype}$, TARGET, SAVE :: ZDUM (${ ', '.join (['0'] * (rank-1) + ['1']) }$)
+    ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
+
+    IF (ASSOCIATED (SELF)) THEN
+      PTR (${lbptr (rank)}$) => SELF%PTR (${','.join(':' for _ in range(rank))}$)
+    ELSE
+      PTR => ZDUM
+    ENDIF
+
+  END FUNCTION ${field_type_name}$_GET_HOST_DATA_RDONLY
+
+  FUNCTION ${field_type_name}$_GET_DEVICE_DATA_RDONLY(SELF) RESULT(PTR)
+    TYPE(${field_type_name}$), POINTER, INTENT (IN) :: SELF
+    ${dtype}$, TARGET, SAVE :: ZDUM (${ ', '.join (['0'] * (rank-1) + ['1']) }$)
+    ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
+
+    IF (ASSOCIATED (SELF)) THEN
+      PTR (${lbptr (rank)}$) => SELF%PTR (${','.join(':' for _ in range(rank))}$)
+    ELSE
+      PTR => ZDUM
+    ENDIF
+
+  END FUNCTION ${field_type_name}$_GET_DEVICE_DATA_RDONLY
+
+  FUNCTION ${field_type_name}$_GET_HOST_DATA_WRONLY(SELF) RESULT(PTR)
+    TYPE(${field_type_name}$), POINTER, INTENT (IN) :: SELF
+    ${dtype}$, TARGET, SAVE :: ZDUM (${ ', '.join (['0'] * (rank-1) + ['1']) }$)
+    ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
+
+    IF (ASSOCIATED (SELF)) THEN
+      PTR (${lbptr (rank)}$) => SELF%PTR (${','.join(':' for _ in range(rank))}$)
+    ELSE
+      PTR => ZDUM
+    ENDIF
+
+  END FUNCTION ${field_type_name}$_GET_HOST_DATA_WRONLY
+
+  FUNCTION ${field_type_name}$_GET_HOST_DATA_RDWR(SELF) RESULT(PTR)
+    TYPE(${field_type_name}$), POINTER, INTENT (IN) :: SELF
+    ${dtype}$, TARGET, SAVE :: ZDUM (${ ', '.join (['0'] * (rank-1) + ['1']) }$)
+    ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
+
+    IF (ASSOCIATED (SELF)) THEN
+      PTR (${lbptr (rank)}$) => SELF%PTR (${','.join(':' for _ in range(rank))}$)
+    ELSE
+      PTR => ZDUM
+    ENDIF
+
+  END FUNCTION ${field_type_name}$_GET_HOST_DATA_RDWR
+
+#:endfor
+
+#:def create_temporary (dims, type)
+#:for d in dims
+  SUBROUTINE CREATE_TEMPORARY_${type}$${d}$D_LU (FIELD_PTR, UBOUNDS, LBOUNDS, PERSISTENT) 
+
+    TYPE(FIELD_${type}$${d}$D), POINTER :: FIELD_PTR
+    INTEGER(KIND=JPIM), INTENT(IN) :: UBOUNDS (${d}$)
+    INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN) :: LBOUNDS (${d}$)
+    LOGICAL, OPTIONAL, INTENT(IN) :: PERSISTENT
+    INTEGER(KIND=JPIM) :: NBLOCKS
+    INTEGER(KIND=JPIM) :: ISIZE (${d}$)
+
+    ISIZE = UBOUNDS
+    IF (PRESENT (LBOUNDS)) ISIZE = ISIZE - LBOUNDS + 1
+
+    ALLOCATE(FIELD_PTR)
+    NBLOCKS = UBOUNDS (${d}$)
+    CALL ALLOCATE_FIELD (FIELD_PTR, SHAPE=ISIZE(1:${d}$-1), NBLOCKS=NBLOCKS, PERSISTENT=PERSISTENT, LBOUNDS=LBOUNDS)
+
+    IF (FIELD_PTR%OWNED) FIELD_PTR%PTR => FIELD_PTR%DATA
+
+  END SUBROUTINE CREATE_TEMPORARY_${type}$${d}$D_LU
+
+#:endfor
+#:enddef
+
+$:create_temporary ([2, 3, 4, 5], '')
+$:create_temporary ([2, 3      ], 'INT')
+$:create_temporary ([2         ], 'LOG')
+
+END MODULE FIELD_HELPER_MODULE

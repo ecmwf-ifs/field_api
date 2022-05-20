@@ -1,0 +1,7 @@
+*.o
+*.mod
+*.x
+*.a
+field_helper_module.F90
+field_module.F90
+

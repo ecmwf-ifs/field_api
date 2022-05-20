@@ -1,0 +1,569 @@
+! Rank and shape definitions for simple templating
+!
+! Note that the ranks encode coneptual dimensions here, eg. FIELD_2D encodes
+! a surface field and FIELD_3D represents a field with a vertical component.
+#:include "field_definition.fypp"
+
+MODULE FIELD_MODULE
+  ! The FIELD types provided by this module provide data abstractions that
+  ! decouple data storage in memory from the data views used in thread-parallel
+  ! sections of the code. They are intended to thinly wrap ATLAS_FIELD
+  ! objects and provide additional features that may later be
+  ! incorporated into Atlas. They can also provide backward-compatibility
+  ! for non-Atlas execution modes.
+
+USE PARKIND1, ONLY: JPIM, JPRB
+USE OML_MOD, ONLY: OML_MAX_THREADS, OML_MY_THREAD
+USE IEEE_ARITHMETIC, ONLY: IEEE_SIGNALING_NAN
+
+IMPLICIT NONE
+
+#:for dtype, suffix, rank, default in field_descriptors
+#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
+TYPE ${field_type_name}$
+  ! A FIELD encapsulates a single multi-dimensional array and can
+  ! provide block-indexed "views" of the data for automating the
+  ! allocation and parallel iterration of NPROMA blocks.
+
+  ! The data view to be used in thread-parallel sections
+  !
+  ! The underlying view pointer is of rank-1, since we always
+  ! the horizontal component as a single dimension.
+  ${dtype}$, POINTER :: VIEW(${shapes[rank-1]}$) => NULL()
+
+  ! TODO: Atlas-based field data storage field
+  ! TODO: Do we still need to use pointers here?
+  ! TYPE(ATLAS_FIELD), POINTER :: DATA
+
+  ! Storage pointer for non-Atlas backward-compatibility mode
+  !
+  ! The underlying storage pointer has the rank as the dimension,
+  ! where the innermost dimension represents the horizontal and
+  ! the outermost one is the block index.
+  ${dtype}$, POINTER :: PTR(${shapes[rank]}$) => NULL()
+  ${dtype}$, ALLOCATABLE :: DATA(${shapes[rank]}$)
+
+  ! For wrapping discontiguous fields in co-allocated storage
+  ! arrays (eg. GFL/GMV) also store a CONTIGUOUS base pointer
+  ! and integer index, to allow block pointer extraction that
+  ! conforms with CUDA device pointers in PGI.
+  ${dtype}$, POINTER, CONTIGUOUS :: BASE_PTR(${shapes[rank+1]}$) => NULL()
+  INTEGER(KIND=JPIM) :: FIDX
+
+  ! A separate data pointer that can be used to create
+  ! a contiguous chunk of host memory to cleanly map to
+  ! device, should the %DATA pointer be discontiguous.
+  ${dtype}$, POINTER, CONTIGUOUS :: DEVPTR(${shapes[rank]}$) => NULL()
+
+  ! Number of blocks used in the data layout
+  INTEGER :: NBLOCKS
+
+  ! Flag indicating whether this field stores real data
+  LOGICAL :: ACTIVE = .FALSE.
+  ! Flag indicating the use a single block-buffer per thread
+  LOGICAL :: THREAD_BUFFER = .FALSE.
+  ! Flag indicating whether we own the allocated base array
+  LOGICAL :: OWNED = .TRUE.
+
+  INTEGER(KIND=JPIM) :: LBOUNDS (${rank}$) = [${", ".join (["1"] * rank)}$]
+
+CONTAINS
+
+  PROCEDURE :: CLONE => ${field_type_name}$_CLONE
+  PROCEDURE :: UPDATE_VIEW => ${field_type_name}$_UPDATE_VIEW
+  PROCEDURE :: EXTRACT_VIEW => ${field_type_name}$_EXTRACT_VIEW
+  PROCEDURE :: GET_VIEW => ${field_type_name}$_GET_VIEW
+  PROCEDURE :: FINAL => ${field_type_name}$_FINAL
+
+  ! GPU-specific device data transfer API
+  PROCEDURE :: CREATE_DEVICE => ${field_type_name}$_CREATE_DEVICE
+  PROCEDURE :: UPDATE_DEVICE => ${field_type_name}$_UPDATE_DEVICE
+  PROCEDURE :: UPDATE_HOST => ${field_type_name}$_UPDATE_HOST
+  PROCEDURE :: DELETE_DEVICE => ${field_type_name}$_DELETE_DEVICE
+END TYPE ${field_type_name}$
+
+#:endfor
+
+#:for rank in ranks
+TYPE FIELD_${rank}$D_PTR
+  ! Struct to hold references to field objects
+  TYPE(FIELD_${rank}$D), POINTER :: PTR => NULL()
+END TYPE FIELD_${rank}$D_PTR
+
+TYPE FIELD_${rank}$D_VIEW
+  ! Struct to hold array views, so we can make arrays of them
+  REAL(KIND=JPRB), POINTER :: P(${shapes[rank-1]}$) => NULL()
+END TYPE FIELD_${rank}$D_VIEW
+
+#:endfor
+
+#:for dtype, suffix, rank, default in field_descriptors
+#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
+INTERFACE ${field_type_name}$
+  MODULE PROCEDURE :: ${field_type_name}$_WRAP
+  MODULE PROCEDURE :: ${field_type_name}$_WRAP_PACKED
+  ! MODULE PROCEDURE :: ${field_type_name}$_EMPTY
+  MODULE PROCEDURE :: ${field_type_name}$_ALLOCATE
+END INTERFACE
+
+#:endfor
+
+INTERFACE ALLOCATE_FIELD
+#:for dtype, suffix, rank, default in field_descriptors
+#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
+  MODULE PROCEDURE :: ALLOCATE_${field_type_name}$
+#:endfor
+END INTERFACE
+
+
+INTERFACE FILL_BUFFER
+#:for suffix in suffixes
+  MODULE PROCEDURE :: FILL_BUFFER_${suffix}$2D, FILL_BUFFER_${suffix}$3D
+  MODULE PROCEDURE :: FILL_BUFFER_${suffix}$4D, FILL_BUFFER_${suffix}$5D
+#:endfor
+END INTERFACE FILL_BUFFER
+
+
+INTERFACE FIELD_CREATE_DEVICE
+#:for dtype, suffix, rank, default in field_descriptors
+#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
+  MODULE PROCEDURE :: ${field_type_name}$_CREATE_DEVICE
+#:endfor
+END INTERFACE FIELD_CREATE_DEVICE
+
+INTERFACE FIELD_UPDATE_DEVICE
+#:for dtype, suffix, rank, default in field_descriptors
+#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
+  MODULE PROCEDURE :: ${field_type_name}$_UPDATE_DEVICE
+#:endfor
+END INTERFACE FIELD_UPDATE_DEVICE
+
+INTERFACE FIELD_UPDATE_HOST
+#:for dtype, suffix, rank, default in field_descriptors
+#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
+  MODULE PROCEDURE :: ${field_type_name}$_UPDATE_HOST
+#:endfor
+END INTERFACE FIELD_UPDATE_HOST
+
+INTERFACE FIELD_DELETE_DEVICE
+#:for dtype, suffix, rank, default in field_descriptors
+#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
+  MODULE PROCEDURE :: ${field_type_name}$_DELETE_DEVICE
+#:endfor
+END INTERFACE FIELD_DELETE_DEVICE
+
+INTERFACE GET_DEVICE_DATA
+#:for dtype, suffix, rank, default in field_descriptors
+#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
+  MODULE PROCEDURE :: ${field_type_name}$_GET_DEVICE_DATA
+#:endfor
+END INTERFACE GET_DEVICE_DATA
+
+
+CONTAINS
+
+#:for dtype, suffix in zip(dtypes, suffixes)
+  SUBROUTINE FILL_BUFFER_${suffix}$2D(BUFFER, INDEX)
+    ! Utility routine to fill data buffers (views)
+    ${dtype}$, POINTER, INTENT(INOUT) :: BUFFER(:)
+    INTEGER(KIND=JPIM), INTENT(IN) :: INDEX
+    INTEGER(KIND=JPIM) :: IDX
+
+    IDX = INDEX+1
+    BUFFER(IDX:) = BUFFER(INDEX)
+  END SUBROUTINE FILL_BUFFER_${suffix}$2D
+
+  SUBROUTINE FILL_BUFFER_${suffix}$3D(BUFFER, INDEX)
+    ! Utility routine to fill data buffers (views)
+    ${dtype}$, POINTER, INTENT(INOUT) :: BUFFER(:,:)
+    INTEGER(KIND=JPIM), INTENT(IN) :: INDEX
+    INTEGER(KIND=JPIM) :: I, IDX
+
+    IDX = INDEX+1
+    DO I=1, SIZE(BUFFER, 2)
+      BUFFER(IDX:,I) = BUFFER(INDEX,I)
+    END DO
+  END SUBROUTINE FILL_BUFFER_${suffix}$3D
+
+  SUBROUTINE FILL_BUFFER_${suffix}$4D(BUFFER, INDEX)
+    ! Utility routine to fill data buffers (views)
+    ${dtype}$, POINTER, INTENT(INOUT) :: BUFFER(:,:,:)
+    INTEGER(KIND=JPIM), INTENT(IN) :: INDEX
+    INTEGER(KIND=JPIM) :: I, J, IDX
+
+    IDX = INDEX+1
+    DO I=1, SIZE(BUFFER, 2)
+      DO J=1, SIZE(BUFFER, 3)
+        BUFFER(IDX:,I,J) = BUFFER(INDEX,I,J)
+      END DO
+    END DO
+  END SUBROUTINE FILL_BUFFER_${suffix}$4D
+
+  SUBROUTINE FILL_BUFFER_${suffix}$5D(BUFFER, INDEX)
+    ! Utility routine to fill data buffers (views)
+    ${dtype}$, POINTER, INTENT(INOUT) :: BUFFER(:,:,:,:)
+    INTEGER(KIND=JPIM), INTENT(IN) :: INDEX
+    INTEGER(KIND=JPIM) :: I, J, K, IDX
+
+    IDX = INDEX+1
+    DO I=1, SIZE(BUFFER, 2)
+      DO J=1, SIZE(BUFFER, 3)
+        DO K=1, SIZE(BUFFER, 4)
+          BUFFER(IDX:,I,J,K) = BUFFER(INDEX,I,J,K)
+        END DO
+      END DO
+    END DO
+  END SUBROUTINE FILL_BUFFER_${suffix}$5D
+
+#:endfor
+
+#:for dtype, suffix, rank, default in field_descriptors
+#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
+  FUNCTION ${field_type_name}$_EMPTY(SHAPE) RESULT(SELF)
+    ! Create FIELD object by wrapping existing data
+    !
+    ! If a SHAPE is provided, a single empty buffer block-sized buffer
+    ! will be allocated under %VIEW and used by all threads in a
+    ! thread-parallel region to avoid segfault when dereferencing NULL
+    ! pointers. Otherwise %DATA and %VIEW will always be unassociated.
+    TYPE(${field_type_name}$) :: SELF
+    INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN) :: SHAPE(${rank-1}$)
+
+    SELF%PTR => NULL()
+    IF (PRESENT(SHAPE)) THEN
+      ALLOCATE(SELF%VIEW(${','.join('SHAPE(%d)'%(r+1) for r in range(rank-1))}$))
+    END IF
+    SELF%ACTIVE = .FALSE.
+    SELF%THREAD_BUFFER = .FALSE.
+    SELF%OWNED = .FALSE.
+    SELF%NBLOCKS = 0
+    SELF%BASE_PTR => NULL()
+    SELF%FIDX = -1
+  END FUNCTION ${field_type_name}$_EMPTY
+
+#:endfor
+
+#:for dtype, suffix, rank, default in field_descriptors
+#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
+  FUNCTION ${field_type_name}$_WRAP(DATA, PERSISTENT, LBOUNDS) RESULT(SELF)
+    ! Create FIELD object by wrapping existing data
+    TYPE(${field_type_name}$), TARGET :: SELF
+    ${dtype}$, TARGET, INTENT(IN) :: DATA(${shapes[rank]}$)
+    LOGICAL, INTENT(IN), OPTIONAL :: PERSISTENT
+    INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: LBOUNDS(${rank}$)
+    LOGICAL :: LLPERSISTENT
+
+    LLPERSISTENT = .TRUE.
+    IF (PRESENT (PERSISTENT)) LLPERSISTENT = PERSISTENT
+    IF (PRESENT (LBOUNDS)) SELF%LBOUNDS = LBOUNDS
+
+    SELF%PTR => DATA
+    SELF%ACTIVE = .TRUE.
+    SELF%THREAD_BUFFER = .NOT. LLPERSISTENT
+    SELF%OWNED = .FALSE.
+    SELF%NBLOCKS = SIZE(SELF%PTR, ${rank}$)
+    SELF%BASE_PTR => NULL()
+    SELF%FIDX = -1
+
+    IF (.NOT. LLPERSISTENT) THEN
+      IF (OML_MAX_THREADS() /= SIZE (DATA, ${rank}$)) THEN
+        CALL ABOR1 ('${field_type_name}$_WRAP: DIMENSION MISMATCH')
+      ENDIF
+    ENDIF
+
+  END FUNCTION ${field_type_name}$_WRAP
+
+#:endfor
+
+#:for dtype, suffix, rank, default in field_descriptors
+#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
+  FUNCTION ${field_type_name}$_WRAP_PACKED(DATA, IDX, LBOUNDS) RESULT(SELF)
+    ! Create FIELD object packed in a multi-field buffer by storing a
+    ! contiguous pointer to existing data and an index.
+    TYPE(${field_type_name}$), TARGET :: SELF
+    ${dtype}$, TARGET, INTENT(IN) :: DATA(${shapes[rank+1]}$)
+    INTEGER(KIND=JPIM), INTENT(IN) :: IDX
+    INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: LBOUNDS(${rank}$)
+
+    IF (PRESENT (LBOUNDS)) SELF%LBOUNDS = LBOUNDS
+
+    SELF%PTR => DATA(${shapes[rank-1]}$,IDX,:)
+    SELF%ACTIVE = .TRUE.
+    SELF%THREAD_BUFFER = .FALSE.
+    SELF%OWNED = .FALSE.
+    SELF%NBLOCKS = SIZE(SELF%PTR, ${rank}$)
+    SELF%BASE_PTR => DATA
+    SELF%FIDX = IDX
+  END FUNCTION ${field_type_name}$_WRAP_PACKED
+
+#:endfor
+
+#:for dtype, suffix, rank, default in field_descriptors
+#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
+  SUBROUTINE ALLOCATE_${field_type_name}$ (SELF, SHAPE, NBLOCKS, PERSISTENT, LBOUNDS) 
+    ! Create FIELD object by explicitly allocating new data
+    !
+    ! Please note that SHAPE is the conceptual shape without the block dimension
+    TYPE(${field_type_name}$), TARGET :: SELF
+    INTEGER(KIND=JPIM), INTENT(IN) :: SHAPE(${rank-1}$)
+    INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: NBLOCKS
+    LOGICAL, INTENT(IN), OPTIONAL :: PERSISTENT
+    INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: LBOUNDS(${rank}$)
+    INTEGER(KIND=JPIM) :: NBLK
+
+    IF (PRESENT (LBOUNDS)) SELF%LBOUNDS = LBOUNDS
+
+    ! By default we allocate thread-local temporaries
+    SELF%THREAD_BUFFER = .TRUE.
+    NBLK = OML_MAX_THREADS()
+
+    IF (PRESENT(PERSISTENT)) THEN
+      IF (PERSISTENT) THEN
+        ! Adjust outer dim for full-sized persistent blocked arrays
+        IF (.NOT. PRESENT(NBLOCKS)) CALL &
+         & ABOR1('${field_type_name}$_ALLOCATE : NBLOCKS not given for persistent allocation!')
+        SELF%THREAD_BUFFER = .FALSE.
+        NBLK = NBLOCKS
+      END IF
+    END IF
+
+    ! Allocate storage array and store metadata
+    ALLOCATE(SELF%DATA(${','.join('SHAPE(%d)'%(r+1) for r in range(rank-1))}$,NBLK))
+    SELF%PTR => SELF%DATA
+    SELF%ACTIVE = .TRUE.
+    SELF%OWNED = .TRUE.
+    SELF%NBLOCKS = SIZE(SELF%DATA, ${rank}$)
+    SELF%BASE_PTR => NULL()
+    SELF%FIDX = -1
+  END SUBROUTINE ALLOCATE_${field_type_name}$
+
+  FUNCTION ${field_type_name}$_ALLOCATE(SHAPE, NBLOCKS, PERSISTENT, LBOUNDS) RESULT(SELF)
+    ! WARNING : Using this function kills performance when the %DATA member is allocated
+    TYPE(${field_type_name}$), TARGET :: SELF
+    INTEGER(KIND=JPIM), INTENT(IN) :: SHAPE(${rank-1}$)
+    INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: NBLOCKS
+    LOGICAL, INTENT(IN), OPTIONAL :: PERSISTENT
+    INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: LBOUNDS(${rank}$)
+    INTEGER(KIND=JPIM) :: NBLK
+   
+    CALL ALLOCATE_${field_type_name}$ (SELF, SHAPE, NBLOCKS, PERSISTENT, LBOUNDS)
+
+  END FUNCTION ${field_type_name}$_ALLOCATE
+
+#:endfor
+
+#:for dtype, suffix, rank, default in field_descriptors
+#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
+  FUNCTION ${field_type_name}$_CLONE(SELF) RESULT(NEWOBJ)
+    ! Clone (deep-copy) this FIELD object, keeping the DATA pointer
+    ! intact, but replicating view pointers.
+    CLASS(${field_type_name}$) :: SELF
+    TYPE(${field_type_name}$), POINTER :: NEWOBJ
+
+    ALLOCATE(NEWOBJ)
+    ! For owned storage data, re-allocate but do not copy data over
+    IF (SELF%OWNED) THEN
+      ALLOCATE(NEWOBJ%DATA, MOLD=SELF%DATA)
+      NEWOBJ%PTR => NEWOBJ%DATA
+    ELSE
+      NEWOBJ%PTR => SELF%PTR
+    END IF
+    NEWOBJ%VIEW => NULL()
+    NEWOBJ%NBLOCKS = SELF%NBLOCKS
+    NEWOBJ%THREAD_BUFFER = SELF%THREAD_BUFFER
+    NEWOBJ%OWNED = .FALSE.
+    NEWOBJ%LBOUNDS = SELF%LBOUNDS
+  END FUNCTION ${field_type_name}$_CLONE
+
+#:endfor
+
+#:for dtype, suffix, rank, default in field_descriptors
+#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
+  SUBROUTINE ${field_type_name}$_UPDATE_VIEW(SELF, BLOCK_INDEX, BLOCK_SIZE, ZERO)
+    ! Sets the view pointer FIELD%MP to the block of the given index
+    CLASS(${field_type_name}$), TARGET :: SELF
+    INTEGER(KIND=JPIM), INTENT(IN) :: BLOCK_INDEX
+    INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: BLOCK_SIZE
+    LOGICAL, OPTIONAL, INTENT(IN) :: ZERO
+    INTEGER(KIND=JPIM) :: IDX
+
+    IDX = BLOCK_INDEX
+    IF (SELF%THREAD_BUFFER) IDX = OML_MY_THREAD()
+    IF (SELF%ACTIVE .AND. SELF%OWNED) THEN
+      SELF%VIEW (${lbptr (rank-1)}$) => SELF%DATA(${','.join(':' for _ in range(rank-1))}$,IDX)
+    ELSEIF (SELF%ACTIVE .AND. .NOT. SELF%OWNED) THEN
+      SELF%VIEW (${lbptr (rank-1)}$) => SELF%PTR(${','.join(':' for _ in range(rank-1))}$,IDX)
+    END IF
+
+    IF (PRESENT(BLOCK_SIZE) .AND. BLOCK_INDEX == SELF%NBLOCKS) THEN
+      ! Fill the the buffer by replicating the last entry
+      CALL FILL_BUFFER(SELF%VIEW, INDEX=BLOCK_SIZE)
+    END IF
+
+    IF (PRESENT(ZERO)) THEN
+      IF (ZERO) SELF%VIEW(${shapes[rank-1]}$) = ${default}$
+    END IF
+  END SUBROUTINE ${field_type_name}$_UPDATE_VIEW
+
+#:endfor
+
+#:for dtype, suffix, rank, default in field_descriptors
+#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
+  SUBROUTINE ${field_type_name}$_EXTRACT_VIEW(SELF, VIEW_PTR, BLOCK_INDEX, BLOCK_SIZE, ZERO)
+    ! Updates internal view and exports it to an external pointer
+    CLASS(${field_type_name}$), TARGET :: SELF
+    ${dtype}$, POINTER, INTENT(INOUT) :: VIEW_PTR(${shapes[rank-1]}$)
+    INTEGER(KIND=JPIM), INTENT(IN) :: BLOCK_INDEX
+    INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: BLOCK_SIZE
+    LOGICAL, OPTIONAL, INTENT(IN) :: ZERO
+    INTEGER(KIND=JPIM) :: IDX
+
+    IDX = BLOCK_INDEX
+    IF (SELF%THREAD_BUFFER) IDX = OML_MY_THREAD()
+    IF (SELF%ACTIVE .AND. SELF%OWNED) THEN
+      VIEW_PTR (${lbptr (rank-1)}$)  => SELF%DATA(${','.join(':' for _ in range(rank-1))}$,IDX)
+    ELSEIF (SELF%ACTIVE .AND. .NOT. SELF%OWNED) THEN
+      VIEW_PTR (${lbptr (rank-1)}$) => SELF%PTR(${','.join(':' for _ in range(rank-1))}$,IDX)
+    ELSE
+      VIEW_PTR (${lbptr (rank-1)}$) => SELF%VIEW  ! Set to NaN'd field buffer
+    END IF
+
+    IF (PRESENT(BLOCK_SIZE) .AND. BLOCK_INDEX == SELF%NBLOCKS) THEN
+      ! Fill the the buffer by replicating the last entry
+      CALL FILL_BUFFER(VIEW_PTR, INDEX=BLOCK_SIZE)
+    END IF
+
+    IF (PRESENT(ZERO)) THEN
+      IF (ZERO) VIEW_PTR(${shapes[rank-1]}$) = ${default}$
+    END IF
+  END SUBROUTINE ${field_type_name}$_EXTRACT_VIEW
+
+#:endfor
+
+#:for dtype, suffix, rank, default in field_descriptors
+#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
+  FUNCTION ${field_type_name}$_GET_VIEW(SELF, BLOCK_INDEX, BLOCK_SIZE, ZERO) RESULT(VIEW_PTR)
+    ! Updates internal view and exports it to an external pointer
+    CLASS(${field_type_name}$), TARGET :: SELF
+    ${dtype}$, POINTER :: VIEW_PTR(${shapes[rank-1]}$)
+    INTEGER(KIND=JPIM), INTENT(IN) :: BLOCK_INDEX
+    INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: BLOCK_SIZE
+    LOGICAL, OPTIONAL, INTENT(IN) :: ZERO
+    INTEGER(KIND=JPIM) :: IDX
+
+    IDX = BLOCK_INDEX
+    IF (SELF%THREAD_BUFFER) IDX = OML_MY_THREAD()
+    IF (SELF%ACTIVE .AND. SELF%OWNED) THEN
+      VIEW_PTR (${lbptr (rank-1)}$) => SELF%DATA(${','.join(':' for _ in range(rank-1))}$,IDX)
+    ELSEIF (SELF%ACTIVE .AND. .NOT. SELF%OWNED) THEN
+      VIEW_PTR (${lbptr (rank-1)}$) => SELF%PTR(${','.join(':' for _ in range(rank-1))}$,IDX)
+    ELSE
+      VIEW_PTR (${lbptr (rank-1)}$) => SELF%VIEW  ! Set to NaN'd field buffer
+    END IF
+
+    IF (PRESENT(BLOCK_SIZE)) THEN
+      IF (BLOCK_INDEX == SELF%NBLOCKS) THEN
+        ! Fill the the buffer by replicating the last entry
+        CALL FILL_BUFFER(VIEW_PTR, INDEX=BLOCK_SIZE)
+      END IF
+    END IF
+
+    IF (PRESENT(ZERO)) THEN
+      IF (ZERO) VIEW_PTR(${shapes[rank-1]}$) = ${default}$
+    END IF
+  END FUNCTION ${field_type_name}$_GET_VIEW
+
+#:endfor
+
+#:for dtype, suffix, rank, default in field_descriptors
+#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
+  SUBROUTINE ${field_type_name}$_CREATE_DEVICE(SELF)
+    ! Initialize a copy of this field on GPU device
+    CLASS(${field_type_name}$), TARGET :: SELF
+
+    SELF%DEVPTR => SELF%DATA
+!$acc enter data create(SELF%DATA)
+  END SUBROUTINE ${field_type_name}$_CREATE_DEVICE
+
+#:endfor
+
+#:for dtype, suffix, rank, default in field_descriptors
+#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
+  FUNCTION ${field_type_name}$_GET_DEVICE_DATA(SELF) RESULT(DEVPTR)
+    ! Initialize a copy of this field on GPU device
+    CLASS(${field_type_name}$), TARGET :: SELF
+    ${dtype}$, POINTER, CONTIGUOUS :: DEVPTR(${shapes[rank]}$)
+
+    IF (SELF%OWNED) THEN
+      DEVPTR (${lbptr (rank)}$) => SELF%DATA
+    ELSE
+      DEVPTR (${lbptr (rank)}$) => SELF%DEVPTR
+    END IF
+  END FUNCTION ${field_type_name}$_GET_DEVICE_DATA
+
+#:endfor
+
+#:for dtype, suffix, rank, default in field_descriptors
+#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
+  SUBROUTINE ${field_type_name}$_UPDATE_DEVICE(SELF)
+    ! Create a copy of this field on device and copy data over
+    CLASS(${field_type_name}$), TARGET :: SELF
+
+    IF (SELF%OWNED) THEN
+!$acc enter data copyin(SELF%DATA)
+      SELF%DEVPTR => SELF%DATA
+    ELSE
+      ALLOCATE(SELF%DEVPTR, SOURCE=SELF%PTR)
+!$acc enter data copyin(SELF%DEVPTR)
+    END IF
+  END SUBROUTINE ${field_type_name}$_UPDATE_DEVICE
+
+#:endfor
+
+#:for dtype, suffix, rank, default in field_descriptors
+#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
+  SUBROUTINE ${field_type_name}$_UPDATE_HOST(SELF)
+    ! Synchronize device data back to host
+    CLASS(${field_type_name}$) :: SELF
+
+    IF (SELF%OWNED) THEN
+      !$acc exit data copyout(SELF%DATA)
+    ELSE
+      !$acc exit data copyout(SELF%DEVPTR)
+      SELF%PTR(${shapes[rank]}$) = SELF%DEVPTR(${shapes[rank]}$)
+    END IF
+  END SUBROUTINE ${field_type_name}$_UPDATE_HOST
+
+#:endfor
+
+  #:for dtype, suffix, rank, default in field_descriptors
+#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
+  SUBROUTINE ${field_type_name}$_DELETE_DEVICE(SELF)
+    ! Initialize a copy of this field on GPU device
+    CLASS(${field_type_name}$), TARGET :: SELF
+
+!$acc exit data delete(SELF%DEVPTR)
+    IF (SELF%OWNED) THEN
+      NULLIFY(SELF%DEVPTR)
+    ELSE
+      DEALLOCATE(SELF%DEVPTR)
+    END IF
+  END SUBROUTINE ${field_type_name}$_DELETE_DEVICE
+
+#:endfor
+
+#:for dtype, suffix, rank, default in field_descriptors
+#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
+  SUBROUTINE ${field_type_name}$_FINAL(SELF)
+    ! Finalizes field and dealloactes owned data
+    CLASS(${field_type_name}$) :: SELF
+    IF (SELF%OWNED) THEN
+      DEALLOCATE(SELF%DATA)
+    END IF
+    NULLIFY(SELF%PTR)
+    NULLIFY(SELF%VIEW)
+  END SUBROUTINE ${field_type_name}$_FINAL
+
+#:endfor
+
+END MODULE FIELD_MODULE
