@@ -68,10 +68,35 @@ CONTAINS
     ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
 
     IF (ASSOCIATED (SELF)) THEN
-      PTR (${lbptr (rank)}$) => SELF%PTR (${','.join(':' for _ in range(rank))}$)
+      IF (.NOT. ASSOCIATED (SELF%DEVPTR)) THEN
+!       CALL SET_DEVICE_${field_type_name}$ (SELF%PTR, SELF%DEVPTR)
+!       ALLOCATE (SELF%DEVPTR, SOURCE=SELF%PTR)
+!       !$acc enter data create (SELF%DEVPTR)
+      ENDIF
+      PTR (${lbptr (rank)}$) => SELF%DEVPTR (${','.join(':' for _ in range(rank))}$)
     ELSE
       PTR => ZDUM
     ENDIF
+
+  CONTAINS
+    INTEGER FUNCTION CONTIGUOUS_DIM (PTR)
+    ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
+#:for d in range (rank, 0, -1)
+  #:set ind0 = ['1'] * rank
+  #:set ind1 = ['1'] * (d - 1) + ['2'] + ['1'] * (rank - d)
+    IF (LOC (PTR (${', '.join (ind0)}$)) - LOC (PTR (${', '.join (ind1)}$)) == KIND (PTR)) THEN
+      CONTIGUOUS_DIM = ${d}$
+      RETURN
+    ENDIF
+#:endfor
+    CONTIGUOUS_DIM = 0
+    END FUNCTION 
+#:for d in range (0, rank+1)
+    SUBROUTINE COPY_DIM${d}$_CONTIGUOUS (SRC, DST)
+    ${dtype}$, POINTER :: SRC (${shapes[rank]}$), DST (${shapes[rank]}$)
+    INTEGER :: ${', '.join (['J'] + list (map (lambda i: 'J' + str (i+1), range (d, rank))))}$
+    END SUBROUTINE
+#:endfor
 
   END FUNCTION ${field_type_name}$_GET_DEVICE_DATA_RDONLY
 
