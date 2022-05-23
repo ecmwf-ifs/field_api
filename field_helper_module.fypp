@@ -47,6 +47,8 @@ INTERFACE GET_HOST_DATA_RDWR
 #:endfor
 END INTERFACE GET_HOST_DATA_RDWR
 
+INTEGER (KIND=JPIM), PARAMETER :: NH2D = 1, ND2H = 2
+
 CONTAINS
 
 #:for dtype, suffix, rank, default in field_descriptors
@@ -88,40 +90,47 @@ CONTAINS
 
   END FUNCTION ${field_type_name}$_GET_HOST_DATA_RDONLY
 
-  SUBROUTINE ${field_type_name}$_COPY_H2D (SRC, DST)
-  ${dtype}$, POINTER :: SRC (${shapes[rank]}$), DST (${shapes[rank]}$)
+  SUBROUTINE ${field_type_name}$_COPY (HST, DEV, KDIR)
+  ${dtype}$, POINTER :: HST (${shapes[rank]}$), DEV (${shapes[rank]}$)
+  INTEGER (KIND=JPIM), INTENT (IN) :: KDIR
   INTEGER (KIND=JPIM) :: IDIM
 
-  IDIM = ${field_type_name}$_GET_LAST_CONTIGUOUS_DIMENSION (SRC)
+  IDIM = ${field_type_name}$_GET_LAST_CONTIGUOUS_DIMENSION (HST)
 
   SELECT CASE (IDIM)
 #:for d in range (rank, -1, -1)
   #:set ind0 = ['1'] * rank
   #:set ind1 = ['1'] * (d - 1) + ['2'] + ['1'] * (rank - d)
     CASE (${d}$)
-      CALL COPY_DIM${d}$_CONTIGUOUS (SRC, DST)
+      CALL COPY_DIM${d}$_CONTIGUOUS (HST, DEV, KDIR)
 #:endfor
   END SELECT
 
   CONTAINS
 
 #:for d in range (0, rank+1)
-    SUBROUTINE COPY_DIM${d}$_CONTIGUOUS (SRC, DST)
-    ${dtype}$, POINTER :: SRC (${shapes[rank]}$), DST (${shapes[rank]}$)
+    SUBROUTINE COPY_DIM${d}$_CONTIGUOUS (HST, DEV, KDIR)
+    ${dtype}$, POINTER :: HST (${shapes[rank]}$), DEV (${shapes[rank]}$)
+    INTEGER (KIND=JPIM), INTENT (IN) :: KDIR
     INTEGER :: ${', '.join (['J'] + list (map (lambda i: 'J' + str (i+1), range (d, rank))))}$
 
   #:for e in range (rank, d, -1)
-    ${'  ' * (rank - e)}$DO J${e}$ = LBOUND (SRC, ${e}$), UBOUND (SRC, ${e}$)
+    ${'  ' * (rank - e)}$DO J${e}$ = LBOUND (HST, ${e}$), UBOUND (HST, ${e}$)
   #:endfor
   #:set ar = ', '.join ([':'] * d  + list (map (lambda i: 'J' + str (i+1), range (d, rank))))
-    ${'  ' * (rank - d)}$DST (${ar}$) = SRC (${ar}$)
+  #:set indent = '  ' * (rank - e)
+    ${indent}$  IF (KDIR == NH2D) THEN
+    ${indent}$    DEV (${ar}$) = HST (${ar}$)
+    ${indent}$  ELSEIF (KDIR == ND2H) THEN
+    ${indent}$    HST (${ar}$) = DEV (${ar}$)
+    ${indent}$  ENDIF
   #:for e in range (d, rank)
     ${'  ' * (rank - e - 1)}$ENDDO
   #:endfor
     END SUBROUTINE
 
 #:endfor
-  END SUBROUTINE ${field_type_name}$_COPY_H2D
+  END SUBROUTINE ${field_type_name}$_COPY
 
   FUNCTION ${field_type_name}$_GET_DEVICE_DATA_ (SELF) RESULT(PTR)
     TYPE(${field_type_name}$), POINTER, INTENT (IN) :: SELF
@@ -131,8 +140,7 @@ CONTAINS
     IF (ASSOCIATED (SELF)) THEN
       IF (.NOT. ASSOCIATED (SELF%DEVPTR)) THEN
         ALLOCATE (SELF%DEVPTR, MOLD=SELF%PTR)
-        CALL ${field_type_name}$_COPY_H2D (SELF%PTR, SELF%DEVPTR)
-!       !$acc enter data create (SELF%DEVPTR)
+        CALL ${field_type_name}$_COPY (SELF%PTR, SELF%DEVPTR, NH2D)
       ENDIF
       PTR (${lbptr (rank)}$) => SELF%DEVPTR (${','.join(':' for _ in range(rank))}$)
     ELSE
