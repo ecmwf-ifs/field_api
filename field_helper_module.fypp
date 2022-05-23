@@ -132,8 +132,6 @@ CONTAINS
     ${indent}$    !$acc host_data use_device (DEV)
     ${indent}$    CALL ACC_MEMCPY_TO_DEVICE (DEV (${ar}$), HST (${ar}$), ISIZE)
     ${indent}$    !$acc end host_data
-!   ${indent}$    DEV (${ar}$) = HST (${ar}$)
-!   ${indent}$    !$acc update device (DEV (${ar}$))
     ${indent}$  ELSEIF (KDIR == ND2H) THEN
     ${indent}$    HST (${ar}$) = DEV (${ar}$)
     ${indent}$  ENDIF
@@ -187,11 +185,7 @@ CONTAINS
     ${dtype}$, TARGET, SAVE :: ZDUM (${ ', '.join ([dumsize] * (rank-1) + ['1']) }$)
     ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
 
-    IF (ASSOCIATED (SELF)) THEN
-      PTR (${lbptr (rank)}$) => SELF%PTR (${','.join(':' for _ in range(rank))}$)
-    ELSE
-      PTR => ZDUM
-    ENDIF
+    PTR (${lbptr (rank)}$) => SELF%PTR (${','.join(':' for _ in range(rank))}$)
 
   END FUNCTION ${field_type_name}$_GET_HOST_DATA_RDWR
 
