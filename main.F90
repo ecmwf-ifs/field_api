@@ -34,15 +34,21 @@ DO JLON = 1, NPROMA
   PRINT *, JLON, Z (JLON,1,1)
 ENDDO
 
-PRINT *, '-----------'
+PRINT *, '-----------  HOST  -----------'
 
 Z => GET_DEVICE_DATA_RDONLY (YLF3)
 
-!#acc serial present (Z)
 DO JLON = 1, NPROMA
   PRINT *, JLON, Z (JLON,1,1)
 ENDDO
-!#acc end serial
+
+PRINT *, '----------- DEVICE -----------'
+
+!$acc serial present (Z)
+DO JLON = 1, NPROMA
+  PRINT *, JLON, Z (JLON,1,1)
+ENDDO
+!$acc end serial
 
 CALL YLF3%FINAL
 

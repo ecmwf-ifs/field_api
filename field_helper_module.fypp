@@ -1,5 +1,7 @@
 #:include "field_definition.fypp"
 
+#:set dumsize = '1'
+
 MODULE FIELD_HELPER_MODULE
 
 USE FIELD_MODULE
@@ -79,7 +81,7 @@ CONTAINS
 
   FUNCTION ${field_type_name}$_GET_HOST_DATA_RDONLY(SELF) RESULT(PTR)
     TYPE(${field_type_name}$), POINTER, INTENT (IN) :: SELF
-    ${dtype}$, TARGET, SAVE :: ZDUM (${ ', '.join (['0'] * (rank-1) + ['1']) }$)
+    ${dtype}$, TARGET, SAVE :: ZDUM (${ ', '.join ([dumsize] * (rank-1) + ['1']) }$)
     ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
 
     IF (ASSOCIATED (SELF)) THEN
@@ -121,6 +123,7 @@ CONTAINS
   #:set indent = '  ' * (rank - e)
     ${indent}$  IF (KDIR == NH2D) THEN
     ${indent}$    DEV (${ar}$) = HST (${ar}$)
+    ${indent}$    !$acc update device (DEV (${ar}$))
     ${indent}$  ELSEIF (KDIR == ND2H) THEN
     ${indent}$    HST (${ar}$) = DEV (${ar}$)
     ${indent}$  ENDIF
@@ -134,12 +137,13 @@ CONTAINS
 
   FUNCTION ${field_type_name}$_GET_DEVICE_DATA_ (SELF) RESULT(PTR)
     TYPE(${field_type_name}$), POINTER, INTENT (IN) :: SELF
-    ${dtype}$, TARGET, SAVE :: ZDUM (${ ', '.join (['0'] * (rank-1) + ['1']) }$)
+    ${dtype}$, TARGET, SAVE :: ZDUM (${ ', '.join ([dumsize] * (rank-1) + ['1']) }$)
     ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
 
     IF (ASSOCIATED (SELF)) THEN
       IF (.NOT. ASSOCIATED (SELF%DEVPTR)) THEN
         ALLOCATE (SELF%DEVPTR, MOLD=SELF%PTR)
+        !$acc enter data create (SELF%DEVPTR)
         CALL ${field_type_name}$_COPY (SELF%PTR, SELF%DEVPTR, NH2D)
       ENDIF
       PTR (${lbptr (rank)}$) => SELF%DEVPTR (${','.join(':' for _ in range(rank))}$)
@@ -152,7 +156,7 @@ CONTAINS
 
   FUNCTION ${field_type_name}$_GET_DEVICE_DATA_RDONLY(SELF) RESULT(PTR)
     TYPE(${field_type_name}$), POINTER, INTENT (IN) :: SELF
-    ${dtype}$, TARGET, SAVE :: ZDUM (${ ', '.join (['0'] * (rank-1) + ['1']) }$)
+    ${dtype}$, TARGET, SAVE :: ZDUM (${ ', '.join ([dumsize] * (rank-1) + ['1']) }$)
     ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
 
     PTR => ${field_type_name}$_GET_DEVICE_DATA_ (SELF)
@@ -161,7 +165,7 @@ CONTAINS
 
   FUNCTION ${field_type_name}$_GET_HOST_DATA_WRONLY(SELF) RESULT(PTR)
     TYPE(${field_type_name}$), POINTER, INTENT (IN) :: SELF
-    ${dtype}$, TARGET, SAVE :: ZDUM (${ ', '.join (['0'] * (rank-1) + ['1']) }$)
+    ${dtype}$, TARGET, SAVE :: ZDUM (${ ', '.join ([dumsize] * (rank-1) + ['1']) }$)
     ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
 
     PTR => ${field_type_name}$_GET_DEVICE_DATA_ (SELF)
@@ -170,7 +174,7 @@ CONTAINS
 
   FUNCTION ${field_type_name}$_GET_HOST_DATA_RDWR(SELF) RESULT(PTR)
     TYPE(${field_type_name}$), POINTER, INTENT (IN) :: SELF
-    ${dtype}$, TARGET, SAVE :: ZDUM (${ ', '.join (['0'] * (rank-1) + ['1']) }$)
+    ${dtype}$, TARGET, SAVE :: ZDUM (${ ', '.join ([dumsize] * (rank-1) + ['1']) }$)
     ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
 
     IF (ASSOCIATED (SELF)) THEN

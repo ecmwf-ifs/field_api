@@ -1,7 +1,7 @@
 
 FC=/home/gmap/mrpm/marguina/install/gmkpack_support/wrapper/PGI217/mpif90 -O0 -g -acc=gpu -Mcuda -Mlarge_arrays
 
-all: main.x
+all: main.x cuda.x
 
 abor1.o: abor1.F90
 	$(FC) -c abor1.F90
@@ -25,6 +25,9 @@ field_helper_module.o: field_helper_module.fypp parkind1.o field_module.o yomhoo
 
 main.x: main.F90 field_helper_module.o field_module.o oml_mod.o yomhook.o abor1.o
 	$(FC) -o main.x main.F90 field_helper_module.o field_module.o oml_mod.o yomhook.o abor1.o
+
+cuda.x: cuda.F90
+	$(FC) -o cuda.x cuda.F90
 
 clean:
 	\rm -f *.x *.o *.mod *.a
