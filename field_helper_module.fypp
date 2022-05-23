@@ -112,8 +112,10 @@ CONTAINS
 
 #:for d in range (0, rank+1)
     SUBROUTINE COPY_DIM${d}$_CONTIGUOUS (HST, DEV, KDIR)
+    USE OPENACC
     ${dtype}$, POINTER :: HST (${shapes[rank]}$), DEV (${shapes[rank]}$)
     INTEGER (KIND=JPIM), INTENT (IN) :: KDIR
+    INTEGER (KIND=JPIM) :: ISIZE
     INTEGER :: ${', '.join (['J'] + list (map (lambda i: 'J' + str (i+1), range (d, rank))))}$
 
   #:for e in range (rank, d, -1)
@@ -122,8 +124,16 @@ CONTAINS
   #:set ar = ', '.join ([':'] * d  + list (map (lambda i: 'J' + str (i+1), range (d, rank))))
   #:set indent = '  ' * (rank - e)
     ${indent}$  IF (KDIR == NH2D) THEN
-    ${indent}$    DEV (${ar}$) = HST (${ar}$)
-    ${indent}$    !$acc update device (DEV (${ar}$))
+    #:if d == 0
+    ${indent}$    ISIZE = KIND (HST)
+    #:else
+    ${indent}$    ISIZE = KIND (HST) * SIZE (HST (${ar}$))
+    #:endif
+    ${indent}$    !$acc host_data use_device (DEV)
+    ${indent}$    CALL ACC_MEMCPY_TO_DEVICE (DEV (${ar}$), HST (${ar}$), ISIZE)
+    ${indent}$    !$acc end host_data
+!   ${indent}$    DEV (${ar}$) = HST (${ar}$)
+!   ${indent}$    !$acc update device (DEV (${ar}$))
     ${indent}$  ELSEIF (KDIR == ND2H) THEN
     ${indent}$    HST (${ar}$) = DEV (${ar}$)
     ${indent}$  ENDIF
