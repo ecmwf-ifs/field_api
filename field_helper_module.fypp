@@ -5,6 +5,8 @@ MODULE FIELD_HELPER_MODULE
 USE FIELD_MODULE
 USE YOMHOOK
 
+IMPLICIT NONE
+
 INTERFACE CREATE_TEMPORARY_LU
 #:for d in [2, 3, 4, 5]
   MODULE PROCEDURE CREATE_TEMPORARY_${d}$D_LU
@@ -49,6 +51,30 @@ CONTAINS
 
 #:for dtype, suffix, rank, default in field_descriptors
 #:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
+
+  INTEGER (KIND=JPIM) FUNCTION ${field_type_name}$_GET_LAST_CONTIGUOUS_DIMENSION (PTR) RESULT (IDIM)
+  ${dtype}$, POINTER :: PTR (${shapes[rank]}$)
+  INTEGER*8 :: ISTRIDE (${rank}$)
+  INTEGER (KIND=JPIM) :: J
+  ISTRIDE (1) = KIND (PTR)
+
+  DO J = 2, ${rank}$
+    ISTRIDE (J) = ISTRIDE (J-1) * SIZE (PTR, J-1) 
+  ENDDO
+
+#:for d in range (rank, 0, -1)
+  #:set ind0 = ['1'] * rank
+  #:set ind1 = ['1'] * (d - 1) + ['2'] + ['1'] * (rank - d)
+  IF (LOC (PTR (${', '.join (ind1)}$)) - LOC (PTR (${', '.join (ind0)}$)) == ISTRIDE (${d}$)) THEN
+    IDIM = ${d}$
+    RETURN
+  ENDIF
+
+#:endfor
+  IDIM = 0
+
+  END FUNCTION ${field_type_name}$_GET_LAST_CONTIGUOUS_DIMENSION
+
   FUNCTION ${field_type_name}$_GET_HOST_DATA_RDONLY(SELF) RESULT(PTR)
     TYPE(${field_type_name}$), POINTER, INTENT (IN) :: SELF
     ${dtype}$, TARGET, SAVE :: ZDUM (${ ', '.join (['0'] * (rank-1) + ['1']) }$)
@@ -62,48 +88,28 @@ CONTAINS
 
   END FUNCTION ${field_type_name}$_GET_HOST_DATA_RDONLY
 
-  FUNCTION ${field_type_name}$_GET_DEVICE_DATA_RDONLY(SELF) RESULT(PTR)
-    TYPE(${field_type_name}$), POINTER, INTENT (IN) :: SELF
-    ${dtype}$, TARGET, SAVE :: ZDUM (${ ', '.join (['0'] * (rank-1) + ['1']) }$)
-    ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
+  SUBROUTINE ${field_type_name}$_COPY_H2D (SRC, DST)
+  ${dtype}$, POINTER :: SRC (${shapes[rank]}$), DST (${shapes[rank]}$)
+  INTEGER (KIND=JPIM) :: IDIM
 
-    IF (ASSOCIATED (SELF)) THEN
-      IF (.NOT. ASSOCIATED (SELF%DEVPTR)) THEN
-        ALLOCATE (SELF%DEVPTR, MOLD=SELF%PTR)
-        CALL COPY (SELF%PTR, SELF%DEVPTR)
-!       !$acc enter data create (SELF%DEVPTR)
-      ENDIF
-      PTR (${lbptr (rank)}$) => SELF%DEVPTR (${','.join(':' for _ in range(rank))}$)
-    ELSE
-      PTR => ZDUM
-    ENDIF
+  IDIM = ${field_type_name}$_GET_LAST_CONTIGUOUS_DIMENSION (SRC)
 
-  CONTAINS
-    SUBROUTINE COPY (SRC, DST)
-    ${dtype}$, POINTER :: SRC (${shapes[rank]}$), DST (${shapes[rank]}$)
-    INTEGER*8 :: ISTRIDE (${rank}$)
-    ISTRIDE (1) = KIND (SRC)
-    DO J = 2, ${rank}$
-      ISTRIDE (J) = ISTRIDE (J-1) * SIZE (SRC, J-1) 
-    ENDDO
-    PRINT *, " ISTRIDE = ", ISTRIDE
-#:for d in range (rank, 0, -1)
+  SELECT CASE (IDIM)
+#:for d in range (rank, -1, -1)
   #:set ind0 = ['1'] * rank
   #:set ind1 = ['1'] * (d - 1) + ['2'] + ['1'] * (rank - d)
-    PRINT *, ${d}$, " ", LOC (PTR (${', '.join (ind1)}$)) - LOC (PTR (${', '.join (ind0)}$)), ISTRIDE (${d}$)
-    IF (LOC (PTR (${', '.join (ind1)}$)) - LOC (PTR (${', '.join (ind0)}$)) == ISTRIDE (${d}$)) THEN
+    CASE (${d}$)
       CALL COPY_DIM${d}$_CONTIGUOUS (SRC, DST)
-      RETURN
-    ENDIF
 #:endfor
-    CALL COPY_DIM0_CONTIGUOUS (SRC, DST)
-    END SUBROUTINE
+  END SELECT
+
+  CONTAINS
 
 #:for d in range (0, rank+1)
     SUBROUTINE COPY_DIM${d}$_CONTIGUOUS (SRC, DST)
     ${dtype}$, POINTER :: SRC (${shapes[rank]}$), DST (${shapes[rank]}$)
     INTEGER :: ${', '.join (['J'] + list (map (lambda i: 'J' + str (i+1), range (d, rank))))}$
-    PRINT *, " DIMENSION ", ${d}$, " CONTIGUOUS "
+
   #:for e in range (rank, d, -1)
     ${'  ' * (rank - e)}$DO J${e}$ = LBOUND (SRC, ${e}$), UBOUND (SRC, ${e}$)
   #:endfor
@@ -115,6 +121,33 @@ CONTAINS
     END SUBROUTINE
 
 #:endfor
+  END SUBROUTINE ${field_type_name}$_COPY_H2D
+
+  FUNCTION ${field_type_name}$_GET_DEVICE_DATA_ (SELF) RESULT(PTR)
+    TYPE(${field_type_name}$), POINTER, INTENT (IN) :: SELF
+    ${dtype}$, TARGET, SAVE :: ZDUM (${ ', '.join (['0'] * (rank-1) + ['1']) }$)
+    ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
+
+    IF (ASSOCIATED (SELF)) THEN
+      IF (.NOT. ASSOCIATED (SELF%DEVPTR)) THEN
+        ALLOCATE (SELF%DEVPTR, MOLD=SELF%PTR)
+        CALL ${field_type_name}$_COPY_H2D (SELF%PTR, SELF%DEVPTR)
+!       !$acc enter data create (SELF%DEVPTR)
+      ENDIF
+      PTR (${lbptr (rank)}$) => SELF%DEVPTR (${','.join(':' for _ in range(rank))}$)
+    ELSE
+      PTR => ZDUM
+    ENDIF
+
+  CONTAINS
+  END FUNCTION ${field_type_name}$_GET_DEVICE_DATA_
+
+  FUNCTION ${field_type_name}$_GET_DEVICE_DATA_RDONLY(SELF) RESULT(PTR)
+    TYPE(${field_type_name}$), POINTER, INTENT (IN) :: SELF
+    ${dtype}$, TARGET, SAVE :: ZDUM (${ ', '.join (['0'] * (rank-1) + ['1']) }$)
+    ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
+
+    PTR => ${field_type_name}$_GET_DEVICE_DATA_ (SELF)
 
   END FUNCTION ${field_type_name}$_GET_DEVICE_DATA_RDONLY
 
@@ -123,11 +156,7 @@ CONTAINS
     ${dtype}$, TARGET, SAVE :: ZDUM (${ ', '.join (['0'] * (rank-1) + ['1']) }$)
     ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
 
-    IF (ASSOCIATED (SELF)) THEN
-      PTR (${lbptr (rank)}$) => SELF%PTR (${','.join(':' for _ in range(rank))}$)
-    ELSE
-      PTR => ZDUM
-    ENDIF
+    PTR => ${field_type_name}$_GET_DEVICE_DATA_ (SELF)
 
   END FUNCTION ${field_type_name}$_GET_HOST_DATA_WRONLY
 
