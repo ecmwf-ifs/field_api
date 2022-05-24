@@ -93,11 +93,11 @@ CONTAINS
   SUBROUTINE ${field_type_name}$_COPY (HST, DEV, KDIR)
   ${dtype}$, POINTER :: HST (${shapes[rank]}$), DEV (${shapes[rank]}$)
   INTEGER (KIND=JPIM), INTENT (IN) :: KDIR
-  INTEGER (KIND=JPIM) :: IDIM
+  INTEGER (KIND=JPIM) :: JDIM
 
-  IDIM = ${field_type_name}$_GET_LAST_CONTIGUOUS_DIMENSION (HST)
+  JDIM = ${field_type_name}$_GET_LAST_CONTIGUOUS_DIMENSION (HST)
 
-  SELECT CASE (IDIM)
+  SELECT CASE (JDIM)
 #:for d in range (rank, -1, -1)
   #:set ind0 = ['1'] * rank
   #:set ind1 = ['1'] * (d - 1) + ['2'] + ['1'] * (rank - d)
