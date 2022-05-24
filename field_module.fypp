@@ -66,6 +66,7 @@ TYPE ${field_type_name}$
   LOGICAL :: OWNED = .TRUE.
 
   INTEGER(KIND=JPIM) :: LBOUNDS (${rank}$) = [${", ".join (["1"] * rank)}$]
+  INTEGER(KIND=JPIM) :: ISTATUS = 0
 
 CONTAINS
 
@@ -83,6 +84,8 @@ CONTAINS
 END TYPE ${field_type_name}$
 
 #:endfor
+
+INTEGER (KIND=JPIM), PARAMETER :: NDEVFRESH = B'00000001', NHSTFRESH = B'00000010'
 
 #:for rank in ranks
 TYPE FIELD_${rank}$D_PTR
@@ -264,6 +267,8 @@ CONTAINS
     SELF%NBLOCKS = SIZE(SELF%PTR, ${rank}$)
     SELF%BASE_PTR => NULL()
     SELF%FIDX = -1
+
+    SELF%ISTATUS = NHSTFRESH
 
     IF (.NOT. LLPERSISTENT) THEN
       IF (OML_MAX_THREADS() /= SIZE (DATA, ${rank}$)) THEN
