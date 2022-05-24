@@ -28,7 +28,7 @@ ALLOCATE (YLF3)
 YLF3 = FIELD_3D (DATA=ZDATA3 (:,1:3,:), PERSISTENT=.TRUE.)
 
 
-PRINT *, '-----------  HOST/HOST  -----------'
+PRINT *, '-----------  HOST  -----------'
 
 Z => GET_HOST_DATA_RDONLY (YLF3)
 
@@ -36,21 +36,24 @@ DO JLON = 1, NPROMA
   PRINT *, JLON, Z (JLON,1,1)
 ENDDO
 
-PRINT *, '-----------  DEVICE/HOST  -----------'
+PRINT *, '----------- DEVICE -----------'
 
 Z => GET_DEVICE_DATA_RDONLY (YLF3)
-
-DO JLON = 1, NPROMA
-  PRINT *, JLON, Z (JLON,1,1)
-ENDDO
-
-PRINT *, '----------- DEVICE/DEVICE -----------'
 
 !$acc serial present (Z)
 DO JLON = 1, NPROMA
   PRINT *, JLON, Z (JLON,1,1)
+   Z (JLON,1,1) = REAL (JLON * JLON, 8)
 ENDDO
 !$acc end serial
+
+PRINT *, '-----------  HOST  -----------'
+
+Z => GET_HOST_DATA_RDONLY (YLF3)
+
+DO JLON = 1, NPROMA
+  PRINT *, JLON, Z (JLON,1,1)
+ENDDO
 
 CALL YLF3%FINAL
 

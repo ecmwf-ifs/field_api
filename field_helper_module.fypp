@@ -73,7 +73,9 @@ CONTAINS
     ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
 
     IF (ASSOCIATED (SELF)) THEN
-!     CALL ${field_type_name}$_COPY (SELF%PTR, SELF%DEVPTR, ND2H)
+      IF (ASSOCIATED (SELF%DEVPTR)) THEN
+        CALL ${field_type_name}$_COPY (SELF%PTR, SELF%DEVPTR, ND2H)
+      ENDIF
       PTR (${lbptr (rank)}$) => SELF%PTR (${','.join(':' for _ in range(rank))}$)
     ELSE
       PTR => ZDUM
