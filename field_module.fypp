@@ -567,6 +567,11 @@ CONTAINS
     END IF
     NULLIFY(SELF%PTR)
     NULLIFY(SELF%VIEW)
+    IF (ASSOCIATED (SELF%DEVPTR)) THEN
+      !$acc exit data delete (SELF%DEVPTR)
+      DEALLOCATE (SELF%DEVPTR)
+      NULLIFY (SELF%DEVPTR)
+    ENDIF
   END SUBROUTINE ${field_type_name}$_FINAL
 
 #:endfor
