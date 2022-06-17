@@ -131,7 +131,7 @@ CONTAINS
   END SUBROUTINE ${field_type_name}$_COPY
 
   FUNCTION ${field_type_name}$_GET_HOST_DATA_ (SELF, MODE) RESULT (PTR)
-    TYPE(${field_type_name}$), POINTER, INTENT (INOUT) :: SELF
+    CLASS(${field_type_name}$), POINTER, INTENT (INOUT) :: SELF
     INTEGER (KIND=JPIM),                INTENT (IN) :: MODE
     ${dtype}$, TARGET, SAVE :: ZDUM (${ ', '.join ([dumsize] * (rank-1) + ['1']) }$)
     ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
@@ -152,7 +152,7 @@ CONTAINS
   END FUNCTION ${field_type_name}$_GET_HOST_DATA_
 
   FUNCTION ${field_type_name}$_GET_HOST_DATA_RDONLY (SELF) RESULT (PTR)
-    TYPE(${field_type_name}$), POINTER, INTENT (INOUT) :: SELF
+    CLASS(${field_type_name}$), POINTER, INTENT (INOUT) :: SELF
     ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
 
     PTR => ${field_type_name}$_GET_HOST_DATA_ (SELF, NRD)
@@ -160,7 +160,7 @@ CONTAINS
   END FUNCTION ${field_type_name}$_GET_HOST_DATA_RDONLY
 
   FUNCTION ${field_type_name}$_GET_HOST_DATA_RDWR (SELF) RESULT (PTR)
-    TYPE(${field_type_name}$), POINTER, INTENT (INOUT) :: SELF
+    CLASS(${field_type_name}$), POINTER, INTENT (INOUT) :: SELF
     ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
 
     PTR => ${field_type_name}$_GET_HOST_DATA_ (SELF, IOR (NRD, NWR))
@@ -168,7 +168,7 @@ CONTAINS
   END FUNCTION ${field_type_name}$_GET_HOST_DATA_RDWR
 
   FUNCTION ${field_type_name}$_GET_DEVICE_DATA_ (SELF, MODE) RESULT(PTR)
-    TYPE(${field_type_name}$), POINTER, INTENT (INOUT) :: SELF
+    CLASS(${field_type_name}$), POINTER, INTENT (INOUT) :: SELF
     INTEGER (KIND=JPIM),                INTENT (IN) :: MODE
     ${dtype}$, TARGET, SAVE :: ZDUM (${ ', '.join ([dumsize] * (rank-1) + ['1']) }$)
     ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
@@ -193,7 +193,7 @@ CONTAINS
   END FUNCTION ${field_type_name}$_GET_DEVICE_DATA_
 
   FUNCTION ${field_type_name}$_GET_DEVICE_DATA_RDONLY (SELF) RESULT (PTR)
-    TYPE(${field_type_name}$), POINTER, INTENT (INOUT) :: SELF
+    CLASS(${field_type_name}$), POINTER, INTENT (INOUT) :: SELF
     ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
 
     PTR => ${field_type_name}$_GET_DEVICE_DATA_ (SELF, NRD)
@@ -201,7 +201,7 @@ CONTAINS
   END FUNCTION ${field_type_name}$_GET_DEVICE_DATA_RDONLY
 
   FUNCTION ${field_type_name}$_GET_DEVICE_DATA_RDWR (SELF) RESULT (PTR)
-    TYPE(${field_type_name}$), POINTER, INTENT (INOUT) :: SELF
+    CLASS(${field_type_name}$), POINTER, INTENT (INOUT) :: SELF
     ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
 
     PTR => ${field_type_name}$_GET_DEVICE_DATA_ (SELF, IOR (NRD, NWR))
@@ -214,7 +214,7 @@ CONTAINS
 #:for d in dims
   SUBROUTINE CREATE_TEMPORARY_${type}$${d}$D_LU (FIELD_PTR, UBOUNDS, LBOUNDS, PERSISTENT) 
 
-    TYPE(FIELD_${type}$${d}$D), POINTER :: FIELD_PTR
+    CLASS(FIELD_${type}$${d}$D_OWNER), POINTER :: FIELD_PTR
     INTEGER(KIND=JPIM), INTENT(IN) :: UBOUNDS (${d}$)
     INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN) :: LBOUNDS (${d}$)
     LOGICAL, OPTIONAL, INTENT(IN) :: PERSISTENT

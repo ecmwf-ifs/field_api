@@ -20,7 +20,7 @@ IMPLICIT NONE
 
 #:for dtype, suffix, rank, default in field_descriptors
 #:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
-TYPE ${field_type_name}$
+TYPE :: ${field_type_name}$
   ! A FIELD encapsulates a single multi-dimensional array and can
   ! provide block-indexed "views" of the data for automating the
   ! allocation and parallel iterration of NPROMA blocks.
@@ -63,25 +63,36 @@ TYPE ${field_type_name}$
   ! Flag indicating the use a single block-buffer per thread
   LOGICAL :: THREAD_BUFFER = .FALSE.
   ! Flag indicating whether we own the allocated base array
-  LOGICAL :: OWNED = .TRUE.
 
   INTEGER(KIND=JPIM) :: LBOUNDS (${rank}$) = [${", ".join (["1"] * rank)}$]
   INTEGER(KIND=JPIM) :: ISTATUS = 0
 
 CONTAINS
 
-  PROCEDURE :: CLONE => ${field_type_name}$_CLONE
+  PROCEDURE :: FINAL => ${field_type_name}$_FINAL
   PROCEDURE :: UPDATE_VIEW => ${field_type_name}$_UPDATE_VIEW
   PROCEDURE :: EXTRACT_VIEW => ${field_type_name}$_EXTRACT_VIEW
-  PROCEDURE :: GET_VIEW => ${field_type_name}$_GET_VIEW
-  PROCEDURE :: FINAL => ${field_type_name}$_FINAL
 
   ! GPU-specific device data transfer API
   PROCEDURE :: CREATE_DEVICE => ${field_type_name}$_CREATE_DEVICE
-  PROCEDURE :: UPDATE_DEVICE => ${field_type_name}$_UPDATE_DEVICE
-  PROCEDURE :: UPDATE_HOST => ${field_type_name}$_UPDATE_HOST
-  PROCEDURE :: DELETE_DEVICE => ${field_type_name}$_DELETE_DEVICE
 END TYPE ${field_type_name}$
+
+#:for dm in data_management_type
+TYPE, EXTENDS(${field_type_name}$) :: ${field_type_name}$_${dm}$
+CONTAINS
+  PROCEDURE :: FINAL => ${field_type_name}$_${dm}$_FINAL
+  PROCEDURE :: CLONE => ${field_type_name}$_${dm}$_CLONE
+  PROCEDURE :: UPDATE_VIEW => ${field_type_name}$_${dm}$_UPDATE_VIEW
+  PROCEDURE :: EXTRACT_VIEW => ${field_type_name}$_${dm}$_EXTRACT_VIEW
+  PROCEDURE :: GET_VIEW => ${field_type_name}$_${dm}$_GET_VIEW
+
+  ! GPU-specific device data transfer API
+  PROCEDURE :: UPDATE_DEVICE => ${field_type_name}$_${dm}$_UPDATE_DEVICE
+  PROCEDURE :: UPDATE_HOST => ${field_type_name}$_${dm}$_UPDATE_HOST
+  PROCEDURE :: DELETE_DEVICE => ${field_type_name}$_${dm}$_DELETE_DEVICE
+END TYPE ${field_type_name}$_${dm}$
+
+#:endfor
 
 #:endfor
 
@@ -137,28 +148,32 @@ END INTERFACE FIELD_CREATE_DEVICE
 INTERFACE FIELD_UPDATE_DEVICE
 #:for dtype, suffix, rank, default in field_descriptors
 #:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
-  MODULE PROCEDURE :: ${field_type_name}$_UPDATE_DEVICE
+  MODULE PROCEDURE :: ${field_type_name}$_WRAPPER_UPDATE_DEVICE
+  MODULE PROCEDURE :: ${field_type_name}$_OWNER_UPDATE_DEVICE
 #:endfor
 END INTERFACE FIELD_UPDATE_DEVICE
 
 INTERFACE FIELD_UPDATE_HOST
 #:for dtype, suffix, rank, default in field_descriptors
 #:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
-  MODULE PROCEDURE :: ${field_type_name}$_UPDATE_HOST
+  MODULE PROCEDURE :: ${field_type_name}$_WRAPPER_UPDATE_HOST
+  MODULE PROCEDURE :: ${field_type_name}$_OWNER_UPDATE_HOST
 #:endfor
 END INTERFACE FIELD_UPDATE_HOST
 
 INTERFACE FIELD_DELETE_DEVICE
 #:for dtype, suffix, rank, default in field_descriptors
 #:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
-  MODULE PROCEDURE :: ${field_type_name}$_DELETE_DEVICE
+  MODULE PROCEDURE :: ${field_type_name}$_WRAPPER_DELETE_DEVICE
+  MODULE PROCEDURE :: ${field_type_name}$_OWNER_DELETE_DEVICE
 #:endfor
 END INTERFACE FIELD_DELETE_DEVICE
 
 INTERFACE GET_DEVICE_DATA
 #:for dtype, suffix, rank, default in field_descriptors
 #:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
-  MODULE PROCEDURE :: ${field_type_name}$_GET_DEVICE_DATA
+  MODULE PROCEDURE :: ${field_type_name}$_WRAPPER_GET_DEVICE_DATA
+  MODULE PROCEDURE :: ${field_type_name}$_OWNER_GET_DEVICE_DATA
 #:endfor
 END INTERFACE GET_DEVICE_DATA
 
@@ -238,7 +253,6 @@ CONTAINS
     END IF
     SELF%ACTIVE = .FALSE.
     SELF%THREAD_BUFFER = .FALSE.
-    SELF%OWNED = .FALSE.
     SELF%NBLOCKS = 0
     SELF%BASE_PTR => NULL()
     SELF%FIDX = -1
@@ -250,7 +264,7 @@ CONTAINS
 #:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
   FUNCTION ${field_type_name}$_WRAP(DATA, PERSISTENT, LBOUNDS) RESULT(SELF)
     ! Create FIELD object by wrapping existing data
-    TYPE(${field_type_name}$), TARGET :: SELF
+    TYPE(${field_type_name}$_WRAPPER), TARGET :: SELF
     ${dtype}$, TARGET, INTENT(IN) :: DATA(${shapes[rank]}$)
     LOGICAL, INTENT(IN), OPTIONAL :: PERSISTENT
     INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: LBOUNDS(${rank}$)
@@ -263,7 +277,6 @@ CONTAINS
     SELF%PTR => DATA
     SELF%ACTIVE = .TRUE.
     SELF%THREAD_BUFFER = .NOT. LLPERSISTENT
-    SELF%OWNED = .FALSE.
     SELF%NBLOCKS = SIZE(SELF%PTR, ${rank}$)
     SELF%BASE_PTR => NULL()
     SELF%FIDX = -1
@@ -285,7 +298,7 @@ CONTAINS
   FUNCTION ${field_type_name}$_WRAP_PACKED(DATA, IDX, LBOUNDS) RESULT(SELF)
     ! Create FIELD object packed in a multi-field buffer by storing a
     ! contiguous pointer to existing data and an index.
-    TYPE(${field_type_name}$), TARGET :: SELF
+    TYPE(${field_type_name}$_WRAPPER), TARGET :: SELF
     ${dtype}$, TARGET, INTENT(IN) :: DATA(${shapes[rank+1]}$)
     INTEGER(KIND=JPIM), INTENT(IN) :: IDX
     INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: LBOUNDS(${rank}$)
@@ -295,7 +308,6 @@ CONTAINS
     SELF%PTR => DATA(${shapes[rank-1]}$,IDX,:)
     SELF%ACTIVE = .TRUE.
     SELF%THREAD_BUFFER = .FALSE.
-    SELF%OWNED = .FALSE.
     SELF%NBLOCKS = SIZE(SELF%PTR, ${rank}$)
     SELF%BASE_PTR => DATA
     SELF%FIDX = IDX
@@ -309,7 +321,7 @@ CONTAINS
     ! Create FIELD object by explicitly allocating new data
     !
     ! Please note that SHAPE is the conceptual shape without the block dimension
-    TYPE(${field_type_name}$), TARGET :: SELF
+    CLASS(${field_type_name}$_OWNER), TARGET :: SELF
     INTEGER(KIND=JPIM), INTENT(IN) :: SHAPE(${rank-1}$)
     INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: NBLOCKS
     LOGICAL, INTENT(IN), OPTIONAL :: PERSISTENT
@@ -336,7 +348,6 @@ CONTAINS
     ALLOCATE(SELF%DATA(${','.join('SHAPE(%d)'%(r+1) for r in range(rank-1))}$,NBLK))
     SELF%PTR => SELF%DATA
     SELF%ACTIVE = .TRUE.
-    SELF%OWNED = .TRUE.
     SELF%NBLOCKS = SIZE(SELF%DATA, ${rank}$)
     SELF%BASE_PTR => NULL()
     SELF%FIDX = -1
@@ -344,7 +355,7 @@ CONTAINS
 
   FUNCTION ${field_type_name}$_ALLOCATE(SHAPE, NBLOCKS, PERSISTENT, LBOUNDS) RESULT(SELF)
     ! WARNING : Using this function kills performance when the %DATA member is allocated
-    TYPE(${field_type_name}$), TARGET :: SELF
+    TYPE(${field_type_name}$_OWNER), TARGET :: SELF
     INTEGER(KIND=JPIM), INTENT(IN) :: SHAPE(${rank-1}$)
     INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: NBLOCKS
     LOGICAL, INTENT(IN), OPTIONAL :: PERSISTENT
@@ -359,26 +370,35 @@ CONTAINS
 
 #:for dtype, suffix, rank, default in field_descriptors
 #:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
-  FUNCTION ${field_type_name}$_CLONE(SELF) RESULT(NEWOBJ)
+  FUNCTION ${field_type_name}$_OWNER_CLONE(SELF) RESULT(NEWOBJ)
     ! Clone (deep-copy) this FIELD object, keeping the DATA pointer
     ! intact, but replicating view pointers.
-    CLASS(${field_type_name}$) :: SELF
-    TYPE(${field_type_name}$), POINTER :: NEWOBJ
+    CLASS(${field_type_name}$_OWNER) :: SELF
+    TYPE(${field_type_name}$_OWNER), POINTER :: NEWOBJ
 
     ALLOCATE(NEWOBJ)
     ! For owned storage data, re-allocate but do not copy data over
-    IF (SELF%OWNED) THEN
-      ALLOCATE(NEWOBJ%DATA, MOLD=SELF%DATA)
-      NEWOBJ%PTR => NEWOBJ%DATA
-    ELSE
-      NEWOBJ%PTR => SELF%PTR
-    END IF
+    ALLOCATE(NEWOBJ%DATA, MOLD=SELF%DATA)
+    NEWOBJ%PTR => NEWOBJ%DATA
     NEWOBJ%VIEW => NULL()
     NEWOBJ%NBLOCKS = SELF%NBLOCKS
     NEWOBJ%THREAD_BUFFER = SELF%THREAD_BUFFER
-    NEWOBJ%OWNED = .FALSE.
     NEWOBJ%LBOUNDS = SELF%LBOUNDS
-  END FUNCTION ${field_type_name}$_CLONE
+  END FUNCTION ${field_type_name}$_OWNER_CLONE
+
+  FUNCTION ${field_type_name}$_WRAPPER_CLONE(SELF) RESULT(NEWOBJ)
+    ! Clone (deep-copy) this FIELD object, keeping the DATA pointer
+    ! intact, but replicating view pointers.
+    CLASS(${field_type_name}$_WRAPPER) :: SELF
+    TYPE(${field_type_name}$_WRAPPER), POINTER :: NEWOBJ
+
+    ALLOCATE(NEWOBJ)
+    NEWOBJ%PTR => SELF%PTR
+    NEWOBJ%VIEW => NULL()
+    NEWOBJ%NBLOCKS = SELF%NBLOCKS
+    NEWOBJ%THREAD_BUFFER = SELF%THREAD_BUFFER
+    NEWOBJ%LBOUNDS = SELF%LBOUNDS
+  END FUNCTION ${field_type_name}$_WRAPPER_CLONE
 
 #:endfor
 
@@ -390,15 +410,6 @@ CONTAINS
     INTEGER(KIND=JPIM), INTENT(IN) :: BLOCK_INDEX
     INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: BLOCK_SIZE
     LOGICAL, OPTIONAL, INTENT(IN) :: ZERO
-    INTEGER(KIND=JPIM) :: IDX
-
-    IDX = BLOCK_INDEX
-    IF (SELF%THREAD_BUFFER) IDX = OML_MY_THREAD()
-    IF (SELF%ACTIVE .AND. SELF%OWNED) THEN
-      SELF%VIEW (${lbptr (rank-1)}$) => SELF%DATA(${','.join(':' for _ in range(rank-1))}$,IDX)
-    ELSEIF (SELF%ACTIVE .AND. .NOT. SELF%OWNED) THEN
-      SELF%VIEW (${lbptr (rank-1)}$) => SELF%PTR(${','.join(':' for _ in range(rank-1))}$,IDX)
-    END IF
 
     IF (PRESENT(BLOCK_SIZE) .AND. BLOCK_INDEX == SELF%NBLOCKS) THEN
       ! Fill the the buffer by replicating the last entry
@@ -409,6 +420,40 @@ CONTAINS
       IF (ZERO) SELF%VIEW(${shapes[rank-1]}$) = ${default}$
     END IF
   END SUBROUTINE ${field_type_name}$_UPDATE_VIEW
+
+  SUBROUTINE ${field_type_name}$_WRAPPER_UPDATE_VIEW(SELF, BLOCK_INDEX, BLOCK_SIZE, ZERO)
+    ! Sets the view pointer FIELD%MP to the block of the given index
+    CLASS(${field_type_name}$_WRAPPER), TARGET :: SELF
+    INTEGER(KIND=JPIM), INTENT(IN) :: BLOCK_INDEX
+    INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: BLOCK_SIZE
+    LOGICAL, OPTIONAL, INTENT(IN) :: ZERO
+    INTEGER(KIND=JPIM) :: IDX
+
+    IDX = BLOCK_INDEX
+    IF (SELF%THREAD_BUFFER) IDX = OML_MY_THREAD()
+    IF (SELF%ACTIVE) THEN
+      SELF%VIEW (${lbptr (rank-1)}$) => SELF%PTR(${','.join(':' for _ in range(rank-1))}$,IDX)
+    END IF
+
+    CALL SELF%${field_type_name}$%UPDATE_VIEW(BLOCK_INDEX, BLOCK_SIZE, ZERO)
+  END SUBROUTINE ${field_type_name}$_WRAPPER_UPDATE_VIEW
+
+  SUBROUTINE ${field_type_name}$_OWNER_UPDATE_VIEW(SELF, BLOCK_INDEX, BLOCK_SIZE, ZERO)
+    ! Sets the view pointer FIELD%MP to the block of the given index
+    CLASS(${field_type_name}$_OWNER), TARGET :: SELF
+    INTEGER(KIND=JPIM), INTENT(IN) :: BLOCK_INDEX
+    INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: BLOCK_SIZE
+    LOGICAL, OPTIONAL, INTENT(IN) :: ZERO
+    INTEGER(KIND=JPIM) :: IDX
+
+    IDX = BLOCK_INDEX
+    IF (SELF%THREAD_BUFFER) IDX = OML_MY_THREAD()
+    IF (SELF%ACTIVE) THEN
+      SELF%VIEW (${lbptr (rank-1)}$) => SELF%DATA(${','.join(':' for _ in range(rank-1))}$,IDX)
+    END IF
+
+    CALL SELF%${field_type_name}$%UPDATE_VIEW(BLOCK_INDEX, BLOCK_SIZE, ZERO)
+  END SUBROUTINE ${field_type_name}$_OWNER_UPDATE_VIEW
 
 #:endfor
 
@@ -421,17 +466,6 @@ CONTAINS
     INTEGER(KIND=JPIM), INTENT(IN) :: BLOCK_INDEX
     INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: BLOCK_SIZE
     LOGICAL, OPTIONAL, INTENT(IN) :: ZERO
-    INTEGER(KIND=JPIM) :: IDX
-
-    IDX = BLOCK_INDEX
-    IF (SELF%THREAD_BUFFER) IDX = OML_MY_THREAD()
-    IF (SELF%ACTIVE .AND. SELF%OWNED) THEN
-      VIEW_PTR (${lbptr (rank-1)}$)  => SELF%DATA(${','.join(':' for _ in range(rank-1))}$,IDX)
-    ELSEIF (SELF%ACTIVE .AND. .NOT. SELF%OWNED) THEN
-      VIEW_PTR (${lbptr (rank-1)}$) => SELF%PTR(${','.join(':' for _ in range(rank-1))}$,IDX)
-    ELSE
-      VIEW_PTR (${lbptr (rank-1)}$) => SELF%VIEW  ! Set to NaN'd field buffer
-    END IF
 
     IF (PRESENT(BLOCK_SIZE) .AND. BLOCK_INDEX == SELF%NBLOCKS) THEN
       ! Fill the the buffer by replicating the last entry
@@ -443,13 +477,53 @@ CONTAINS
     END IF
   END SUBROUTINE ${field_type_name}$_EXTRACT_VIEW
 
+  SUBROUTINE ${field_type_name}$_OWNER_EXTRACT_VIEW(SELF, VIEW_PTR, BLOCK_INDEX, BLOCK_SIZE, ZERO)
+    ! Updates internal view and exports it to an external pointer
+    CLASS(${field_type_name}$_OWNER), TARGET :: SELF
+    ${dtype}$, POINTER, INTENT(INOUT) :: VIEW_PTR(${shapes[rank-1]}$)
+    INTEGER(KIND=JPIM), INTENT(IN) :: BLOCK_INDEX
+    INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: BLOCK_SIZE
+    LOGICAL, OPTIONAL, INTENT(IN) :: ZERO
+    INTEGER(KIND=JPIM) :: IDX
+
+    IDX = BLOCK_INDEX
+    IF (SELF%THREAD_BUFFER) IDX = OML_MY_THREAD()
+    IF (SELF%ACTIVE) THEN
+      VIEW_PTR (${lbptr (rank-1)}$)  => SELF%DATA(${','.join(':' for _ in range(rank-1))}$,IDX)
+    ELSE
+      VIEW_PTR (${lbptr (rank-1)}$) => SELF%VIEW  ! Set to NaN'd field buffer
+    END IF
+
+    CALL SELF%${field_type_name}$%EXTRACT_VIEW(VIEW_PTR, BLOCK_INDEX, BLOCK_SIZE, ZERO)
+  END SUBROUTINE ${field_type_name}$_OWNER_EXTRACT_VIEW
+
+  SUBROUTINE ${field_type_name}$_WRAPPER_EXTRACT_VIEW(SELF, VIEW_PTR, BLOCK_INDEX, BLOCK_SIZE, ZERO)
+    ! Updates internal view and exports it to an external pointer
+    CLASS(${field_type_name}$_WRAPPER), TARGET :: SELF
+    ${dtype}$, POINTER, INTENT(INOUT) :: VIEW_PTR(${shapes[rank-1]}$)
+    INTEGER(KIND=JPIM), INTENT(IN) :: BLOCK_INDEX
+    INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: BLOCK_SIZE
+    LOGICAL, OPTIONAL, INTENT(IN) :: ZERO
+    INTEGER(KIND=JPIM) :: IDX
+
+    IDX = BLOCK_INDEX
+    IF (SELF%THREAD_BUFFER) IDX = OML_MY_THREAD()
+    IF (SELF%ACTIVE) THEN
+      VIEW_PTR (${lbptr (rank-1)}$) => SELF%PTR(${','.join(':' for _ in range(rank-1))}$,IDX)
+    ELSE
+      VIEW_PTR (${lbptr (rank-1)}$) => SELF%VIEW  ! Set to NaN'd field buffer
+    END IF
+
+    CALL SELF%${field_type_name}$%EXTRACT_VIEW(VIEW_PTR, BLOCK_INDEX, BLOCK_SIZE, ZERO)
+  END SUBROUTINE ${field_type_name}$_WRAPPER_EXTRACT_VIEW
+
 #:endfor
 
 #:for dtype, suffix, rank, default in field_descriptors
 #:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
-  FUNCTION ${field_type_name}$_GET_VIEW(SELF, BLOCK_INDEX, BLOCK_SIZE, ZERO) RESULT(VIEW_PTR)
+  FUNCTION ${field_type_name}$_WRAPPER_GET_VIEW(SELF, BLOCK_INDEX, BLOCK_SIZE, ZERO) RESULT(VIEW_PTR)
     ! Updates internal view and exports it to an external pointer
-    CLASS(${field_type_name}$), TARGET :: SELF
+    CLASS(${field_type_name}$_WRAPPER), TARGET :: SELF
     ${dtype}$, POINTER :: VIEW_PTR(${shapes[rank-1]}$)
     INTEGER(KIND=JPIM), INTENT(IN) :: BLOCK_INDEX
     INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: BLOCK_SIZE
@@ -458,9 +532,7 @@ CONTAINS
 
     IDX = BLOCK_INDEX
     IF (SELF%THREAD_BUFFER) IDX = OML_MY_THREAD()
-    IF (SELF%ACTIVE .AND. SELF%OWNED) THEN
-      VIEW_PTR (${lbptr (rank-1)}$) => SELF%DATA(${','.join(':' for _ in range(rank-1))}$,IDX)
-    ELSEIF (SELF%ACTIVE .AND. .NOT. SELF%OWNED) THEN
+    IF (SELF%ACTIVE) THEN
       VIEW_PTR (${lbptr (rank-1)}$) => SELF%PTR(${','.join(':' for _ in range(rank-1))}$,IDX)
     ELSE
       VIEW_PTR (${lbptr (rank-1)}$) => SELF%VIEW  ! Set to NaN'd field buffer
@@ -476,7 +548,36 @@ CONTAINS
     IF (PRESENT(ZERO)) THEN
       IF (ZERO) VIEW_PTR(${shapes[rank-1]}$) = ${default}$
     END IF
-  END FUNCTION ${field_type_name}$_GET_VIEW
+  END FUNCTION ${field_type_name}$_WRAPPER_GET_VIEW
+
+  FUNCTION ${field_type_name}$_OWNER_GET_VIEW(SELF, BLOCK_INDEX, BLOCK_SIZE, ZERO) RESULT(VIEW_PTR)
+    ! Updates internal view and exports it to an external pointer
+    CLASS(${field_type_name}$_OWNER), TARGET :: SELF
+    ${dtype}$, POINTER :: VIEW_PTR(${shapes[rank-1]}$)
+    INTEGER(KIND=JPIM), INTENT(IN) :: BLOCK_INDEX
+    INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: BLOCK_SIZE
+    LOGICAL, OPTIONAL, INTENT(IN) :: ZERO
+    INTEGER(KIND=JPIM) :: IDX
+
+    IDX = BLOCK_INDEX
+    IF (SELF%THREAD_BUFFER) IDX = OML_MY_THREAD()
+    IF (SELF%ACTIVE) THEN
+      VIEW_PTR (${lbptr (rank-1)}$) => SELF%DATA(${','.join(':' for _ in range(rank-1))}$,IDX)
+    ELSE
+      VIEW_PTR (${lbptr (rank-1)}$) => SELF%VIEW  ! Set to NaN'd field buffer
+    END IF
+
+    IF (PRESENT(BLOCK_SIZE)) THEN
+      IF (BLOCK_INDEX == SELF%NBLOCKS) THEN
+        ! Fill the the buffer by replicating the last entry
+        CALL FILL_BUFFER(VIEW_PTR, INDEX=BLOCK_SIZE)
+      END IF
+    END IF
+
+    IF (PRESENT(ZERO)) THEN
+      IF (ZERO) VIEW_PTR(${shapes[rank-1]}$) = ${default}$
+    END IF
+  END FUNCTION ${field_type_name}$_OWNER_GET_VIEW
 
 #:endfor
 
@@ -494,66 +595,80 @@ CONTAINS
 
 #:for dtype, suffix, rank, default in field_descriptors
 #:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
-  FUNCTION ${field_type_name}$_GET_DEVICE_DATA(SELF) RESULT(DEVPTR)
+  FUNCTION ${field_type_name}$_WRAPPER_GET_DEVICE_DATA(SELF) RESULT(DEVPTR)
     ! Initialize a copy of this field on GPU device
-    CLASS(${field_type_name}$), TARGET :: SELF
+    CLASS(${field_type_name}$_WRAPPER), TARGET :: SELF
     ${dtype}$, POINTER, CONTIGUOUS :: DEVPTR(${shapes[rank]}$)
 
-    IF (SELF%OWNED) THEN
-      DEVPTR (${lbptr (rank)}$) => SELF%DATA
-    ELSE
-      DEVPTR (${lbptr (rank)}$) => SELF%DEVPTR
-    END IF
-  END FUNCTION ${field_type_name}$_GET_DEVICE_DATA
+    DEVPTR (${lbptr (rank)}$) => SELF%DEVPTR
+  END FUNCTION ${field_type_name}$_WRAPPER_GET_DEVICE_DATA
+
+  FUNCTION ${field_type_name}$_OWNER_GET_DEVICE_DATA(SELF) RESULT(DEVPTR)
+    ! Initialize a copy of this field on GPU device
+    CLASS(${field_type_name}$_OWNER), TARGET :: SELF
+    ${dtype}$, POINTER, CONTIGUOUS :: DEVPTR(${shapes[rank]}$)
+
+    DEVPTR (${lbptr (rank)}$) => SELF%DATA
+  END FUNCTION ${field_type_name}$_OWNER_GET_DEVICE_DATA
 
 #:endfor
 
 #:for dtype, suffix, rank, default in field_descriptors
 #:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
-  SUBROUTINE ${field_type_name}$_UPDATE_DEVICE(SELF)
+  SUBROUTINE ${field_type_name}$_WRAPPER_UPDATE_DEVICE(SELF)
     ! Create a copy of this field on device and copy data over
-    CLASS(${field_type_name}$), TARGET :: SELF
+    CLASS(${field_type_name}$_WRAPPER), TARGET :: SELF
 
-    IF (SELF%OWNED) THEN
 !$acc enter data copyin(SELF%DATA)
-      SELF%DEVPTR => SELF%DATA
-    ELSE
-      ALLOCATE(SELF%DEVPTR, SOURCE=SELF%PTR)
+    SELF%DEVPTR => SELF%DATA
+  END SUBROUTINE ${field_type_name}$_WRAPPER_UPDATE_DEVICE
+
+  SUBROUTINE ${field_type_name}$_OWNER_UPDATE_DEVICE(SELF)
+    ! Create a copy of this field on device and copy data over
+    CLASS(${field_type_name}$_OWNER), TARGET :: SELF
+
+    ALLOCATE(SELF%DEVPTR, SOURCE=SELF%PTR)
 !$acc enter data copyin(SELF%DEVPTR)
-    END IF
-  END SUBROUTINE ${field_type_name}$_UPDATE_DEVICE
+  END SUBROUTINE ${field_type_name}$_OWNER_UPDATE_DEVICE
 
 #:endfor
 
 #:for dtype, suffix, rank, default in field_descriptors
 #:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
-  SUBROUTINE ${field_type_name}$_UPDATE_HOST(SELF)
+  SUBROUTINE ${field_type_name}$_WRAPPER_UPDATE_HOST(SELF)
     ! Synchronize device data back to host
-    CLASS(${field_type_name}$) :: SELF
+    CLASS(${field_type_name}$_WRAPPER) :: SELF
 
-    IF (SELF%OWNED) THEN
-      !$acc exit data copyout(SELF%DATA)
-    ELSE
-      !$acc exit data copyout(SELF%DEVPTR)
-      SELF%PTR(${shapes[rank]}$) = SELF%DEVPTR(${shapes[rank]}$)
-    END IF
-  END SUBROUTINE ${field_type_name}$_UPDATE_HOST
+    !$acc exit data copyout(SELF%DEVPTR)
+    SELF%PTR(${shapes[rank]}$) = SELF%DEVPTR(${shapes[rank]}$)
+  END SUBROUTINE ${field_type_name}$_WRAPPER_UPDATE_HOST
+
+  SUBROUTINE ${field_type_name}$_OWNER_UPDATE_HOST(SELF)
+    ! Synchronize device data back to host
+    CLASS(${field_type_name}$_OWNER) :: SELF
+
+    !$acc exit data copyout(SELF%DATA)
+  END SUBROUTINE ${field_type_name}$_OWNER_UPDATE_HOST
 
 #:endfor
 
   #:for dtype, suffix, rank, default in field_descriptors
 #:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
-  SUBROUTINE ${field_type_name}$_DELETE_DEVICE(SELF)
+  SUBROUTINE ${field_type_name}$_WRAPPER_DELETE_DEVICE(SELF)
     ! Initialize a copy of this field on GPU device
-    CLASS(${field_type_name}$), TARGET :: SELF
+    CLASS(${field_type_name}$_WRAPPER), TARGET :: SELF
 
 !$acc exit data delete(SELF%DEVPTR)
-    IF (SELF%OWNED) THEN
-      NULLIFY(SELF%DEVPTR)
-    ELSE
-      DEALLOCATE(SELF%DEVPTR)
-    END IF
-  END SUBROUTINE ${field_type_name}$_DELETE_DEVICE
+    DEALLOCATE(SELF%DEVPTR)
+  END SUBROUTINE ${field_type_name}$_WRAPPER_DELETE_DEVICE
+
+  SUBROUTINE ${field_type_name}$_OWNER_DELETE_DEVICE(SELF)
+    ! Initialize a copy of this field on GPU device
+    CLASS(${field_type_name}$_OWNER), TARGET :: SELF
+
+!$acc exit data delete(SELF%DEVPTR)
+    NULLIFY(SELF%DEVPTR)
+  END SUBROUTINE ${field_type_name}$_OWNER_DELETE_DEVICE
 
 #:endfor
 
@@ -562,9 +677,6 @@ CONTAINS
   SUBROUTINE ${field_type_name}$_FINAL(SELF)
     ! Finalizes field and dealloactes owned data
     CLASS(${field_type_name}$) :: SELF
-    IF (SELF%OWNED) THEN
-      DEALLOCATE(SELF%DATA)
-    END IF
     NULLIFY(SELF%PTR)
     NULLIFY(SELF%VIEW)
     IF (ASSOCIATED (SELF%DEVPTR)) THEN
@@ -573,6 +685,19 @@ CONTAINS
       NULLIFY (SELF%DEVPTR)
     ENDIF
   END SUBROUTINE ${field_type_name}$_FINAL
+
+  SUBROUTINE ${field_type_name}$_WRAPPER_FINAL(SELF)
+    ! Finalizes field and dealloactes owned data
+    CLASS(${field_type_name}$_WRAPPER) :: SELF
+    CALL SELF%${field_type_name}$%FINAL
+  END SUBROUTINE ${field_type_name}$_WRAPPER_FINAL
+
+  SUBROUTINE ${field_type_name}$_OWNER_FINAL(SELF)
+    ! Finalizes field and dealloactes owned data
+    CLASS(${field_type_name}$_OWNER) :: SELF
+    DEALLOCATE(SELF%DATA)
+    CALL SELF%${field_type_name}$%FINAL
+  END SUBROUTINE ${field_type_name}$_OWNER_FINAL
 
 #:endfor
 

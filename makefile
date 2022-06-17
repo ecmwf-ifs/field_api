@@ -1,5 +1,5 @@
 
-FC=/home/gmap/mrpm/marguina/install/gmkpack_support/wrapper/PGI217/mpif90 -O0 -g -acc=gpu -Mcuda -Mlarge_arrays
+FC=/home/gmap/mrpm/marguina/install/gmkpack_support/wrapper/PGI217/mpif90 -O0 -g -acc=gpu -Mcuda -Mlarge_arrays -Wall -Wextra
 
 all: main.x cuda.x
 
