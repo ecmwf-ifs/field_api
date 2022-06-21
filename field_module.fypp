@@ -37,13 +37,6 @@ TYPE :: ${field_type_name}$
   ${dtype}$, POINTER :: PTR(${shapes[rank]}$) => NULL()
   ${dtype}$, ALLOCATABLE :: DATA(${shapes[rank]}$)
 
-  ! For wrapping discontiguous fields in co-allocated storage
-  ! arrays (eg. GFL/GMV) also store a CONTIGUOUS base pointer
-  ! and integer index, to allow block pointer extraction that
-  ! conforms with CUDA device pointers in PGI.
-  ${dtype}$, POINTER, CONTIGUOUS :: BASE_PTR(${shapes[rank+1]}$) => NULL()
-  INTEGER(KIND=JPIM) :: FIDX
-
   ! A separate data pointer that can be used to create
   ! a contiguous chunk of host memory to cleanly map to
   ! device, should the %DATA pointer be discontiguous.
@@ -240,8 +233,6 @@ CONTAINS
     SELF%ACTIVE = .FALSE.
     SELF%THREAD_BUFFER = .FALSE.
     SELF%NBLOCKS = 0
-    SELF%BASE_PTR => NULL()
-    SELF%FIDX = -1
   END FUNCTION ${field_type_name}$_EMPTY
 
 #:endfor
@@ -264,8 +255,6 @@ CONTAINS
     SELF%ACTIVE = .TRUE.
     SELF%THREAD_BUFFER = .NOT. LLPERSISTENT
     SELF%NBLOCKS = SIZE(SELF%PTR, ${rank}$)
-    SELF%BASE_PTR => NULL()
-    SELF%FIDX = -1
 
     SELF%ISTATUS = NHSTFRESH
 
@@ -295,8 +284,6 @@ CONTAINS
     SELF%ACTIVE = .TRUE.
     SELF%THREAD_BUFFER = .FALSE.
     SELF%NBLOCKS = SIZE(SELF%PTR, ${rank}$)
-    SELF%BASE_PTR => DATA
-    SELF%FIDX = IDX
   END FUNCTION ${field_type_name}$_WRAP_PACKED
 
 #:endfor
@@ -335,8 +322,6 @@ CONTAINS
     SELF%PTR => SELF%DATA
     SELF%ACTIVE = .TRUE.
     SELF%NBLOCKS = SIZE(SELF%DATA, ${rank}$)
-    SELF%BASE_PTR => NULL()
-    SELF%FIDX = -1
   END SUBROUTINE ALLOCATE_${field_type_name}$
 
   FUNCTION ${field_type_name}$_ALLOCATE(SHAPE, NBLOCKS, PERSISTENT, LBOUNDS) RESULT(SELF)
