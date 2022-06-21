@@ -25,12 +25,6 @@ TYPE :: ${field_type_name}$
   ! provide block-indexed "views" of the data for automating the
   ! allocation and parallel iterration of NPROMA blocks.
 
-  ! The data view to be used in thread-parallel sections
-  !
-  ! The underlying view pointer is of rank-1, since we always
-  ! the horizontal component as a single dimension.
-  ${dtype}$, POINTER :: VIEW(${shapes[rank-1]}$) => NULL()
-
   ! TODO: Atlas-based field data storage field
   ! TODO: Do we still need to use pointers here?
   ! TYPE(ATLAS_FIELD), POINTER :: DATA
@@ -243,9 +237,6 @@ CONTAINS
     INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN) :: SHAPE(${rank-1}$)
 
     SELF%PTR => NULL()
-    IF (PRESENT(SHAPE)) THEN
-      ALLOCATE(SELF%VIEW(${','.join('SHAPE(%d)'%(r+1) for r in range(rank-1))}$))
-    END IF
     SELF%ACTIVE = .FALSE.
     SELF%THREAD_BUFFER = .FALSE.
     SELF%NBLOCKS = 0
@@ -379,7 +370,7 @@ CONTAINS
     IF (SELF%ACTIVE) THEN
       VIEW_PTR (${lbptr (rank-1)}$) => SELF%PTR(${','.join(':' for _ in range(rank-1))}$,IDX)
     ELSE
-      VIEW_PTR (${lbptr (rank-1)}$) => SELF%VIEW  ! Set to NaN'd field buffer
+      VIEW_PTR (${lbptr (rank-1)}$) => NULL()
     END IF
 
     IF (PRESENT(BLOCK_SIZE)) THEN
@@ -408,7 +399,7 @@ CONTAINS
     IF (SELF%ACTIVE) THEN
       VIEW_PTR (${lbptr (rank-1)}$) => SELF%DATA(${','.join(':' for _ in range(rank-1))}$,IDX)
     ELSE
-      VIEW_PTR (${lbptr (rank-1)}$) => SELF%VIEW  ! Set to NaN'd field buffer
+      VIEW_PTR (${lbptr (rank-1)}$) => NULL()
     END IF
 
     IF (PRESENT(BLOCK_SIZE)) THEN
@@ -522,7 +513,6 @@ CONTAINS
     ! Finalizes field and dealloactes owned data
     CLASS(${field_type_name}$) :: SELF
     NULLIFY(SELF%PTR)
-    NULLIFY(SELF%VIEW)
     IF (ASSOCIATED (SELF%DEVPTR)) THEN
       !$acc exit data delete (SELF%DEVPTR)
       DEALLOCATE (SELF%DEVPTR)
