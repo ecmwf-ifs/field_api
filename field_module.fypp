@@ -35,7 +35,6 @@ TYPE :: ${field_type_name}$
   ! where the innermost dimension represents the horizontal and
   ! the outermost one is the block index.
   ${dtype}$, POINTER :: PTR(${shapes[rank]}$) => NULL()
-  ${dtype}$, ALLOCATABLE :: DATA(${shapes[rank]}$)
 
   ! A separate data pointer that can be used to create
   ! a contiguous chunk of host memory to cleanly map to
@@ -318,10 +317,9 @@ CONTAINS
     END IF
 
     ! Allocate storage array and store metadata
-    ALLOCATE(SELF%DATA(${','.join('SHAPE(%d)'%(r+1) for r in range(rank-1))}$,NBLK))
-    SELF%PTR => SELF%DATA
+    ALLOCATE(SELF%PTR(${','.join('SHAPE(%d)'%(r+1) for r in range(rank-1))}$,NBLK))
     SELF%ACTIVE = .TRUE.
-    SELF%NBLOCKS = SIZE(SELF%DATA, ${rank}$)
+    SELF%NBLOCKS = SIZE(SELF%PTR, ${rank}$)
   END SUBROUTINE ALLOCATE_${field_type_name}$
 
   FUNCTION ${field_type_name}$_ALLOCATE(SHAPE, NBLOCKS, PERSISTENT, LBOUNDS) RESULT(SELF)
@@ -382,7 +380,7 @@ CONTAINS
     IDX = BLOCK_INDEX
     IF (SELF%THREAD_BUFFER) IDX = OML_MY_THREAD()
     IF (SELF%ACTIVE) THEN
-      VIEW_PTR (${lbptr (rank-1)}$) => SELF%DATA(${','.join(':' for _ in range(rank-1))}$,IDX)
+      VIEW_PTR (${lbptr (rank-1)}$) => SELF%PTR(${','.join(':' for _ in range(rank-1))}$,IDX)
     ELSE
       VIEW_PTR (${lbptr (rank-1)}$) => NULL()
     END IF
@@ -407,8 +405,8 @@ CONTAINS
     ! Initialize a copy of this field on GPU device
     CLASS(${field_type_name}$), TARGET :: SELF
 
-    SELF%DEVPTR => SELF%DATA
-!$acc enter data create(SELF%DATA)
+    SELF%DEVPTR => SELF%PTR
+!$acc enter data create(SELF%PTR)
   END SUBROUTINE ${field_type_name}$_CREATE_DEVICE
 
 #:endfor
@@ -428,7 +426,7 @@ CONTAINS
     CLASS(${field_type_name}$_OWNER), TARGET :: SELF
     ${dtype}$, POINTER, CONTIGUOUS :: DEVPTR(${shapes[rank]}$)
 
-    DEVPTR (${lbptr (rank)}$) => SELF%DATA
+    DEVPTR (${lbptr (rank)}$) => SELF%PTR
   END FUNCTION ${field_type_name}$_OWNER_GET_DEVICE_DATA
 
 #:endfor
@@ -439,8 +437,8 @@ CONTAINS
     ! Create a copy of this field on device and copy data over
     CLASS(${field_type_name}$_WRAPPER), TARGET :: SELF
 
-!$acc enter data copyin(SELF%DATA)
-    SELF%DEVPTR => SELF%DATA
+!$acc enter data copyin(SELF%PTR)
+    SELF%DEVPTR => SELF%PTR
   END SUBROUTINE ${field_type_name}$_WRAPPER_UPDATE_DEVICE
 
   SUBROUTINE ${field_type_name}$_OWNER_UPDATE_DEVICE(SELF)
@@ -467,7 +465,7 @@ CONTAINS
     ! Synchronize device data back to host
     CLASS(${field_type_name}$_OWNER) :: SELF
 
-    !$acc exit data copyout(SELF%DATA)
+    !$acc exit data copyout(SELF%PTR)
   END SUBROUTINE ${field_type_name}$_OWNER_UPDATE_HOST
 
 #:endfor
@@ -514,7 +512,9 @@ CONTAINS
   SUBROUTINE ${field_type_name}$_OWNER_FINAL(SELF)
     ! Finalizes field and dealloactes owned data
     CLASS(${field_type_name}$_OWNER) :: SELF
-    DEALLOCATE(SELF%DATA)
+    IF (ALLOCATED(SELF%PTR)) THEN
+	    DEALLOCATE(SELF%PTR)
+    END IF
     CALL SELF%${field_type_name}$%FINAL
   END SUBROUTINE ${field_type_name}$_OWNER_FINAL
 
