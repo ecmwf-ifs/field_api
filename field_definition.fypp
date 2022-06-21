@@ -7,9 +7,9 @@
   &                        for (dtype, suffix, default) in zip(dtypes, suffixes, defaults) &
   &                        for rank in ranks]
 #:set data_management_type = ['WRAPPER', 'OWNER']
+#:set dumsize = '1'
 
 #:def lbptr (rank)
   #:set lb = ", ".join (list (map (lambda i: "SELF%LBOUNDS(" + str (i+1) + "):", range (0, rank))))
 $:lb
 #:enddef
-

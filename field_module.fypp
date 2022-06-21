@@ -78,6 +78,7 @@ END TYPE ${field_type_name}$_${dm}$
 #:endfor
 
 INTEGER (KIND=JPIM), PARAMETER :: NDEVFRESH = B'00000001', NHSTFRESH = B'00000010'
+INTEGER (KIND=JPIM), PARAMETER, PRIVATE :: NH2D = 1, ND2H = 2, NRD = B'00000001', NWR = B'00000010'
 
 #:for rank in ranks
 TYPE FIELD_${rank}$D_PTR
@@ -158,6 +159,33 @@ INTERFACE GET_DEVICE_DATA
 #:endfor
 END INTERFACE GET_DEVICE_DATA
 
+INTERFACE GET_DEVICE_DATA_RDONLY
+#:for dtype, suffix, rank, default in field_descriptors
+#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
+  MODULE PROCEDURE :: ${field_type_name}$_GET_DEVICE_DATA_RDONLY
+#:endfor
+END INTERFACE GET_DEVICE_DATA_RDONLY
+
+INTERFACE GET_DEVICE_DATA_RDWR
+#:for dtype, suffix, rank, default in field_descriptors
+#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
+  MODULE PROCEDURE :: ${field_type_name}$_GET_DEVICE_DATA_RDWR
+#:endfor
+END INTERFACE GET_DEVICE_DATA_RDWR
+
+INTERFACE GET_HOST_DATA_RDONLY
+#:for dtype, suffix, rank, default in field_descriptors
+#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
+  MODULE PROCEDURE :: ${field_type_name}$_GET_HOST_DATA_RDONLY
+#:endfor
+END INTERFACE GET_HOST_DATA_RDONLY
+
+INTERFACE GET_HOST_DATA_RDWR
+#:for dtype, suffix, rank, default in field_descriptors
+#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
+  MODULE PROCEDURE :: ${field_type_name}$_GET_HOST_DATA_RDWR
+#:endfor
+END INTERFACE GET_HOST_DATA_RDWR
 
 CONTAINS
 
@@ -488,6 +516,160 @@ CONTAINS
     END IF
     CALL SELF%${field_type_name}$%FINAL
   END SUBROUTINE ${field_type_name}$_OWNER_FINAL
+
+
+  INTEGER (KIND=JPIM) FUNCTION ${field_type_name}$_GET_LAST_CONTIGUOUS_DIMENSION (PTR) RESULT (JDIM)
+  ${dtype}$, POINTER :: PTR (${shapes[rank]}$)
+  INTEGER*8 :: ISTRIDE (${rank}$)
+  INTEGER (KIND=JPIM) :: J
+
+  ISTRIDE (1) = KIND (PTR)
+  DO J = 2, ${rank}$
+    ISTRIDE (J) = ISTRIDE (J-1) * SIZE (PTR, J-1) 
+  ENDDO
+
+  JDIM = 0
+#:for d in range (1, rank+1)
+  #:set ind0 = ['1'] * rank
+  #:set ind1 = ['1'] * (d - 1) + ['2'] + ['1'] * (rank - d)
+  IF (LOC (PTR (${', '.join (ind1)}$)) - LOC (PTR (${', '.join (ind0)}$)) /= ISTRIDE (${d}$)) THEN
+    RETURN
+  ENDIF
+
+  JDIM = ${d}$
+
+#:endfor
+  END FUNCTION ${field_type_name}$_GET_LAST_CONTIGUOUS_DIMENSION
+
+  SUBROUTINE ${field_type_name}$_COPY (HST, DEV, KDIR)
+  ${dtype}$, POINTER :: HST (${shapes[rank]}$), DEV (${shapes[rank]}$)
+  INTEGER (KIND=JPIM), INTENT (IN) :: KDIR
+  INTEGER (KIND=JPIM) :: JDIM
+
+  JDIM = ${field_type_name}$_GET_LAST_CONTIGUOUS_DIMENSION (HST)
+
+  SELECT CASE (JDIM)
+#:for d in range (rank + 1)
+    CASE (${d}$)
+      CALL COPY_DIM${d}$_CONTIGUOUS (HST, DEV, KDIR)
+#:endfor
+  END SELECT
+
+  CONTAINS
+
+#:for d in range (0, rank+1)
+    SUBROUTINE COPY_DIM${d}$_CONTIGUOUS (HST, DEV, KDIR)
+    USE OPENACC
+    ${dtype}$, POINTER :: HST (${shapes[rank]}$), DEV (${shapes[rank]}$)
+    INTEGER (KIND=JPIM), INTENT (IN) :: KDIR
+    INTEGER (KIND=JPIM) :: ISIZE
+    INTEGER :: ${', '.join (['J'] + list (map (lambda i: 'J' + str (i+1), range (d, rank))))}$
+
+  #:for e in range (rank, d, -1)
+    ${'  ' * (rank - e)}$DO J${e}$ = LBOUND (HST, ${e}$), UBOUND (HST, ${e}$)
+  #:endfor
+  #:set ar = ', '.join ([':'] * d  + list (map (lambda i: 'J' + str (i+1), range (d, rank))))
+  #:set indent = '  ' * (rank - e)
+    #:if d == 0
+    ${indent}$  ISIZE = KIND (HST)
+    #:else
+    ${indent}$  ISIZE = KIND (HST) * SIZE (HST (${ar}$))
+    #:endif
+    ${indent}$  IF (KDIR == NH2D) THEN
+    ${indent}$    !$acc host_data use_device (DEV)
+    ${indent}$    CALL ACC_MEMCPY_TO_DEVICE (DEV (${ar}$), HST (${ar}$), ISIZE)
+    ${indent}$    !$acc end host_data
+    ${indent}$  ELSEIF (KDIR == ND2H) THEN
+    ${indent}$    !$acc host_data use_device (DEV)
+    ${indent}$    CALL ACC_MEMCPY_FROM_DEVICE (HST (${ar}$), DEV (${ar}$), ISIZE)
+    ${indent}$    !$acc end host_data
+    ${indent}$  ENDIF
+  #:for e in range (d, rank)
+    ${'  ' * (rank - e - 1)}$ENDDO
+  #:endfor
+    END SUBROUTINE
+
+#:endfor
+  END SUBROUTINE ${field_type_name}$_COPY
+
+
+  FUNCTION ${field_type_name}$_GET_HOST_DATA_ (SELF, MODE) RESULT (PTR)
+    CLASS(${field_type_name}$), POINTER, INTENT (INOUT) :: SELF
+    INTEGER (KIND=JPIM),                INTENT (IN) :: MODE
+    ${dtype}$, TARGET, SAVE :: ZDUM (${ ', '.join ([dumsize] * (rank-1) + ['1']) }$)
+    ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
+
+    IF (ASSOCIATED (SELF)) THEN
+      IF (IAND (SELF%ISTATUS, NHSTFRESH) == 0) THEN
+        CALL ${field_type_name}$_COPY (SELF%PTR, SELF%DEVPTR, ND2H)
+        SELF%ISTATUS = IOR (SELF%ISTATUS, NHSTFRESH)
+      ENDIF
+      PTR (${lbptr (rank)}$) => SELF%PTR (${','.join(':' for _ in range(rank))}$)
+      IF (IAND (MODE, NWR) /= 0) THEN
+        SELF%ISTATUS = IAND (SELF%ISTATUS, NOT (NDEVFRESH))
+      ENDIF
+    ELSE
+      PTR => ZDUM
+    ENDIF
+
+  END FUNCTION ${field_type_name}$_GET_HOST_DATA_
+
+  FUNCTION ${field_type_name}$_GET_HOST_DATA_RDONLY (SELF) RESULT (PTR)
+    CLASS(${field_type_name}$), POINTER, INTENT (INOUT) :: SELF
+    ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
+
+    PTR => ${field_type_name}$_GET_HOST_DATA_ (SELF, NRD)
+
+  END FUNCTION ${field_type_name}$_GET_HOST_DATA_RDONLY
+
+  FUNCTION ${field_type_name}$_GET_HOST_DATA_RDWR (SELF) RESULT (PTR)
+    CLASS(${field_type_name}$), POINTER, INTENT (INOUT) :: SELF
+    ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
+
+    PTR => ${field_type_name}$_GET_HOST_DATA_ (SELF, IOR (NRD, NWR))
+
+  END FUNCTION ${field_type_name}$_GET_HOST_DATA_RDWR
+
+  FUNCTION ${field_type_name}$_GET_DEVICE_DATA_ (SELF, MODE) RESULT(PTR)
+    CLASS(${field_type_name}$), POINTER, INTENT (INOUT) :: SELF
+    INTEGER (KIND=JPIM),                INTENT (IN) :: MODE
+    ${dtype}$, TARGET, SAVE :: ZDUM (${ ', '.join ([dumsize] * (rank-1) + ['1']) }$)
+    ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
+
+    IF (ASSOCIATED (SELF)) THEN
+      IF (IAND (SELF%ISTATUS, NDEVFRESH) == 0) THEN
+        IF (.NOT. ASSOCIATED (SELF%DEVPTR)) THEN
+          ALLOCATE (SELF%DEVPTR, MOLD=SELF%PTR)
+          !$acc enter data create (SELF%DEVPTR)
+        ENDIF
+        CALL ${field_type_name}$_COPY (SELF%PTR, SELF%DEVPTR, NH2D)
+        SELF%ISTATUS = IOR (SELF%ISTATUS, NDEVFRESH)
+      ENDIF
+      PTR (${lbptr (rank)}$) => SELF%DEVPTR (${','.join(':' for _ in range(rank))}$)
+      IF (IAND (MODE, NWR) /= 0) THEN
+        SELF%ISTATUS = IAND (SELF%ISTATUS, NOT (NHSTFRESH))
+      ENDIF
+    ELSE
+      PTR => ZDUM
+    ENDIF
+
+  END FUNCTION ${field_type_name}$_GET_DEVICE_DATA_
+
+  FUNCTION ${field_type_name}$_GET_DEVICE_DATA_RDONLY (SELF) RESULT (PTR)
+    CLASS(${field_type_name}$), POINTER, INTENT (INOUT) :: SELF
+    ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
+
+    PTR => ${field_type_name}$_GET_DEVICE_DATA_ (SELF, NRD)
+
+  END FUNCTION ${field_type_name}$_GET_DEVICE_DATA_RDONLY
+
+  FUNCTION ${field_type_name}$_GET_DEVICE_DATA_RDWR (SELF) RESULT (PTR)
+    CLASS(${field_type_name}$), POINTER, INTENT (INOUT) :: SELF
+    ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
+
+    PTR => ${field_type_name}$_GET_DEVICE_DATA_ (SELF, IOR (NRD, NWR))
+
+  END FUNCTION ${field_type_name}$_GET_DEVICE_DATA_RDWR
 
 #:endfor
 
