@@ -79,7 +79,6 @@ END TYPE ${field_type_name}$
 TYPE, EXTENDS(${field_type_name}$) :: ${field_type_name}$_${dm}$
 CONTAINS
   PROCEDURE :: FINAL => ${field_type_name}$_${dm}$_FINAL
-  PROCEDURE :: CLONE => ${field_type_name}$_${dm}$_CLONE
   PROCEDURE :: GET_VIEW => ${field_type_name}$_${dm}$_GET_VIEW
 
   ! GPU-specific device data transfer API
@@ -361,40 +360,6 @@ CONTAINS
     CALL ALLOCATE_${field_type_name}$ (SELF, SHAPE, NBLOCKS, PERSISTENT, LBOUNDS)
 
   END FUNCTION ${field_type_name}$_ALLOCATE
-
-#:endfor
-
-#:for dtype, suffix, rank, default in field_descriptors
-#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
-  FUNCTION ${field_type_name}$_OWNER_CLONE(SELF) RESULT(NEWOBJ)
-    ! Clone (deep-copy) this FIELD object, keeping the DATA pointer
-    ! intact, but replicating view pointers.
-    CLASS(${field_type_name}$_OWNER) :: SELF
-    TYPE(${field_type_name}$_OWNER), POINTER :: NEWOBJ
-
-    ALLOCATE(NEWOBJ)
-    ! For owned storage data, re-allocate but do not copy data over
-    ALLOCATE(NEWOBJ%DATA, MOLD=SELF%DATA)
-    NEWOBJ%PTR => NEWOBJ%DATA
-    NEWOBJ%VIEW => NULL()
-    NEWOBJ%NBLOCKS = SELF%NBLOCKS
-    NEWOBJ%THREAD_BUFFER = SELF%THREAD_BUFFER
-    NEWOBJ%LBOUNDS = SELF%LBOUNDS
-  END FUNCTION ${field_type_name}$_OWNER_CLONE
-
-  FUNCTION ${field_type_name}$_WRAPPER_CLONE(SELF) RESULT(NEWOBJ)
-    ! Clone (deep-copy) this FIELD object, keeping the DATA pointer
-    ! intact, but replicating view pointers.
-    CLASS(${field_type_name}$_WRAPPER) :: SELF
-    TYPE(${field_type_name}$_WRAPPER), POINTER :: NEWOBJ
-
-    ALLOCATE(NEWOBJ)
-    NEWOBJ%PTR => SELF%PTR
-    NEWOBJ%VIEW => NULL()
-    NEWOBJ%NBLOCKS = SELF%NBLOCKS
-    NEWOBJ%THREAD_BUFFER = SELF%THREAD_BUFFER
-    NEWOBJ%LBOUNDS = SELF%LBOUNDS
-  END FUNCTION ${field_type_name}$_WRAPPER_CLONE
 
 #:endfor
 
