@@ -71,7 +71,6 @@ CONTAINS
 
   PROCEDURE :: FINAL => ${field_type_name}$_FINAL
   PROCEDURE :: UPDATE_VIEW => ${field_type_name}$_UPDATE_VIEW
-  PROCEDURE :: EXTRACT_VIEW => ${field_type_name}$_EXTRACT_VIEW
 
   ! GPU-specific device data transfer API
   PROCEDURE :: CREATE_DEVICE => ${field_type_name}$_CREATE_DEVICE
@@ -83,7 +82,6 @@ CONTAINS
   PROCEDURE :: FINAL => ${field_type_name}$_${dm}$_FINAL
   PROCEDURE :: CLONE => ${field_type_name}$_${dm}$_CLONE
   PROCEDURE :: UPDATE_VIEW => ${field_type_name}$_${dm}$_UPDATE_VIEW
-  PROCEDURE :: EXTRACT_VIEW => ${field_type_name}$_${dm}$_EXTRACT_VIEW
   PROCEDURE :: GET_VIEW => ${field_type_name}$_${dm}$_GET_VIEW
 
   ! GPU-specific device data transfer API
@@ -454,68 +452,6 @@ CONTAINS
 
     CALL SELF%${field_type_name}$%UPDATE_VIEW(BLOCK_INDEX, BLOCK_SIZE, ZERO)
   END SUBROUTINE ${field_type_name}$_OWNER_UPDATE_VIEW
-
-#:endfor
-
-#:for dtype, suffix, rank, default in field_descriptors
-#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
-  SUBROUTINE ${field_type_name}$_EXTRACT_VIEW(SELF, VIEW_PTR, BLOCK_INDEX, BLOCK_SIZE, ZERO)
-    ! Updates internal view and exports it to an external pointer
-    CLASS(${field_type_name}$), TARGET :: SELF
-    ${dtype}$, POINTER, INTENT(INOUT) :: VIEW_PTR(${shapes[rank-1]}$)
-    INTEGER(KIND=JPIM), INTENT(IN) :: BLOCK_INDEX
-    INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: BLOCK_SIZE
-    LOGICAL, OPTIONAL, INTENT(IN) :: ZERO
-
-    IF (PRESENT(BLOCK_SIZE) .AND. BLOCK_INDEX == SELF%NBLOCKS) THEN
-      ! Fill the the buffer by replicating the last entry
-      CALL FILL_BUFFER(VIEW_PTR, INDEX=BLOCK_SIZE)
-    END IF
-
-    IF (PRESENT(ZERO)) THEN
-      IF (ZERO) VIEW_PTR(${shapes[rank-1]}$) = ${default}$
-    END IF
-  END SUBROUTINE ${field_type_name}$_EXTRACT_VIEW
-
-  SUBROUTINE ${field_type_name}$_OWNER_EXTRACT_VIEW(SELF, VIEW_PTR, BLOCK_INDEX, BLOCK_SIZE, ZERO)
-    ! Updates internal view and exports it to an external pointer
-    CLASS(${field_type_name}$_OWNER), TARGET :: SELF
-    ${dtype}$, POINTER, INTENT(INOUT) :: VIEW_PTR(${shapes[rank-1]}$)
-    INTEGER(KIND=JPIM), INTENT(IN) :: BLOCK_INDEX
-    INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: BLOCK_SIZE
-    LOGICAL, OPTIONAL, INTENT(IN) :: ZERO
-    INTEGER(KIND=JPIM) :: IDX
-
-    IDX = BLOCK_INDEX
-    IF (SELF%THREAD_BUFFER) IDX = OML_MY_THREAD()
-    IF (SELF%ACTIVE) THEN
-      VIEW_PTR (${lbptr (rank-1)}$)  => SELF%DATA(${','.join(':' for _ in range(rank-1))}$,IDX)
-    ELSE
-      VIEW_PTR (${lbptr (rank-1)}$) => SELF%VIEW  ! Set to NaN'd field buffer
-    END IF
-
-    CALL SELF%${field_type_name}$%EXTRACT_VIEW(VIEW_PTR, BLOCK_INDEX, BLOCK_SIZE, ZERO)
-  END SUBROUTINE ${field_type_name}$_OWNER_EXTRACT_VIEW
-
-  SUBROUTINE ${field_type_name}$_WRAPPER_EXTRACT_VIEW(SELF, VIEW_PTR, BLOCK_INDEX, BLOCK_SIZE, ZERO)
-    ! Updates internal view and exports it to an external pointer
-    CLASS(${field_type_name}$_WRAPPER), TARGET :: SELF
-    ${dtype}$, POINTER, INTENT(INOUT) :: VIEW_PTR(${shapes[rank-1]}$)
-    INTEGER(KIND=JPIM), INTENT(IN) :: BLOCK_INDEX
-    INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: BLOCK_SIZE
-    LOGICAL, OPTIONAL, INTENT(IN) :: ZERO
-    INTEGER(KIND=JPIM) :: IDX
-
-    IDX = BLOCK_INDEX
-    IF (SELF%THREAD_BUFFER) IDX = OML_MY_THREAD()
-    IF (SELF%ACTIVE) THEN
-      VIEW_PTR (${lbptr (rank-1)}$) => SELF%PTR(${','.join(':' for _ in range(rank-1))}$,IDX)
-    ELSE
-      VIEW_PTR (${lbptr (rank-1)}$) => SELF%VIEW  ! Set to NaN'd field buffer
-    END IF
-
-    CALL SELF%${field_type_name}$%EXTRACT_VIEW(VIEW_PTR, BLOCK_INDEX, BLOCK_SIZE, ZERO)
-  END SUBROUTINE ${field_type_name}$_WRAPPER_EXTRACT_VIEW
 
 #:endfor
 
