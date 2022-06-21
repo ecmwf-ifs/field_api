@@ -70,7 +70,6 @@ TYPE :: ${field_type_name}$
 CONTAINS
 
   PROCEDURE :: FINAL => ${field_type_name}$_FINAL
-  PROCEDURE :: UPDATE_VIEW => ${field_type_name}$_UPDATE_VIEW
 
   ! GPU-specific device data transfer API
   PROCEDURE :: CREATE_DEVICE => ${field_type_name}$_CREATE_DEVICE
@@ -81,7 +80,6 @@ TYPE, EXTENDS(${field_type_name}$) :: ${field_type_name}$_${dm}$
 CONTAINS
   PROCEDURE :: FINAL => ${field_type_name}$_${dm}$_FINAL
   PROCEDURE :: CLONE => ${field_type_name}$_${dm}$_CLONE
-  PROCEDURE :: UPDATE_VIEW => ${field_type_name}$_${dm}$_UPDATE_VIEW
   PROCEDURE :: GET_VIEW => ${field_type_name}$_${dm}$_GET_VIEW
 
   ! GPU-specific device data transfer API
@@ -397,61 +395,6 @@ CONTAINS
     NEWOBJ%THREAD_BUFFER = SELF%THREAD_BUFFER
     NEWOBJ%LBOUNDS = SELF%LBOUNDS
   END FUNCTION ${field_type_name}$_WRAPPER_CLONE
-
-#:endfor
-
-#:for dtype, suffix, rank, default in field_descriptors
-#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
-  SUBROUTINE ${field_type_name}$_UPDATE_VIEW(SELF, BLOCK_INDEX, BLOCK_SIZE, ZERO)
-    ! Sets the view pointer FIELD%MP to the block of the given index
-    CLASS(${field_type_name}$), TARGET :: SELF
-    INTEGER(KIND=JPIM), INTENT(IN) :: BLOCK_INDEX
-    INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: BLOCK_SIZE
-    LOGICAL, OPTIONAL, INTENT(IN) :: ZERO
-
-    IF (PRESENT(BLOCK_SIZE) .AND. BLOCK_INDEX == SELF%NBLOCKS) THEN
-      ! Fill the the buffer by replicating the last entry
-      CALL FILL_BUFFER(SELF%VIEW, INDEX=BLOCK_SIZE)
-    END IF
-
-    IF (PRESENT(ZERO)) THEN
-      IF (ZERO) SELF%VIEW(${shapes[rank-1]}$) = ${default}$
-    END IF
-  END SUBROUTINE ${field_type_name}$_UPDATE_VIEW
-
-  SUBROUTINE ${field_type_name}$_WRAPPER_UPDATE_VIEW(SELF, BLOCK_INDEX, BLOCK_SIZE, ZERO)
-    ! Sets the view pointer FIELD%MP to the block of the given index
-    CLASS(${field_type_name}$_WRAPPER), TARGET :: SELF
-    INTEGER(KIND=JPIM), INTENT(IN) :: BLOCK_INDEX
-    INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: BLOCK_SIZE
-    LOGICAL, OPTIONAL, INTENT(IN) :: ZERO
-    INTEGER(KIND=JPIM) :: IDX
-
-    IDX = BLOCK_INDEX
-    IF (SELF%THREAD_BUFFER) IDX = OML_MY_THREAD()
-    IF (SELF%ACTIVE) THEN
-      SELF%VIEW (${lbptr (rank-1)}$) => SELF%PTR(${','.join(':' for _ in range(rank-1))}$,IDX)
-    END IF
-
-    CALL SELF%${field_type_name}$%UPDATE_VIEW(BLOCK_INDEX, BLOCK_SIZE, ZERO)
-  END SUBROUTINE ${field_type_name}$_WRAPPER_UPDATE_VIEW
-
-  SUBROUTINE ${field_type_name}$_OWNER_UPDATE_VIEW(SELF, BLOCK_INDEX, BLOCK_SIZE, ZERO)
-    ! Sets the view pointer FIELD%MP to the block of the given index
-    CLASS(${field_type_name}$_OWNER), TARGET :: SELF
-    INTEGER(KIND=JPIM), INTENT(IN) :: BLOCK_INDEX
-    INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: BLOCK_SIZE
-    LOGICAL, OPTIONAL, INTENT(IN) :: ZERO
-    INTEGER(KIND=JPIM) :: IDX
-
-    IDX = BLOCK_INDEX
-    IF (SELF%THREAD_BUFFER) IDX = OML_MY_THREAD()
-    IF (SELF%ACTIVE) THEN
-      SELF%VIEW (${lbptr (rank-1)}$) => SELF%DATA(${','.join(':' for _ in range(rank-1))}$,IDX)
-    END IF
-
-    CALL SELF%${field_type_name}$%UPDATE_VIEW(BLOCK_INDEX, BLOCK_SIZE, ZERO)
-  END SUBROUTINE ${field_type_name}$_OWNER_UPDATE_VIEW
 
 #:endfor
 
