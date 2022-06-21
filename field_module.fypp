@@ -469,7 +469,7 @@ CONTAINS
 
 #:endfor
 
-  #:for dtype, suffix, rank, default in field_descriptors
+#:for dtype, suffix, rank, default in field_descriptors
 #:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
   SUBROUTINE ${field_type_name}$_WRAPPER_DELETE_DEVICE(SELF)
     ! Initialize a copy of this field on GPU device
@@ -517,7 +517,10 @@ CONTAINS
     CALL SELF%${field_type_name}$%FINAL
   END SUBROUTINE ${field_type_name}$_OWNER_FINAL
 
+#:endfor
 
+#:for dtype, suffix, rank, default in field_descriptors
+#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
   INTEGER (KIND=JPIM) FUNCTION ${field_type_name}$_GET_LAST_CONTIGUOUS_DIMENSION (PTR) RESULT (JDIM)
   ${dtype}$, POINTER :: PTR (${shapes[rank]}$)
   INTEGER*8 :: ISTRIDE (${rank}$)

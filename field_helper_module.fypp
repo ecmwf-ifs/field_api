@@ -20,15 +20,7 @@ INTERFACE CREATE_TEMPORARY_LU
 #:endfor
 END INTERFACE CREATE_TEMPORARY_LU
 
-INTEGER (KIND=JPIM), PARAMETER, PRIVATE :: NH2D = 1, ND2H = 2, NRD = B'00000001', NWR = B'00000010'
-
 CONTAINS
-
-#:for dtype, suffix, rank, default in field_descriptors
-#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
-
-
-#:endfor
 
 #:def create_temporary (dims, type)
 #:for d in dims
