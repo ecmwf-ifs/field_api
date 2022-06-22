@@ -520,28 +520,23 @@ CONTAINS
 
 
   FUNCTION ${field_type_name}$_GET_HOST_DATA_ (SELF, MODE) RESULT (PTR)
-    CLASS(${field_type_name}$), POINTER, INTENT (INOUT) :: SELF
+    CLASS(${field_type_name}$), INTENT (INOUT) :: SELF
     INTEGER (KIND=JPIM),                INTENT (IN) :: MODE
-    ${dtype}$, TARGET, SAVE :: ZDUM (${ ', '.join ([dumsize] * (rank-1) + ['1']) }$)
     ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
 
-    IF (ASSOCIATED (SELF)) THEN
-      IF (IAND (SELF%ISTATUS, NHSTFRESH) == 0) THEN
-        CALL SELF%COPY (ND2H)
-        SELF%ISTATUS = IOR (SELF%ISTATUS, NHSTFRESH)
-      ENDIF
-      PTR (${lbptr (rank)}$) => SELF%PTR (${','.join(':' for _ in range(rank))}$)
-      IF (IAND (MODE, NWR) /= 0) THEN
-        SELF%ISTATUS = IAND (SELF%ISTATUS, NOT (NDEVFRESH))
-      ENDIF
-    ELSE
-      PTR => ZDUM
+    IF (IAND (SELF%ISTATUS, NHSTFRESH) == 0) THEN
+      CALL SELF%COPY (ND2H)
+      SELF%ISTATUS = IOR (SELF%ISTATUS, NHSTFRESH)
+    ENDIF
+    PTR (${lbptr (rank)}$) => SELF%PTR (${','.join(':' for _ in range(rank))}$)
+    IF (IAND (MODE, NWR) /= 0) THEN
+      SELF%ISTATUS = IAND (SELF%ISTATUS, NOT (NDEVFRESH))
     ENDIF
 
   END FUNCTION ${field_type_name}$_GET_HOST_DATA_
 
   FUNCTION ${field_type_name}$_GET_HOST_DATA_RDONLY (SELF) RESULT (PTR)
-    CLASS(${field_type_name}$), POINTER, INTENT (INOUT) :: SELF
+    CLASS(${field_type_name}$), INTENT (INOUT) :: SELF
     ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
 
     PTR => ${field_type_name}$_GET_HOST_DATA_ (SELF, NRD)
@@ -549,7 +544,7 @@ CONTAINS
   END FUNCTION ${field_type_name}$_GET_HOST_DATA_RDONLY
 
   FUNCTION ${field_type_name}$_GET_HOST_DATA_RDWR (SELF) RESULT (PTR)
-    CLASS(${field_type_name}$), POINTER, INTENT (INOUT) :: SELF
+    CLASS(${field_type_name}$), INTENT (INOUT) :: SELF
     ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
 
     PTR => ${field_type_name}$_GET_HOST_DATA_ (SELF, IOR (NRD, NWR))
@@ -557,32 +552,27 @@ CONTAINS
   END FUNCTION ${field_type_name}$_GET_HOST_DATA_RDWR
 
   FUNCTION ${field_type_name}$_GET_DEVICE_DATA_ (SELF, MODE) RESULT(PTR)
-    CLASS(${field_type_name}$), POINTER, INTENT (INOUT) :: SELF
+    CLASS(${field_type_name}$), INTENT (INOUT) :: SELF
     INTEGER (KIND=JPIM),                INTENT (IN) :: MODE
-    ${dtype}$, TARGET, SAVE :: ZDUM (${ ', '.join ([dumsize] * (rank-1) + ['1']) }$)
     ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
 
-    IF (ASSOCIATED (SELF)) THEN
-      IF (IAND (SELF%ISTATUS, NDEVFRESH) == 0) THEN
-        IF (.NOT. ASSOCIATED (SELF%DEVPTR)) THEN
-          ALLOCATE (SELF%DEVPTR, MOLD=SELF%PTR)
-          !$acc enter data create (SELF%DEVPTR)
-        ENDIF
-        CALL SELF%COPY (NH2D)
-        SELF%ISTATUS = IOR (SELF%ISTATUS, NDEVFRESH)
+    IF (IAND (SELF%ISTATUS, NDEVFRESH) == 0) THEN
+      IF (.NOT. ASSOCIATED (SELF%DEVPTR)) THEN
+        ALLOCATE (SELF%DEVPTR, MOLD=SELF%PTR)
+        !$acc enter data create (SELF%DEVPTR)
       ENDIF
-      PTR (${lbptr (rank)}$) => SELF%DEVPTR (${','.join(':' for _ in range(rank))}$)
-      IF (IAND (MODE, NWR) /= 0) THEN
-        SELF%ISTATUS = IAND (SELF%ISTATUS, NOT (NHSTFRESH))
-      ENDIF
-    ELSE
-      PTR => ZDUM
+      CALL SELF%COPY (NH2D)
+      SELF%ISTATUS = IOR (SELF%ISTATUS, NDEVFRESH)
+    ENDIF
+    PTR (${lbptr (rank)}$) => SELF%DEVPTR (${','.join(':' for _ in range(rank))}$)
+    IF (IAND (MODE, NWR) /= 0) THEN
+      SELF%ISTATUS = IAND (SELF%ISTATUS, NOT (NHSTFRESH))
     ENDIF
 
   END FUNCTION ${field_type_name}$_GET_DEVICE_DATA_
 
   FUNCTION ${field_type_name}$_GET_DEVICE_DATA_RDONLY (SELF) RESULT (PTR)
-    CLASS(${field_type_name}$), POINTER, INTENT (INOUT) :: SELF
+    CLASS(${field_type_name}$), INTENT (INOUT) :: SELF
     ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
 
     PTR => ${field_type_name}$_GET_DEVICE_DATA_ (SELF, NRD)
@@ -590,7 +580,7 @@ CONTAINS
   END FUNCTION ${field_type_name}$_GET_DEVICE_DATA_RDONLY
 
   FUNCTION ${field_type_name}$_GET_DEVICE_DATA_RDWR (SELF) RESULT (PTR)
-    CLASS(${field_type_name}$), POINTER, INTENT (INOUT) :: SELF
+    CLASS(${field_type_name}$), INTENT (INOUT) :: SELF
     ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
 
     PTR => ${field_type_name}$_GET_DEVICE_DATA_ (SELF, IOR (NRD, NWR))
