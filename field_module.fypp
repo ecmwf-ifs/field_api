@@ -57,6 +57,7 @@ CONTAINS
 
   PROCEDURE :: FINAL => ${field_type_name}$_FINAL
   PROCEDURE :: GET_VIEW => ${field_type_name}$_GET_VIEW
+  PROCEDURE :: COPY =>  ${field_type_name}$_COPY
 
   ! GPU-specific device data transfer API
   PROCEDURE :: CREATE_DEVICE => ${field_type_name}$_CREATE_DEVICE
@@ -544,17 +545,17 @@ CONTAINS
 #:endfor
   END FUNCTION ${field_type_name}$_GET_LAST_CONTIGUOUS_DIMENSION
 
-  SUBROUTINE ${field_type_name}$_COPY (HST, DEV, KDIR)
-  ${dtype}$, POINTER :: HST (${shapes[rank]}$), DEV (${shapes[rank]}$)
+  SUBROUTINE ${field_type_name}$_COPY (SELF, KDIR)
+  CLASS(${field_type_name}$) :: SELF
   INTEGER (KIND=JPIM), INTENT (IN) :: KDIR
   INTEGER (KIND=JPIM) :: JDIM
 
-  JDIM = ${field_type_name}$_GET_LAST_CONTIGUOUS_DIMENSION (HST)
+  JDIM = ${field_type_name}$_GET_LAST_CONTIGUOUS_DIMENSION (SELF%PTR)
 
   SELECT CASE (JDIM)
 #:for d in range (rank + 1)
     CASE (${d}$)
-      CALL COPY_DIM${d}$_CONTIGUOUS (HST, DEV, KDIR)
+      CALL COPY_DIM${d}$_CONTIGUOUS (SELF%PTR, SELF%DEVPTR, KDIR)
 #:endfor
   END SELECT
 
@@ -604,7 +605,7 @@ CONTAINS
 
     IF (ASSOCIATED (SELF)) THEN
       IF (IAND (SELF%ISTATUS, NHSTFRESH) == 0) THEN
-        CALL ${field_type_name}$_COPY (SELF%PTR, SELF%DEVPTR, ND2H)
+        CALL SELF%COPY (ND2H)
         SELF%ISTATUS = IOR (SELF%ISTATUS, NHSTFRESH)
       ENDIF
       PTR (${lbptr (rank)}$) => SELF%PTR (${','.join(':' for _ in range(rank))}$)
@@ -645,7 +646,7 @@ CONTAINS
           ALLOCATE (SELF%DEVPTR, MOLD=SELF%PTR)
           !$acc enter data create (SELF%DEVPTR)
         ENDIF
-        CALL ${field_type_name}$_COPY (SELF%PTR, SELF%DEVPTR, NH2D)
+        CALL SELF%COPY (NH2D)
         SELF%ISTATUS = IOR (SELF%ISTATUS, NDEVFRESH)
       ENDIF
       PTR (${lbptr (rank)}$) => SELF%DEVPTR (${','.join(':' for _ in range(rank))}$)
