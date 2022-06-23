@@ -102,7 +102,6 @@ END TYPE FIELD_${rank}$D_VIEW
 INTERFACE ${field_type_name}$
   MODULE PROCEDURE :: ${field_type_name}$_WRAP
   MODULE PROCEDURE :: ${field_type_name}$_WRAP_PACKED
-  ! MODULE PROCEDURE :: ${field_type_name}$_EMPTY
   MODULE PROCEDURE :: ${field_type_name}$_ALLOCATE
 END INTERFACE
 
@@ -196,26 +195,6 @@ CONTAINS
       END DO
     END DO
   END SUBROUTINE FILL_BUFFER_${suffix}$5D
-
-#:endfor
-
-#:for dtype, suffix, rank, default in field_descriptors
-#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
-  FUNCTION ${field_type_name}$_EMPTY(SHAPE) RESULT(SELF)
-    ! Create FIELD object by wrapping existing data
-    !
-    ! If a SHAPE is provided, a single empty buffer block-sized buffer
-    ! will be allocated under %VIEW and used by all threads in a
-    ! thread-parallel region to avoid segfault when dereferencing NULL
-    ! pointers. Otherwise %DATA and %VIEW will always be unassociated.
-    TYPE(${field_type_name}$) :: SELF
-    INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN) :: SHAPE(${rank-1}$)
-
-    SELF%PTR => NULL()
-    SELF%ACTIVE = .FALSE.
-    SELF%THREAD_BUFFER = .FALSE.
-    SELF%NBLOCKS = 0
-  END FUNCTION ${field_type_name}$_EMPTY
 
 #:endfor
 
