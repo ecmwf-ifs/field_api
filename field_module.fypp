@@ -125,14 +125,6 @@ INTERFACE FIELD_DELETE_DEVICE
 #:endfor
 END INTERFACE FIELD_DELETE_DEVICE
 
-INTERFACE GET_DEVICE_DATA
-#:for dtype, suffix, rank, default in field_descriptors
-#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
-  MODULE PROCEDURE :: ${field_type_name}$_WRAPPER_GET_DEVICE_DATA
-  MODULE PROCEDURE :: ${field_type_name}$_OWNER_GET_DEVICE_DATA
-#:endfor
-END INTERFACE GET_DEVICE_DATA
-
 INTERFACE GET_DEVICE_DATA_RDONLY
 #:for dtype, suffix, rank, default in field_descriptors
 #:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
@@ -369,26 +361,6 @@ CONTAINS
       IF (ZERO) VIEW_PTR(${shapes[rank-1]}$) = ${default}$
     END IF
   END FUNCTION ${field_type_name}$_GET_VIEW
-
-#:endfor
-
-#:for dtype, suffix, rank, default in field_descriptors
-#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
-  FUNCTION ${field_type_name}$_WRAPPER_GET_DEVICE_DATA(SELF) RESULT(DEVPTR)
-    ! Initialize a copy of this field on GPU device
-    CLASS(${field_type_name}$_WRAPPER), TARGET :: SELF
-    ${dtype}$, POINTER, CONTIGUOUS :: DEVPTR(${shapes[rank]}$)
-
-    DEVPTR (${lbptr (rank)}$) => SELF%DEVPTR
-  END FUNCTION ${field_type_name}$_WRAPPER_GET_DEVICE_DATA
-
-  FUNCTION ${field_type_name}$_OWNER_GET_DEVICE_DATA(SELF) RESULT(DEVPTR)
-    ! Initialize a copy of this field on GPU device
-    CLASS(${field_type_name}$_OWNER), TARGET :: SELF
-    ${dtype}$, POINTER, CONTIGUOUS :: DEVPTR(${shapes[rank]}$)
-
-    DEVPTR (${lbptr (rank)}$) => SELF%PTR
-  END FUNCTION ${field_type_name}$_OWNER_GET_DEVICE_DATA
 
 #:endfor
 
