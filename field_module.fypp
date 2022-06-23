@@ -491,10 +491,10 @@ CONTAINS
   END SUBROUTINE ${field_type_name}$_COPY
 
 
-  FUNCTION ${field_type_name}$_MOVE_DATA_FROM_DEVICE (SELF, MODE) RESULT (PTR)
+  SUBROUTINE ${field_type_name}$_MOVE_DATA_FROM_DEVICE (SELF, MODE, PTR)
     CLASS(${field_type_name}$), INTENT (INOUT) :: SELF
     INTEGER (KIND=JPIM),                INTENT (IN) :: MODE
-    ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
+    ${dtype}$, POINTER, INTENT(INOUT) :: PTR(${shapes[rank]}$)
 
     IF (IAND (SELF%ISTATUS, NHSTFRESH) == 0) THEN
       CALL SELF%COPY (ND2H)
@@ -505,28 +505,28 @@ CONTAINS
       SELF%ISTATUS = IAND (SELF%ISTATUS, NOT (NDEVFRESH))
     ENDIF
 
-  END FUNCTION ${field_type_name}$_MOVE_DATA_FROM_DEVICE
+  END SUBROUTINE ${field_type_name}$_MOVE_DATA_FROM_DEVICE
 
-  FUNCTION ${field_type_name}$_MOVE_DATA_FROM_DEVICE_RDONLY (SELF) RESULT (PTR)
+  SUBROUTINE ${field_type_name}$_MOVE_DATA_FROM_DEVICE_RDONLY (SELF, PTR)
     CLASS(${field_type_name}$), INTENT (INOUT) :: SELF
-    ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
+    ${dtype}$, POINTER, INTENT(INOUT) :: PTR(${shapes[rank]}$)
 
-    PTR => ${field_type_name}$_MOVE_DATA_FROM_DEVICE (SELF, NRD)
+    CALL ${field_type_name}$_MOVE_DATA_FROM_DEVICE (SELF, NRD, PTR)
 
-  END FUNCTION ${field_type_name}$_MOVE_DATA_FROM_DEVICE_RDONLY
+  END SUBROUTINE ${field_type_name}$_MOVE_DATA_FROM_DEVICE_RDONLY
 
-  FUNCTION ${field_type_name}$_MOVE_DATA_FROM_DEVICE_RDWR (SELF) RESULT (PTR)
+  SUBROUTINE ${field_type_name}$_MOVE_DATA_FROM_DEVICE_RDWR (SELF, PTR)
     CLASS(${field_type_name}$), INTENT (INOUT) :: SELF
-    ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
+    ${dtype}$, POINTER, INTENT(INOUT) :: PTR(${shapes[rank]}$)
 
-    PTR => ${field_type_name}$_MOVE_DATA_FROM_DEVICE (SELF, IOR (NRD, NWR))
+    CALL ${field_type_name}$_MOVE_DATA_FROM_DEVICE (SELF, IOR (NRD, NWR), PTR)
 
-  END FUNCTION ${field_type_name}$_MOVE_DATA_FROM_DEVICE_RDWR
+  END SUBROUTINE ${field_type_name}$_MOVE_DATA_FROM_DEVICE_RDWR
 
-  FUNCTION ${field_type_name}$_MOVE_DATA_TO_DEVICE (SELF, MODE) RESULT(PTR)
+  SUBROUTINE ${field_type_name}$_MOVE_DATA_TO_DEVICE (SELF, MODE, PTR)
     CLASS(${field_type_name}$), INTENT (INOUT) :: SELF
     INTEGER (KIND=JPIM),                INTENT (IN) :: MODE
-    ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
+    ${dtype}$, POINTER, INTENT(INOUT) :: PTR(${shapes[rank]}$)
 
     IF (IAND (SELF%ISTATUS, NDEVFRESH) == 0) THEN
       IF (.NOT. ASSOCIATED (SELF%DEVPTR)) THEN
@@ -541,23 +541,23 @@ CONTAINS
       SELF%ISTATUS = IAND (SELF%ISTATUS, NOT (NHSTFRESH))
     ENDIF
 
-  END FUNCTION ${field_type_name}$_MOVE_DATA_TO_DEVICE
+  END SUBROUTINE ${field_type_name}$_MOVE_DATA_TO_DEVICE
 
-  FUNCTION ${field_type_name}$_MOVE_DATA_TO_DEVICE_RDONLY (SELF) RESULT (PTR)
+  SUBROUTINE ${field_type_name}$_MOVE_DATA_TO_DEVICE_RDONLY (SELF, PTR)
     CLASS(${field_type_name}$), INTENT (INOUT) :: SELF
-    ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
+    ${dtype}$, POINTER, INTENT(INOUT) :: PTR(${shapes[rank]}$)
 
-    PTR => ${field_type_name}$_MOVE_DATA_TO_DEVICE (SELF, NRD)
+    CALL ${field_type_name}$_MOVE_DATA_TO_DEVICE (SELF, NRD, PTR)
 
-  END FUNCTION ${field_type_name}$_MOVE_DATA_TO_DEVICE_RDONLY
+  END SUBROUTINE ${field_type_name}$_MOVE_DATA_TO_DEVICE_RDONLY
 
-  FUNCTION ${field_type_name}$_MOVE_DATA_TO_DEVICE_RDWR (SELF) RESULT (PTR)
+  SUBROUTINE ${field_type_name}$_MOVE_DATA_TO_DEVICE_RDWR (SELF, PTR)
     CLASS(${field_type_name}$), INTENT (INOUT) :: SELF
-    ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
+    ${dtype}$, POINTER, INTENT(INOUT) :: PTR(${shapes[rank]}$)
 
-    PTR => ${field_type_name}$_MOVE_DATA_TO_DEVICE (SELF, IOR (NRD, NWR))
+    CALL ${field_type_name}$_MOVE_DATA_TO_DEVICE (SELF, IOR (NRD, NWR), PTR)
 
-  END FUNCTION ${field_type_name}$_MOVE_DATA_TO_DEVICE_RDWR
+  END SUBROUTINE ${field_type_name}$_MOVE_DATA_TO_DEVICE_RDWR
 
 #:endfor
 
