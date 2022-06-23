@@ -58,6 +58,10 @@ CONTAINS
   PROCEDURE :: FINAL => ${field_type_name}$_FINAL
   PROCEDURE :: GET_VIEW => ${field_type_name}$_GET_VIEW
   PROCEDURE :: COPY =>  ${field_type_name}$_COPY
+  PROCEDURE :: MOVE_DATA_TO_DEVICE_RDONLY => ${field_type_name}$_MOVE_DATA_TO_DEVICE_RDONLY
+  PROCEDURE :: MOVE_DATA_TO_DEVICE_RDWR => ${field_type_name}$_MOVE_DATA_TO_DEVICE_RDWR
+  PROCEDURE :: MOVE_DATA_FROM_DEVICE_RDONLY => ${field_type_name}$_MOVE_DATA_FROM_DEVICE_RDONLY
+  PROCEDURE :: MOVE_DATA_FROM_DEVICE_RDWR => ${field_type_name}$_MOVE_DATA_FROM_DEVICE_RDWR
 
   ! GPU-specific device data transfer API
 END TYPE ${field_type_name}$
@@ -124,34 +128,6 @@ INTERFACE FIELD_DELETE_DEVICE
   MODULE PROCEDURE :: ${field_type_name}$_OWNER_DELETE_DEVICE
 #:endfor
 END INTERFACE FIELD_DELETE_DEVICE
-
-INTERFACE MOVE_DATA_TO_DEVICE_RDONLY
-#:for dtype, suffix, rank, default in field_descriptors
-#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
-  MODULE PROCEDURE :: ${field_type_name}$_MOVE_DATA_TO_DEVICE_RDONLY
-#:endfor
-END INTERFACE MOVE_DATA_TO_DEVICE_RDONLY
-
-INTERFACE MOVE_DATA_TO_DEVICE_RDWR
-#:for dtype, suffix, rank, default in field_descriptors
-#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
-  MODULE PROCEDURE :: ${field_type_name}$_MOVE_DATA_TO_DEVICE_RDWR
-#:endfor
-END INTERFACE MOVE_DATA_TO_DEVICE_RDWR
-
-INTERFACE MOVE_DATA_FROM_DEVICE_RDONLY
-#:for dtype, suffix, rank, default in field_descriptors
-#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
-  MODULE PROCEDURE :: ${field_type_name}$_MOVE_DATA_FROM_DEVICE_RDONLY
-#:endfor
-END INTERFACE MOVE_DATA_FROM_DEVICE_RDONLY
-
-INTERFACE MOVE_DATA_FROM_DEVICE_RDWR
-#:for dtype, suffix, rank, default in field_descriptors
-#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
-  MODULE PROCEDURE :: ${field_type_name}$_MOVE_DATA_FROM_DEVICE_RDWR
-#:endfor
-END INTERFACE MOVE_DATA_FROM_DEVICE_RDWR
 
 CONTAINS
 
