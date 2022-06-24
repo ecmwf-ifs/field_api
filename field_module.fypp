@@ -20,7 +20,7 @@ IMPLICIT NONE
 
 #:for dtype, suffix, rank, default in field_descriptors
 #:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
-TYPE :: ${field_type_name}$
+TYPE, ABSTRACT :: ${field_type_name}$
   ! A FIELD encapsulates a single multi-dimensional array and can
   ! provide block-indexed "views" of the data for automating the
   ! allocation and parallel iterration of NPROMA blocks.
@@ -90,10 +90,13 @@ INTEGER (KIND=JPIM), PARAMETER :: NDEVFRESH = B'00000001', NHSTFRESH = B'0000001
 INTEGER (KIND=JPIM), PARAMETER, PRIVATE :: NH2D = 1, ND2H = 2, NRD = B'00000001', NWR = B'00000010'
 
 #:for rank in ranks
-TYPE FIELD_${rank}$D_PTR
+#:for dm in data_management_type
+TYPE FIELD_${rank}$D_${dm}$_PTR
   ! Struct to hold references to field objects
-  TYPE(FIELD_${rank}$D), POINTER :: PTR => NULL()
-END TYPE FIELD_${rank}$D_PTR
+  TYPE(FIELD_${rank}$D_${dm}$), POINTER :: PTR => NULL()
+END TYPE FIELD_${rank}$D_${dm}$_PTR
+#
+#:endfor
 
 TYPE FIELD_${rank}$D_VIEW
   ! Struct to hold array views, so we can make arrays of them
