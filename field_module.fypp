@@ -57,13 +57,13 @@ CONTAINS
 
   PROCEDURE :: FINAL => ${field_type_name}$_FINAL
   PROCEDURE :: GET_VIEW => ${field_type_name}$_GET_VIEW
-  PROCEDURE :: COPY =>  ${field_type_name}$_COPY
   PROCEDURE :: MOVE_DATA_TO_DEVICE_RDONLY => ${field_type_name}$_MOVE_DATA_TO_DEVICE_RDONLY
   PROCEDURE :: MOVE_DATA_TO_DEVICE_RDWR => ${field_type_name}$_MOVE_DATA_TO_DEVICE_RDWR
   PROCEDURE :: MOVE_DATA_FROM_DEVICE_RDONLY => ${field_type_name}$_MOVE_DATA_FROM_DEVICE_RDONLY
   PROCEDURE :: MOVE_DATA_FROM_DEVICE_RDWR => ${field_type_name}$_MOVE_DATA_FROM_DEVICE_RDWR
   PROCEDURE, PRIVATE :: MOVE_DATA_TO_DEVICE => ${field_type_name}$_MOVE_DATA_TO_DEVICE
   PROCEDURE, PRIVATE :: MOVE_DATA_FROM_DEVICE => ${field_type_name}$_MOVE_DATA_FROM_DEVICE
+  PROCEDURE, PRIVATE :: COPY =>  ${field_type_name}$_COPY
 
   ! GPU-specific device data transfer API
 END TYPE ${field_type_name}$
@@ -71,6 +71,11 @@ END TYPE ${field_type_name}$
 #:for dm in data_management_type
 TYPE, EXTENDS(${field_type_name}$) :: ${field_type_name}$_${dm}$
 CONTAINS
+#:if dm == 'WRAPPER'
+  PROCEDURE :: INIT => ${field_type_name}$_WRAP, ${field_type_name}$_WRAP_PACKED
+#:else
+  PROCEDURE :: INIT => ALLOCATE_${field_type_name}$
+#:endif
   PROCEDURE :: FINAL => ${field_type_name}$_${dm}$_FINAL
 
   ! GPU-specific device data transfer API
@@ -94,16 +99,6 @@ TYPE FIELD_${rank}$D_VIEW
   ! Struct to hold array views, so we can make arrays of them
   REAL(KIND=JPRB), POINTER :: P(${shapes[rank-1]}$) => NULL()
 END TYPE FIELD_${rank}$D_VIEW
-
-#:endfor
-
-#:for dtype, suffix, rank, default in field_descriptors
-#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
-INTERFACE ${field_type_name}$
-  MODULE PROCEDURE :: ${field_type_name}$_WRAP
-  MODULE PROCEDURE :: ${field_type_name}$_WRAP_PACKED
-  MODULE PROCEDURE :: ALLOCATE_${field_type_name}$
-END INTERFACE
 
 #:endfor
 
@@ -133,6 +128,82 @@ CONTAINS
 !
 #:for dtype, suffix, rank, default in field_descriptors
 #:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
+  SUBROUTINE ${field_type_name}$_WRAP(SELF, DATA, PERSISTENT, LBOUNDS)
+    ! Create FIELD object by wrapping existing data
+    CLASS(${field_type_name}$_WRAPPER), INTENT(INOUT) :: SELF
+    ${dtype}$, TARGET, INTENT(IN) :: DATA(${shapes[rank]}$)
+    LOGICAL, INTENT(IN), OPTIONAL :: PERSISTENT
+    INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: LBOUNDS(${rank}$)
+    LOGICAL :: LLPERSISTENT
+
+    LLPERSISTENT = .TRUE.
+    IF (PRESENT (PERSISTENT)) LLPERSISTENT = PERSISTENT
+    IF (PRESENT (LBOUNDS)) SELF%LBOUNDS = LBOUNDS
+
+    SELF%PTR => DATA
+    SELF%ACTIVE = .TRUE.
+    SELF%THREAD_BUFFER = .NOT. LLPERSISTENT
+    SELF%NBLOCKS = SIZE(SELF%PTR, ${rank}$)
+
+    SELF%ISTATUS = NHSTFRESH
+
+    IF (.NOT. LLPERSISTENT) THEN
+      IF (OML_MAX_THREADS() /= SIZE (DATA, ${rank}$)) THEN
+        CALL ABOR1 ('${field_type_name}$_WRAP: DIMENSION MISMATCH')
+      ENDIF
+    ENDIF
+
+  END SUBROUTINE ${field_type_name}$_WRAP
+
+  SUBROUTINE ${field_type_name}$_WRAP_PACKED(SELF, DATA, IDX, LBOUNDS)
+    ! Create FIELD object packed in a multi-field buffer by storing a
+    ! contiguous pointer to existing data and an index.
+    CLASS(${field_type_name}$_WRAPPER), INTENT(INOUT) :: SELF
+    ${dtype}$, TARGET, INTENT(IN) :: DATA(${shapes[rank+1]}$)
+    INTEGER(KIND=JPIM), INTENT(IN) :: IDX
+    INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: LBOUNDS(${rank}$)
+
+    IF (PRESENT (LBOUNDS)) SELF%LBOUNDS = LBOUNDS
+
+    SELF%PTR => DATA(${shapes[rank-1]}$,IDX,:)
+    SELF%ACTIVE = .TRUE.
+    SELF%THREAD_BUFFER = .FALSE.
+    SELF%NBLOCKS = SIZE(SELF%PTR, ${rank}$)
+  END SUBROUTINE ${field_type_name}$_WRAP_PACKED
+
+  SUBROUTINE ALLOCATE_${field_type_name}$ (SELF, SHAPE, NBLOCKS, PERSISTENT, LBOUNDS) 
+    ! Create FIELD object by explicitly allocating new data
+    !
+    ! Please note that SHAPE is the conceptual shape without the block dimension
+    CLASS(${field_type_name}$_OWNER), TARGET :: SELF
+    INTEGER(KIND=JPIM), INTENT(IN) :: SHAPE(${rank-1}$)
+    INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: NBLOCKS
+    LOGICAL, INTENT(IN), OPTIONAL :: PERSISTENT
+    INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: LBOUNDS(${rank}$)
+    INTEGER(KIND=JPIM) :: NBLK
+
+    IF (PRESENT (LBOUNDS)) SELF%LBOUNDS = LBOUNDS
+
+    ! By default we allocate thread-local temporaries
+    SELF%THREAD_BUFFER = .TRUE.
+    NBLK = OML_MAX_THREADS()
+
+    IF (PRESENT(PERSISTENT)) THEN
+      IF (PERSISTENT) THEN
+        ! Adjust outer dim for full-sized persistent blocked arrays
+        IF (.NOT. PRESENT(NBLOCKS)) CALL &
+         & ABOR1('${field_type_name}$_ALLOCATE : NBLOCKS not given for persistent allocation!')
+        SELF%THREAD_BUFFER = .FALSE.
+        NBLK = NBLOCKS
+      END IF
+    END IF
+
+    ! Allocate storage array and store metadata
+    ALLOCATE(SELF%PTR(${','.join('SHAPE(%d)'%(r+1) for r in range(rank-1))}$,NBLK))
+    SELF%ACTIVE = .TRUE.
+    SELF%NBLOCKS = SIZE(SELF%PTR, ${rank}$)
+  END SUBROUTINE ALLOCATE_${field_type_name}$
+
   FUNCTION ${field_type_name}$_GET_VIEW(SELF, BLOCK_INDEX, ZERO) RESULT(VIEW_PTR)
     ! Updates internal view and exports it to an external pointer
     CLASS(${field_type_name}$), TARGET :: SELF
@@ -354,82 +425,6 @@ $:create_temporary ([2         ], 'LOG')
 
 #:for dtype, suffix, rank, default in field_descriptors
 #:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
-  SUBROUTINE ${field_type_name}$_WRAP(SELF, DATA, PERSISTENT, LBOUNDS)
-    ! Create FIELD object by wrapping existing data
-    TYPE(${field_type_name}$_WRAPPER), INTENT(INOUT) :: SELF
-    ${dtype}$, TARGET, INTENT(IN) :: DATA(${shapes[rank]}$)
-    LOGICAL, INTENT(IN), OPTIONAL :: PERSISTENT
-    INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: LBOUNDS(${rank}$)
-    LOGICAL :: LLPERSISTENT
-
-    LLPERSISTENT = .TRUE.
-    IF (PRESENT (PERSISTENT)) LLPERSISTENT = PERSISTENT
-    IF (PRESENT (LBOUNDS)) SELF%LBOUNDS = LBOUNDS
-
-    SELF%PTR => DATA
-    SELF%ACTIVE = .TRUE.
-    SELF%THREAD_BUFFER = .NOT. LLPERSISTENT
-    SELF%NBLOCKS = SIZE(SELF%PTR, ${rank}$)
-
-    SELF%ISTATUS = NHSTFRESH
-
-    IF (.NOT. LLPERSISTENT) THEN
-      IF (OML_MAX_THREADS() /= SIZE (DATA, ${rank}$)) THEN
-        CALL ABOR1 ('${field_type_name}$_WRAP: DIMENSION MISMATCH')
-      ENDIF
-    ENDIF
-
-  END SUBROUTINE ${field_type_name}$_WRAP
-
-  SUBROUTINE ${field_type_name}$_WRAP_PACKED(SELF, DATA, IDX, LBOUNDS)
-    ! Create FIELD object packed in a multi-field buffer by storing a
-    ! contiguous pointer to existing data and an index.
-    TYPE(${field_type_name}$_WRAPPER), INTENT(INOUT) :: SELF
-    ${dtype}$, TARGET, INTENT(IN) :: DATA(${shapes[rank+1]}$)
-    INTEGER(KIND=JPIM), INTENT(IN) :: IDX
-    INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: LBOUNDS(${rank}$)
-
-    IF (PRESENT (LBOUNDS)) SELF%LBOUNDS = LBOUNDS
-
-    SELF%PTR => DATA(${shapes[rank-1]}$,IDX,:)
-    SELF%ACTIVE = .TRUE.
-    SELF%THREAD_BUFFER = .FALSE.
-    SELF%NBLOCKS = SIZE(SELF%PTR, ${rank}$)
-  END SUBROUTINE ${field_type_name}$_WRAP_PACKED
-
-  SUBROUTINE ALLOCATE_${field_type_name}$ (SELF, SHAPE, NBLOCKS, PERSISTENT, LBOUNDS) 
-    ! Create FIELD object by explicitly allocating new data
-    !
-    ! Please note that SHAPE is the conceptual shape without the block dimension
-    CLASS(${field_type_name}$_OWNER), TARGET :: SELF
-    INTEGER(KIND=JPIM), INTENT(IN) :: SHAPE(${rank-1}$)
-    INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: NBLOCKS
-    LOGICAL, INTENT(IN), OPTIONAL :: PERSISTENT
-    INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: LBOUNDS(${rank}$)
-    INTEGER(KIND=JPIM) :: NBLK
-
-    IF (PRESENT (LBOUNDS)) SELF%LBOUNDS = LBOUNDS
-
-    ! By default we allocate thread-local temporaries
-    SELF%THREAD_BUFFER = .TRUE.
-    NBLK = OML_MAX_THREADS()
-
-    IF (PRESENT(PERSISTENT)) THEN
-      IF (PERSISTENT) THEN
-        ! Adjust outer dim for full-sized persistent blocked arrays
-        IF (.NOT. PRESENT(NBLOCKS)) CALL &
-         & ABOR1('${field_type_name}$_ALLOCATE : NBLOCKS not given for persistent allocation!')
-        SELF%THREAD_BUFFER = .FALSE.
-        NBLK = NBLOCKS
-      END IF
-    END IF
-
-    ! Allocate storage array and store metadata
-    ALLOCATE(SELF%PTR(${','.join('SHAPE(%d)'%(r+1) for r in range(rank-1))}$,NBLK))
-    SELF%ACTIVE = .TRUE.
-    SELF%NBLOCKS = SIZE(SELF%PTR, ${rank}$)
-  END SUBROUTINE ALLOCATE_${field_type_name}$
-
   INTEGER (KIND=JPIM) FUNCTION ${field_type_name}$_GET_LAST_CONTIGUOUS_DIMENSION (PTR) RESULT (JDIM)
   ${dtype}$, POINTER :: PTR (${shapes[rank]}$)
   INTEGER*8 :: ISTRIDE (${rank}$)
