@@ -51,7 +51,6 @@ TYPE, ABSTRACT :: ${field_type_name}$
   LOGICAL :: ACTIVE = .FALSE.
   ! Flag indicating the use a single block-buffer per thread
   LOGICAL :: THREAD_BUFFER = .FALSE.
-  ! Flag indicating whether we own the allocated base array
 
   INTEGER(KIND=JPIM) :: LBOUNDS (${rank}$) = [${", ".join (["1"] * rank)}$]
   INTEGER(KIND=JPIM) :: ISTATUS = 0
@@ -67,8 +66,6 @@ CONTAINS
   PROCEDURE, PRIVATE :: MOVE_DATA_TO_DEVICE => ${field_type_name}$_MOVE_DATA_TO_DEVICE
   PROCEDURE, PRIVATE :: MOVE_DATA_FROM_DEVICE => ${field_type_name}$_MOVE_DATA_FROM_DEVICE
   PROCEDURE, PRIVATE :: COPY =>  ${field_type_name}$_COPY
-
-  ! GPU-specific device data transfer API
 END TYPE ${field_type_name}$
 
 #:for dm in data_management_type
@@ -80,8 +77,6 @@ CONTAINS
   PROCEDURE :: INIT => ALLOCATE_${field_type_name}$
 #:endif
   PROCEDURE :: FINAL => ${field_type_name}$_${dm}$_FINAL
-
-  ! GPU-specific device data transfer API
   PROCEDURE :: DELETE_DEVICE => ${field_type_name}$_${dm}$_DELETE_DEVICE
 END TYPE ${field_type_name}$_${dm}$
 
@@ -213,7 +208,7 @@ CONTAINS
   END FUNCTION ${field_type_name}$_GET_VIEW
 
   SUBROUTINE ${field_type_name}$_WRAPPER_DELETE_DEVICE(SELF)
-    ! Initialize a copy of this field on GPU device
+    ! Delete the copy of this field on GPU device
     CLASS(${field_type_name}$_WRAPPER), TARGET :: SELF
 
 !$acc exit data delete(SELF%DEVPTR)
@@ -221,7 +216,7 @@ CONTAINS
   END SUBROUTINE ${field_type_name}$_WRAPPER_DELETE_DEVICE
 
   SUBROUTINE ${field_type_name}$_OWNER_DELETE_DEVICE(SELF)
-    ! Initialize a copy of this field on GPU device
+    ! Delete the copy of this field on GPU device
     CLASS(${field_type_name}$_OWNER), TARGET :: SELF
 
 !$acc exit data delete(SELF%DEVPTR)
