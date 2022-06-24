@@ -114,13 +114,6 @@ INTERFACE ALLOCATE_FIELD
 #:endfor
 END INTERFACE
 
-INTERFACE FILL_BUFFER
-#:for suffix in suffixes
-  MODULE PROCEDURE :: FILL_BUFFER_${suffix}$2D, FILL_BUFFER_${suffix}$3D
-  MODULE PROCEDURE :: FILL_BUFFER_${suffix}$4D, FILL_BUFFER_${suffix}$5D
-#:endfor
-END INTERFACE FILL_BUFFER
-
 INTERFACE FIELD_DELETE_DEVICE
 #:for dtype, suffix, rank, default in field_descriptors
 #:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
@@ -147,12 +140,11 @@ CONTAINS
 !
 #:for dtype, suffix, rank, default in field_descriptors
 #:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
-  FUNCTION ${field_type_name}$_GET_VIEW(SELF, BLOCK_INDEX, BLOCK_SIZE, ZERO) RESULT(VIEW_PTR)
+  FUNCTION ${field_type_name}$_GET_VIEW(SELF, BLOCK_INDEX, ZERO) RESULT(VIEW_PTR)
     ! Updates internal view and exports it to an external pointer
     CLASS(${field_type_name}$), TARGET :: SELF
     ${dtype}$, POINTER :: VIEW_PTR(${shapes[rank-1]}$)
     INTEGER(KIND=JPIM), INTENT(IN) :: BLOCK_INDEX
-    INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: BLOCK_SIZE
     LOGICAL, OPTIONAL, INTENT(IN) :: ZERO
     INTEGER(KIND=JPIM) :: IDX
 
@@ -162,13 +154,6 @@ CONTAINS
       VIEW_PTR (${lbptr (rank-1)}$) => SELF%PTR(${','.join(':' for _ in range(rank-1))}$,IDX)
     ELSE
       VIEW_PTR (${lbptr (rank-1)}$) => NULL()
-    END IF
-
-    IF (PRESENT(BLOCK_SIZE)) THEN
-      IF (BLOCK_INDEX == SELF%NBLOCKS) THEN
-        ! Fill the the buffer by replicating the last entry
-        CALL FILL_BUFFER(VIEW_PTR, INDEX=BLOCK_SIZE)
-      END IF
     END IF
 
     IF (PRESENT(ZERO)) THEN
@@ -372,61 +357,6 @@ CONTAINS
 $:create_temporary ([2, 3, 4, 5], '')
 $:create_temporary ([2, 3      ], 'INT')
 $:create_temporary ([2         ], 'LOG')
-
-#:for dtype, suffix in zip(dtypes, suffixes)
-  SUBROUTINE FILL_BUFFER_${suffix}$2D(BUFFER, INDEX)
-    ! Utility routine to fill data buffers (views)
-    ${dtype}$, POINTER, INTENT(INOUT) :: BUFFER(:)
-    INTEGER(KIND=JPIM), INTENT(IN) :: INDEX
-    INTEGER(KIND=JPIM) :: IDX
-
-    IDX = INDEX+1
-    BUFFER(IDX:) = BUFFER(INDEX)
-  END SUBROUTINE FILL_BUFFER_${suffix}$2D
-
-  SUBROUTINE FILL_BUFFER_${suffix}$3D(BUFFER, INDEX)
-    ! Utility routine to fill data buffers (views)
-    ${dtype}$, POINTER, INTENT(INOUT) :: BUFFER(:,:)
-    INTEGER(KIND=JPIM), INTENT(IN) :: INDEX
-    INTEGER(KIND=JPIM) :: I, IDX
-
-    IDX = INDEX+1
-    DO I=1, SIZE(BUFFER, 2)
-      BUFFER(IDX:,I) = BUFFER(INDEX,I)
-    END DO
-  END SUBROUTINE FILL_BUFFER_${suffix}$3D
-
-  SUBROUTINE FILL_BUFFER_${suffix}$4D(BUFFER, INDEX)
-    ! Utility routine to fill data buffers (views)
-    ${dtype}$, POINTER, INTENT(INOUT) :: BUFFER(:,:,:)
-    INTEGER(KIND=JPIM), INTENT(IN) :: INDEX
-    INTEGER(KIND=JPIM) :: I, J, IDX
-
-    IDX = INDEX+1
-    DO I=1, SIZE(BUFFER, 2)
-      DO J=1, SIZE(BUFFER, 3)
-        BUFFER(IDX:,I,J) = BUFFER(INDEX,I,J)
-      END DO
-    END DO
-  END SUBROUTINE FILL_BUFFER_${suffix}$4D
-
-  SUBROUTINE FILL_BUFFER_${suffix}$5D(BUFFER, INDEX)
-    ! Utility routine to fill data buffers (views)
-    ${dtype}$, POINTER, INTENT(INOUT) :: BUFFER(:,:,:,:)
-    INTEGER(KIND=JPIM), INTENT(IN) :: INDEX
-    INTEGER(KIND=JPIM) :: I, J, K, IDX
-
-    IDX = INDEX+1
-    DO I=1, SIZE(BUFFER, 2)
-      DO J=1, SIZE(BUFFER, 3)
-        DO K=1, SIZE(BUFFER, 4)
-          BUFFER(IDX:,I,J,K) = BUFFER(INDEX,I,J,K)
-        END DO
-      END DO
-    END DO
-  END SUBROUTINE FILL_BUFFER_${suffix}$5D
-
-#:endfor
 
 #:for dtype, suffix, rank, default in field_descriptors
 #:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
