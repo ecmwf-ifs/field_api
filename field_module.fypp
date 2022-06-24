@@ -261,8 +261,8 @@ CONTAINS
   SUBROUTINE ${field_type_name}$_OWNER_FINAL(SELF)
     ! Finalizes field and dealloactes owned data
     CLASS(${field_type_name}$_OWNER) :: SELF
-    IF (ALLOCATED(SELF%PTR)) THEN
-	    DEALLOCATE(SELF%PTR)
+    IF (ASSOCIATED(SELF%PTR)) THEN
+      DEALLOCATE(SELF%PTR)
     END IF
     CALL SELF%${field_type_name}$%FINAL
   END SUBROUTINE ${field_type_name}$_OWNER_FINAL
