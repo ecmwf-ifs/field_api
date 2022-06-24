@@ -18,6 +18,9 @@ USE IEEE_ARITHMETIC, ONLY: IEEE_SIGNALING_NAN
 
 IMPLICIT NONE
 
+INTEGER (KIND=JPIM), PARAMETER :: NDEVFRESH = B'00000001', NHSTFRESH = B'00000010'
+INTEGER (KIND=JPIM), PARAMETER, PRIVATE :: NH2D = 1, ND2H = 2, NRD = B'00000001', NWR = B'00000010'
+
 #:for dtype, suffix, rank, default in field_descriptors
 #:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
 TYPE, ABSTRACT :: ${field_type_name}$
@@ -83,25 +86,6 @@ CONTAINS
 END TYPE ${field_type_name}$_${dm}$
 
 #:endfor
-
-#:endfor
-
-INTEGER (KIND=JPIM), PARAMETER :: NDEVFRESH = B'00000001', NHSTFRESH = B'00000010'
-INTEGER (KIND=JPIM), PARAMETER, PRIVATE :: NH2D = 1, ND2H = 2, NRD = B'00000001', NWR = B'00000010'
-
-#:for rank in ranks
-#:for dm in data_management_type
-TYPE FIELD_${rank}$D_${dm}$_PTR
-  ! Struct to hold references to field objects
-  TYPE(FIELD_${rank}$D_${dm}$), POINTER :: PTR => NULL()
-END TYPE FIELD_${rank}$D_${dm}$_PTR
-#
-#:endfor
-
-TYPE FIELD_${rank}$D_VIEW
-  ! Struct to hold array views, so we can make arrays of them
-  REAL(KIND=JPRB), POINTER :: P(${shapes[rank-1]}$) => NULL()
-END TYPE FIELD_${rank}$D_VIEW
 
 #:endfor
 
