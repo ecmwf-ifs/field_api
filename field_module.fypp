@@ -83,16 +83,7 @@ CONTAINS
 END TYPE ${field_type_name}$_${dm}$
 
 #:endfor
-
 #:endfor
-
-INTERFACE FIELD_DELETE_DEVICE
-#:for dtype, suffix, rank, default in field_descriptors
-#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
-  MODULE PROCEDURE :: ${field_type_name}$_WRAPPER_DELETE_DEVICE
-  MODULE PROCEDURE :: ${field_type_name}$_OWNER_DELETE_DEVICE
-#:endfor
-END INTERFACE FIELD_DELETE_DEVICE
 
 INTERFACE CREATE_TEMPORARY_LU
 #:for d in [2, 3, 4, 5]
