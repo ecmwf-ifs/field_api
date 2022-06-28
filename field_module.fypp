@@ -58,6 +58,7 @@ TYPE, ABSTRACT :: ${field_type_name}$
 CONTAINS
 
   PROCEDURE :: FINAL => ${field_type_name}$_FINAL
+  PROCEDURE :: DELETE_DEVICE => ${field_type_name}$_DELETE_DEVICE
   PROCEDURE :: GET_VIEW => ${field_type_name}$_GET_VIEW
   PROCEDURE :: MOVE_DATA_TO_DEVICE_RDONLY => ${field_type_name}$_MOVE_DATA_TO_DEVICE_RDONLY
   PROCEDURE :: MOVE_DATA_TO_DEVICE_RDWR => ${field_type_name}$_MOVE_DATA_TO_DEVICE_RDWR
@@ -79,7 +80,6 @@ CONTAINS
   PROCEDURE :: INIT => ALLOCATE_${field_type_name}$
 #:endif
   PROCEDURE :: FINAL => ${field_type_name}$_${dm}$_FINAL
-  PROCEDURE :: DELETE_DEVICE => ${field_type_name}$_${dm}$_DELETE_DEVICE
 END TYPE ${field_type_name}$_${dm}$
 
 #:endfor
@@ -200,41 +200,32 @@ CONTAINS
     END IF
   END FUNCTION ${field_type_name}$_GET_VIEW
 
-  SUBROUTINE ${field_type_name}$_WRAPPER_DELETE_DEVICE(SELF)
+  SUBROUTINE ${field_type_name}$_DELETE_DEVICE(SELF)
     ! Delete the copy of this field on GPU device
-    CLASS(${field_type_name}$_WRAPPER), TARGET :: SELF
+    CLASS(${field_type_name}$), TARGET :: SELF
 
-!$acc exit data delete(SELF%DEVPTR)
-    DEALLOCATE(SELF%DEVPTR)
-  END SUBROUTINE ${field_type_name}$_WRAPPER_DELETE_DEVICE
-
-  SUBROUTINE ${field_type_name}$_OWNER_DELETE_DEVICE(SELF)
-    ! Delete the copy of this field on GPU device
-    CLASS(${field_type_name}$_OWNER), TARGET :: SELF
-
-!$acc exit data delete(SELF%DEVPTR)
-    NULLIFY(SELF%DEVPTR)
-  END SUBROUTINE ${field_type_name}$_OWNER_DELETE_DEVICE
-
-  SUBROUTINE ${field_type_name}$_FINAL(SELF)
-    ! Finalizes field and dealloactes owned data
-    CLASS(${field_type_name}$) :: SELF
-    NULLIFY(SELF%PTR)
     IF (ASSOCIATED (SELF%DEVPTR)) THEN
       !$acc exit data delete (SELF%DEVPTR)
       DEALLOCATE (SELF%DEVPTR)
       NULLIFY (SELF%DEVPTR)
     ENDIF
+  END SUBROUTINE ${field_type_name}$_DELETE_DEVICE
+
+  SUBROUTINE ${field_type_name}$_FINAL(SELF)
+    ! Finalizes field and deallocates owned data
+    CLASS(${field_type_name}$) :: SELF
+    NULLIFY(SELF%PTR)
+    CALL SELF%DELETE_DEVICE()
   END SUBROUTINE ${field_type_name}$_FINAL
 
   SUBROUTINE ${field_type_name}$_WRAPPER_FINAL(SELF)
-    ! Finalizes field and dealloactes owned data
+    ! Finalizes field and deallocates owned data
     CLASS(${field_type_name}$_WRAPPER) :: SELF
     CALL SELF%${field_type_name}$%FINAL
   END SUBROUTINE ${field_type_name}$_WRAPPER_FINAL
 
   SUBROUTINE ${field_type_name}$_OWNER_FINAL(SELF)
-    ! Finalizes field and dealloactes owned data
+    ! Finalizes field and deallocates owned data
     CLASS(${field_type_name}$_OWNER) :: SELF
     IF (ASSOCIATED(SELF%PTR)) THEN
       DEALLOCATE(SELF%PTR)
