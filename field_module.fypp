@@ -186,13 +186,14 @@ CONTAINS
     LOGICAL, OPTIONAL, INTENT(IN) :: ZERO
     INTEGER(KIND=JPIM) :: IDX
 
+    IF (.NOT. SELF%ACTIVE) THEN
+      VIEW_PTR (${lbptr (rank-1)}$) => NULL()
+      RETURN
+    END IF
+
     IDX = BLOCK_INDEX
     IF (SELF%THREAD_BUFFER) IDX = OML_MY_THREAD()
-    IF (SELF%ACTIVE) THEN
-      VIEW_PTR (${lbptr (rank-1)}$) => SELF%PTR(${','.join(':' for _ in range(rank-1))}$,IDX)
-    ELSE
-      VIEW_PTR (${lbptr (rank-1)}$) => NULL()
-    END IF
+    VIEW_PTR (${lbptr (rank-1)}$) => SELF%PTR(${','.join(':' for _ in range(rank-1))}$,IDX)
 
     IF (PRESENT(ZERO)) THEN
       IF (ZERO) VIEW_PTR(${shapes[rank-1]}$) = ${default}$
