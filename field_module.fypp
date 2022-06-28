@@ -179,10 +179,9 @@ CONTAINS
     SELF%NBLOCKS = SIZE(SELF%PTR, ${rank}$)
   END SUBROUTINE ALLOCATE_${field_type_name}$
 
-  FUNCTION ${field_type_name}$_GET_VIEW(SELF, BLOCK_INDEX, ZERO) RESULT(VIEW_PTR)
-    ! Updates internal view and exports it to an external pointer
+  SUBROUTINE ${field_type_name}$_GET_VIEW(SELF, VIEW_PTR, BLOCK_INDEX, ZERO)
     CLASS(${field_type_name}$), TARGET :: SELF
-    ${dtype}$, POINTER :: VIEW_PTR(${shapes[rank-1]}$)
+    ${dtype}$, POINTER, INTENT(OUT) :: VIEW_PTR(${shapes[rank-1]}$)
     INTEGER(KIND=JPIM), INTENT(IN) :: BLOCK_INDEX
     LOGICAL, OPTIONAL, INTENT(IN) :: ZERO
     INTEGER(KIND=JPIM) :: IDX
@@ -198,7 +197,7 @@ CONTAINS
     IF (PRESENT(ZERO)) THEN
       IF (ZERO) VIEW_PTR(${shapes[rank-1]}$) = ${default}$
     END IF
-  END FUNCTION ${field_type_name}$_GET_VIEW
+  END SUBROUTINE ${field_type_name}$_GET_VIEW
 
   SUBROUTINE ${field_type_name}$_DELETE_DEVICE(SELF)
     ! Delete the copy of this field on GPU device
