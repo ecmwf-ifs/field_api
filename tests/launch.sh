@@ -52,5 +52,6 @@ test_prog final_wrapper.F90
 test_prog final_owner.F90
 test_prog final_wrapper_gpu.F90
 test_prog get_view_bugfix1.F90
+test_prog get_stats.F90
 
 rm $SRC *.o *.mod $OUTFILE
