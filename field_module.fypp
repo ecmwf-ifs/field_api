@@ -85,7 +85,7 @@ END TYPE ${field_type_name}$
 TYPE, EXTENDS(${field_type_name}$) :: ${field_type_name}$_${dm}$
 CONTAINS
 #:if dm == 'WRAPPER'
-  PROCEDURE :: INIT => ${field_type_name}$_WRAP, ${field_type_name}$_WRAP_PACKED
+  PROCEDURE :: INIT => ${field_type_name}$_WRAP
 #:else
   PROCEDURE :: INIT => ALLOCATE_${field_type_name}$
 #:endif
@@ -138,21 +138,6 @@ CONTAINS
     ENDIF
 
   END SUBROUTINE ${field_type_name}$_WRAP
-
-  SUBROUTINE ${field_type_name}$_WRAP_PACKED(SELF, DATA, IDX, LBOUNDS)
-    ! Create FIELD object packed in a multi-field buffer by storing a
-    ! contiguous pointer to existing data and an index.
-    CLASS(${field_type_name}$_WRAPPER), INTENT(INOUT) :: SELF
-    ${dtype}$, TARGET, INTENT(IN) :: DATA(${shapes[rank+1]}$)
-    INTEGER(KIND=JPIM), INTENT(IN) :: IDX
-    INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: LBOUNDS(${rank}$)
-
-    IF (PRESENT (LBOUNDS)) SELF%LBOUNDS = LBOUNDS
-
-    SELF%PTR => DATA(${shapes[rank-1]}$,IDX,:)
-    SELF%THREAD_BUFFER = .FALSE.
-    SELF%NBLOCKS = SIZE(SELF%PTR, ${rank}$)
-  END SUBROUTINE ${field_type_name}$_WRAP_PACKED
 
   SUBROUTINE ALLOCATE_${field_type_name}$ (SELF, SHAPE, NBLOCKS, PERSISTENT, LBOUNDS) 
     ! Create FIELD object by explicitly allocating new data
