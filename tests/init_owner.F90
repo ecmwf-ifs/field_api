@@ -15,9 +15,7 @@ PROGRAM INIT
                 ERROR STOP
         END IF
 
-        IF (ALL(O%PTR == 42)) THEN
-                STOP
-        ELSE
+        IF (.NOT. ALL(O%PTR == 42)) THEN
                 ERROR STOP
         END IF 
 END PROGRAM INIT

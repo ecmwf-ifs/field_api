@@ -38,6 +38,5 @@ PROGRAM INIT
         IF(W%STATS%TRANSFER_GPU_TO_CPU /= 1 ) THEN
                 ERROR STOP
         END IF
-        write(*,*)w%stats
 
 END PROGRAM INIT

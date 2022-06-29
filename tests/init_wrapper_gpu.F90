@@ -24,9 +24,7 @@ PROGRAM INIT
         END DO
         !$ACC END SERIAL
 
-        IF (RES) THEN
-                STOP
-        ELSE
+        IF (.NOT. RES) THEN
                 ERROR STOP
         END IF
 END PROGRAM INIT
