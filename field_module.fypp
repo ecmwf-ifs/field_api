@@ -57,8 +57,6 @@ TYPE, ABSTRACT :: ${field_type_name}$
   ! Number of blocks used in the data layout
   INTEGER :: NBLOCKS
 
-  ! Flag indicating whether this field stores real data
-  LOGICAL :: ACTIVE = .FALSE.
   ! Flag indicating the use a single block-buffer per thread
   LOGICAL :: THREAD_BUFFER = .FALSE.
 
@@ -128,7 +126,6 @@ CONTAINS
     IF (PRESENT (LBOUNDS)) SELF%LBOUNDS = LBOUNDS
 
     SELF%PTR => DATA
-    SELF%ACTIVE = .TRUE.
     SELF%THREAD_BUFFER = .NOT. LLPERSISTENT
     SELF%NBLOCKS = SIZE(SELF%PTR, ${rank}$)
 
@@ -153,7 +150,6 @@ CONTAINS
     IF (PRESENT (LBOUNDS)) SELF%LBOUNDS = LBOUNDS
 
     SELF%PTR => DATA(${shapes[rank-1]}$,IDX,:)
-    SELF%ACTIVE = .TRUE.
     SELF%THREAD_BUFFER = .FALSE.
     SELF%NBLOCKS = SIZE(SELF%PTR, ${rank}$)
   END SUBROUTINE ${field_type_name}$_WRAP_PACKED
@@ -187,7 +183,6 @@ CONTAINS
 
     ! Allocate storage array and store metadata
     ALLOCATE(SELF%PTR(${','.join('SHAPE(%d)'%(r+1) for r in range(rank-1))}$,NBLK))
-    SELF%ACTIVE = .TRUE.
     SELF%NBLOCKS = SIZE(SELF%PTR, ${rank}$)
   END SUBROUTINE ALLOCATE_${field_type_name}$
 
@@ -197,11 +192,6 @@ CONTAINS
     INTEGER(KIND=JPIM), INTENT(IN) :: BLOCK_INDEX
     LOGICAL, OPTIONAL, INTENT(IN) :: ZERO
     INTEGER(KIND=JPIM) :: IDX
-
-    IF (.NOT. SELF%ACTIVE) THEN
-      VIEW_PTR (${lbptr (rank-1)}$) => NULL()
-      RETURN
-    END IF
 
     IDX = BLOCK_INDEX
     IF (SELF%THREAD_BUFFER) IDX = OML_MY_THREAD()
