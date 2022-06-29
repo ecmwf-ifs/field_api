@@ -62,6 +62,7 @@ TYPE, ABSTRACT :: ${field_type_name}$
 
   INTEGER(KIND=JPIM) :: LBOUNDS (${rank}$) = [${", ".join (["1"] * rank)}$]
   INTEGER(KIND=JPIM) :: ISTATUS = 0
+  INTEGER(KIND=JPIM) :: LAST_CONTIGUOUS_DIMENSION = 0
 
   TYPE(GPU_STATS) :: STATS
 
@@ -156,6 +157,8 @@ CONTAINS
     SELF%THREAD_BUFFER = .TRUE.
     NBLK = OML_MAX_THREADS()
 
+    SELF%LAST_CONTIGUOUS_DIMENSION = ${rank}$
+
     IF (PRESENT(PERSISTENT)) THEN
       IF (PERSISTENT) THEN
         ! Adjust outer dim for full-sized persistent blocked arrays
@@ -223,13 +226,12 @@ CONTAINS
   SUBROUTINE ${field_type_name}$_COPY (SELF, KDIR)
   CLASS(${field_type_name}$) :: SELF
   INTEGER (KIND=JPIM), INTENT (IN) :: KDIR
-  INTEGER (KIND=JPIM) :: JDIM
   REAL :: START, FINISH
 
-  JDIM = ${field_type_name}$_GET_LAST_CONTIGUOUS_DIMENSION (SELF%PTR)
+  SELF%LAST_CONTIGUOUS_DIMENSION = ${field_type_name}$_GET_LAST_CONTIGUOUS_DIMENSION (SELF%PTR)
 
   CALL CPU_TIME(START)
-  SELECT CASE (JDIM)
+  SELECT CASE (SELF%LAST_CONTIGUOUS_DIMENSION)
 #:for d in range (rank + 1)
     CASE (${d}$)
       CALL COPY_DIM${d}$_CONTIGUOUS (SELF%PTR, SELF%DEVPTR, KDIR)
