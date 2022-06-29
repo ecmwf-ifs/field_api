@@ -87,7 +87,7 @@ CONTAINS
 #:if dm == 'WRAPPER'
   PROCEDURE :: INIT => ${field_type_name}$_WRAP
 #:else
-  PROCEDURE :: INIT => ALLOCATE_${field_type_name}$
+  PROCEDURE :: INIT => ${field_type_name}$_ALLOCATE
 #:endif
   PROCEDURE :: FINAL => ${field_type_name}$_${dm}$_FINAL
 END TYPE ${field_type_name}$_${dm}$
@@ -139,7 +139,7 @@ CONTAINS
 
   END SUBROUTINE ${field_type_name}$_WRAP
 
-  SUBROUTINE ALLOCATE_${field_type_name}$ (SELF, SHAPE, NBLOCKS, PERSISTENT, LBOUNDS) 
+  SUBROUTINE ${field_type_name}$_ALLOCATE (SELF, SHAPE, NBLOCKS, PERSISTENT, LBOUNDS) 
     ! Create FIELD object by explicitly allocating new data
     !
     ! Please note that SHAPE is the conceptual shape without the block dimension
@@ -169,7 +169,7 @@ CONTAINS
     ! Allocate storage array and store metadata
     ALLOCATE(SELF%PTR(${','.join('SHAPE(%d)'%(r+1) for r in range(rank-1))}$,NBLK))
     SELF%NBLOCKS = SIZE(SELF%PTR, ${rank}$)
-  END SUBROUTINE ALLOCATE_${field_type_name}$
+  END SUBROUTINE ${field_type_name}$_ALLOCATE
 
   SUBROUTINE ${field_type_name}$_GET_VIEW(SELF, VIEW_PTR, BLOCK_INDEX, ZERO)
     CLASS(${field_type_name}$), TARGET :: SELF
@@ -394,7 +394,7 @@ CONTAINS
 
     ALLOCATE(FIELD_PTR)
     NBLOCKS = UBOUNDS (${d}$)
-    CALL ALLOCATE_${field_type_name}$ (FIELD_PTR, SHAPE=ISIZE(1:${d}$-1), NBLOCKS=NBLOCKS, PERSISTENT=PERSISTENT, LBOUNDS=LBOUNDS)
+    CALL ${field_type_name}$_ALLOCATE (FIELD_PTR, SHAPE=ISIZE(1:${d}$-1), NBLOCKS=NBLOCKS, PERSISTENT=PERSISTENT, LBOUNDS=LBOUNDS)
 
     FIELD_PTR%ISTATUS = NHSTFRESH
 
