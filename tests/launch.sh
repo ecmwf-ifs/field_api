@@ -46,6 +46,7 @@ fi
 test_prog init_wrapper.F90
 test_prog init_wrapper_gpu.F90
 test_prog init_owner.F90
+test_prog init_owner2.F90
 test_prog init_owner_gpu.F90
 test_prog wrapper_modify_gpu.F90
 test_prog final_wrapper.F90

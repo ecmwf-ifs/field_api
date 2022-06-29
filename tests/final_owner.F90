@@ -5,7 +5,7 @@ PROGRAM INIT
         IMPLICIT NONE
         TYPE(FIELD_2D_OWNER) :: O
 
-        CALL O%INIT(SHAPE=[10],NBLOCKS=21, PERSISTENT=.TRUE.)
+        CALL O%INIT([10,1],[21,11])
         O%PTR=42
         CALL O%FINAL()
 

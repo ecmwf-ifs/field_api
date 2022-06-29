@@ -8,14 +8,14 @@ PROGRAM INIT
         LOGICAL :: RES
         INTEGER :: I,J
 
-        CALL O%INIT(SHAPE=[10],NBLOCKS=21, PERSISTENT=.TRUE.)
+        CALL O%INIT([10,1],[21,11])
         O%PTR=42
 
         CALL O%MOVE_DATA_TO_DEVICE_RDONLY(D_GPU)
         !$ACC SERIAL PRESENT(D_GPU) COPY(RES)
         RES=.TRUE.
-        DO I=1,10
-        DO J=1,10
+        DO I=10,21
+        DO J=1,11
         IF(D_GPU(I,J) /= 42) THEN
                 RES = .FALSE.
         END IF

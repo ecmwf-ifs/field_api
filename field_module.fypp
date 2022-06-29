@@ -96,18 +96,6 @@ END TYPE ${field_type_name}$_${dm}$
 #:endfor
 #:endfor
 
-INTERFACE CREATE_TEMPORARY_LU
-#:for d in [2, 3, 4, 5]
-  MODULE PROCEDURE CREATE_TEMPORARY_${d}$D_LU
-#:endfor
-#:for d in [2, 3]
-  MODULE PROCEDURE CREATE_TEMPORARY_INT${d}$D_LU
-#:endfor
-#:for d in [2]
-  MODULE PROCEDURE CREATE_TEMPORARY_LOG${d}$D_LU
-#:endfor
-END INTERFACE CREATE_TEMPORARY_LU
-
 CONTAINS
 !
 ! CLASS METHODS
@@ -140,38 +128,37 @@ CONTAINS
 
   END SUBROUTINE ${field_type_name}$_WRAP
 
-  SUBROUTINE ${field_type_name}$_ALLOCATE (SELF, SHAPE, NBLOCKS, PERSISTENT, LBOUNDS) 
+  SUBROUTINE ${field_type_name}$_ALLOCATE (SELF, LBOUNDS, UBOUNDS, PERSISTENT)
     ! Create FIELD object by explicitly allocating new data
-    !
-    ! Please note that SHAPE is the conceptual shape without the block dimension
     CLASS(${field_type_name}$_OWNER), TARGET :: SELF
-    INTEGER(KIND=JPIM), INTENT(IN) :: SHAPE(${rank-1}$)
-    INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: NBLOCKS
+    INTEGER(KIND=JPIM), INTENT(IN) :: LBOUNDS(${rank}$)
+    INTEGER(KIND=JPIM), INTENT(IN) :: UBOUNDS(${rank}$)
     LOGICAL, INTENT(IN), OPTIONAL :: PERSISTENT
-    INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: LBOUNDS(${rank}$)
-    INTEGER(KIND=JPIM) :: NBLK
+    INTEGER(KIND=JPIM) :: REAL_LBOUNDS(${rank}$)
+    INTEGER(KIND=JPIM) :: REAL_UBOUNDS(${rank}$)
 
-    IF (PRESENT (LBOUNDS)) SELF%LBOUNDS = LBOUNDS
+    REAL_LBOUNDS=LBOUNDS
+    REAL_UBOUNDS=UBOUNDS
+
+    SELF%LBOUNDS = LBOUNDS
 
     ! By default we allocate thread-local temporaries
     SELF%THREAD_BUFFER = .TRUE.
-    NBLK = OML_MAX_THREADS()
 
     SELF%LAST_CONTIGUOUS_DIMENSION = ${rank}$
 
     IF (PRESENT(PERSISTENT)) THEN
       IF (PERSISTENT) THEN
-        ! Adjust outer dim for full-sized persistent blocked arrays
-        IF (.NOT. PRESENT(NBLOCKS)) CALL &
-         & ABOR1('${field_type_name}$_ALLOCATE : NBLOCKS not given for persistent allocation!')
         SELF%THREAD_BUFFER = .FALSE.
-        NBLK = NBLOCKS
+        REAL_LBOUNDS(${rank}$) = 1
+        REAL_UBOUNDS(${rank}$) = OML_MAX_THREADS()
       END IF
     END IF
 
     ! Allocate storage array and store metadata
-    ALLOCATE(SELF%PTR(${','.join('SHAPE(%d)'%(r+1) for r in range(rank-1))}$,NBLK))
+    ALLOCATE(SELF%PTR(${','.join('REAL_LBOUNDS(%d):REAL_UBOUNDS(%d)'%(r+1,r+1) for r in range(rank))}$))
     SELF%NBLOCKS = SIZE(SELF%PTR, ${rank}$)
+    SELF%ISTATUS = NHSTFRESH
   END SUBROUTINE ${field_type_name}$_ALLOCATE
 
   SUBROUTINE ${field_type_name}$_GET_VIEW(SELF, VIEW_PTR, BLOCK_INDEX, ZERO)
@@ -378,36 +365,6 @@ CONTAINS
 !
 ! HELPERS
 !
-
-#:def create_temporary (dims, type)
-#:for d in dims
-#:set field_type_name = 'FIELD_%s%sD' % (type, d)
-  SUBROUTINE CREATE_TEMPORARY_${type}$${d}$D_LU (FIELD_PTR, UBOUNDS, LBOUNDS, PERSISTENT)
-
-    CLASS(${field_type_name}$_OWNER), POINTER :: FIELD_PTR
-    INTEGER(KIND=JPIM), INTENT(IN) :: UBOUNDS (${d}$)
-    INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN) :: LBOUNDS (${d}$)
-    LOGICAL, OPTIONAL, INTENT(IN) :: PERSISTENT
-    INTEGER(KIND=JPIM) :: NBLOCKS
-    INTEGER(KIND=JPIM) :: ISIZE (${d}$)
-
-    ISIZE = UBOUNDS
-    IF (PRESENT (LBOUNDS)) ISIZE = ISIZE - LBOUNDS + 1
-
-    ALLOCATE(FIELD_PTR)
-    NBLOCKS = UBOUNDS (${d}$)
-    CALL ${field_type_name}$_ALLOCATE (FIELD_PTR, SHAPE=ISIZE(1:${d}$-1), NBLOCKS=NBLOCKS, PERSISTENT=PERSISTENT, LBOUNDS=LBOUNDS)
-
-    FIELD_PTR%ISTATUS = NHSTFRESH
-
-  END SUBROUTINE CREATE_TEMPORARY_${type}$${d}$D_LU
-
-#:endfor
-#:enddef
-
-$:create_temporary ([2, 3, 4, 5], '')
-$:create_temporary ([2, 3      ], 'INT')
-$:create_temporary ([2         ], 'LOG')
 
 #:for dtype, suffix, rank, default in field_descriptors
 #:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
