@@ -44,6 +44,7 @@ else
 fi
 
 test_prog init_wrapper.F90
+test_prog init_wrapper_non_contiguous.F90
 test_prog init_wrapper_gpu.F90
 test_prog init_owner.F90
 test_prog init_owner2.F90

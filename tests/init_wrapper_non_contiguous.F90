@@ -1,0 +1,32 @@
+MODULE NON_CONTI
+        USE FIELD_MODULE
+        IMPLICIT NONE
+CONTAINS
+        SUBROUTINE DO_STUFF_WITH_CON_CONTIGUOUS(D)
+                REAL(KIND=JPRB) :: D(:,:)
+                TYPE(FIELD_2D_WRAPPER) :: W
+                CALL W%INIT(D)
+                W%PTR=42
+        END SUBROUTINE DO_STUFF_WITH_CON_CONTIGUOUS
+END MODULE NON_CONTI
+PROGRAM INIT
+        ! TEST IF WRAPPER WORKS WITH NON CONTIGUOUS ARRAY
+        USE FIELD_MODULE
+        USE NON_CONTI
+
+        IMPLICIT NONE
+        REAL(KIND=JPRB), ALLOCATABLE :: D(:,:)
+        INTEGER :: I, J
+
+        ALLOCATE(D(10,10))
+        D=7
+        CALL DO_STUFF_WITH_CON_CONTIGUOUS(D(5:10,1:2))
+        DO I=5,10
+        DO J=1,2
+        IF (D(I,J) /= 42) THEN
+                ERROR STOP
+        END IF
+        END DO
+        END DO
+
+END PROGRAM INIT
