@@ -54,9 +54,6 @@ TYPE, ABSTRACT :: ${field_type_name}$
   ! device, should the %DATA pointer be discontiguous.
   ${dtype}$, POINTER, CONTIGUOUS :: DEVPTR(${shapes[rank]}$) => NULL()
 
-  ! Number of blocks used in the data layout
-  INTEGER :: NBLOCKS
-
   ! Flag indicating the use a single block-buffer per thread
   LOGICAL :: THREAD_BUFFER = .FALSE.
 
@@ -113,8 +110,6 @@ CONTAINS
 
     SELF%PTR => DATA
     SELF%THREAD_BUFFER = .NOT. LLPERSISTENT
-    SELF%NBLOCKS = SIZE(SELF%PTR, ${rank}$)
-
     SELF%ISTATUS = NHSTFRESH
 
     IF (.NOT. LLPERSISTENT) THEN
@@ -152,7 +147,6 @@ CONTAINS
 
     ! Allocate storage array and store metadata
     ALLOCATE(SELF%PTR(${','.join('REAL_LBOUNDS(%d):REAL_UBOUNDS(%d)'%(r+1,r+1) for r in range(rank))}$))
-    SELF%NBLOCKS = SIZE(SELF%PTR, ${rank}$)
     SELF%ISTATUS = NHSTFRESH
   END SUBROUTINE ${field_type_name}$_ALLOCATE
 
