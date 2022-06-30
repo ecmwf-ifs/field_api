@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.15)
 
 project(field_api)
 enable_language (Fortran)
+set(LIBNAME field_api)
+set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/modules)
 
 get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
 if (Fortran_COMPILER_NAME MATCHES "nvfortran")
@@ -22,10 +24,13 @@ add_custom_command(
 	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/field_module.fypp
 	VERBATIM)
 
-add_library(libfield_api field_module.F90 abor1.F90 oml_mod.F90 parkind1.F90) 
+add_library(${LIBNAME} field_module.F90 abor1.F90 oml_mod.F90 parkind1.F90) 
 
 add_executable(main.x main.F90)
-target_link_libraries(main.x PUBLIC libfield_api)
+target_link_libraries(main.x PUBLIC ${LIBNAME})
 
 add_executable(cuda.x cuda.F90)
-target_link_libraries(cuda.x PUBLIC libfield_api)
+target_link_libraries(cuda.x PUBLIC ${LIBNAME})
+
+enable_testing()
+add_subdirectory(tests)
