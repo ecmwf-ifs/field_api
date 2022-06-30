@@ -1,0 +1,31 @@
+cmake_minimum_required(VERSION 3.15)
+
+project(field_api)
+enable_language (Fortran)
+
+get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
+if (Fortran_COMPILER_NAME MATCHES "nvfortran")
+	set (CMAKE_Fortran_FLAGS "-acc=gpu -Mcuda -Mlarge_arrays")
+	set (CMAKE_Fortran_FLAGS "-acc=gpu -Mcuda -Mlarge_arrays")
+endif()
+
+set(CMAKE_BUILD_TYPE "Debug")
+
+# Pre-process: .fpp -> .f90 via Fypp
+find_program(FYPP fypp)
+if (NOT FYPP)
+	MESSAGE(FATAL_ERROR "Could not find fypp.")
+endif()
+add_custom_command(
+	OUTPUT field_module.F90
+	COMMAND fypp -m os ${CMAKE_CURRENT_SOURCE_DIR}/field_module.fypp > field_module.F90
+	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/field_module.fypp
+	VERBATIM)
+
+add_library(libfield_api field_module.F90 abor1.F90 oml_mod.F90 parkind1.F90) 
+
+add_executable(main.x main.F90)
+target_link_libraries(main.x PUBLIC libfield_api)
+
+add_executable(cuda.x cuda.F90)
+target_link_libraries(cuda.x PUBLIC libfield_api)
