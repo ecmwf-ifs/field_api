@@ -122,7 +122,7 @@ CONTAINS
 
   SUBROUTINE ${field_type_name}$_ALLOCATE (SELF, LBOUNDS, UBOUNDS, PERSISTENT)
     ! Create FIELD object by explicitly allocating new data
-    CLASS(${field_type_name}$_OWNER), TARGET :: SELF
+    CLASS(${field_type_name}$_OWNER) :: SELF
     INTEGER(KIND=JPIM), INTENT(IN) :: LBOUNDS(${rank}$)
     INTEGER(KIND=JPIM), INTENT(IN) :: UBOUNDS(${rank}$)
     LOGICAL, INTENT(IN), OPTIONAL :: PERSISTENT
@@ -151,7 +151,7 @@ CONTAINS
   END SUBROUTINE ${field_type_name}$_ALLOCATE
 
   SUBROUTINE ${field_type_name}$_GET_VIEW(SELF, VIEW_PTR, BLOCK_INDEX, ZERO)
-    CLASS(${field_type_name}$), TARGET :: SELF
+    CLASS(${field_type_name}$) :: SELF
     ${dtype}$, POINTER, INTENT(OUT) :: VIEW_PTR(${shapes[rank-1]}$)
     INTEGER(KIND=JPIM), INTENT(IN) :: BLOCK_INDEX
     LOGICAL, OPTIONAL, INTENT(IN) :: ZERO
@@ -170,7 +170,7 @@ CONTAINS
 
   SUBROUTINE ${field_type_name}$_DELETE_DEVICE(SELF)
     ! Delete the copy of this field on GPU device
-    CLASS(${field_type_name}$), TARGET :: SELF
+    CLASS(${field_type_name}$) :: SELF
 
     IF (ASSOCIATED (SELF%DEVPTR)) THEN
       !$acc exit data delete (SELF%DEVPTR)
