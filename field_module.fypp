@@ -60,7 +60,6 @@ TYPE, ABSTRACT :: ${field_type_name}$
   ! Flag indicating the use a single block-buffer per thread
   LOGICAL :: THREAD_BUFFER = .FALSE.
 
-  INTEGER(KIND=JPIM) :: LBOUNDS (${rank}$) = [${", ".join (["1"] * rank)}$]
   INTEGER(KIND=JPIM) :: ISTATUS = 0
   INTEGER(KIND=JPIM) :: LAST_CONTIGUOUS_DIMENSION = 0
 
@@ -102,17 +101,15 @@ CONTAINS
 !
 #:for dtype, suffix, rank, default in field_descriptors
 #:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
-  SUBROUTINE ${field_type_name}$_WRAP(SELF, DATA, PERSISTENT, LBOUNDS)
+  SUBROUTINE ${field_type_name}$_WRAP(SELF, DATA, PERSISTENT)
     ! Create FIELD object by wrapping existing data
     CLASS(${field_type_name}$_WRAPPER), INTENT(INOUT) :: SELF
     ${dtype}$, TARGET, INTENT(IN) :: DATA(${shapes[rank]}$)
     LOGICAL, INTENT(IN), OPTIONAL :: PERSISTENT
-    INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: LBOUNDS(${rank}$)
     LOGICAL :: LLPERSISTENT
 
     LLPERSISTENT = .TRUE.
     IF (PRESENT (PERSISTENT)) LLPERSISTENT = PERSISTENT
-    IF (PRESENT (LBOUNDS)) SELF%LBOUNDS = LBOUNDS
 
     SELF%PTR => DATA
     SELF%THREAD_BUFFER = .NOT. LLPERSISTENT
@@ -140,8 +137,6 @@ CONTAINS
     REAL_LBOUNDS=LBOUNDS
     REAL_UBOUNDS=UBOUNDS
 
-    SELF%LBOUNDS = LBOUNDS
-
     ! By default we allocate thread-local temporaries
     SELF%THREAD_BUFFER = .TRUE.
 
@@ -167,8 +162,10 @@ CONTAINS
     INTEGER(KIND=JPIM), INTENT(IN) :: BLOCK_INDEX
     LOGICAL, OPTIONAL, INTENT(IN) :: ZERO
     INTEGER(KIND=JPIM) :: IDX
+    INTEGER(KIND=JPIM) :: LBOUNDS(${rank}$)
 
     IDX = BLOCK_INDEX
+    LBOUNDS=LBOUND(SELF%PTR)
     IF (SELF%THREAD_BUFFER) IDX = OML_MY_THREAD()
     VIEW_PTR (${lbptr (rank-1)}$) => SELF%PTR(${','.join(':' for _ in range(rank-1))}$,IDX)
 
@@ -273,7 +270,9 @@ CONTAINS
     CLASS(${field_type_name}$), INTENT (INOUT) :: SELF
     INTEGER (KIND=JPIM),                INTENT (IN) :: MODE
     ${dtype}$, POINTER, INTENT(INOUT) :: PTR(${shapes[rank]}$)
+    INTEGER(KIND=JPIM) :: LBOUNDS(${rank}$)
 
+    LBOUNDS=LBOUND(SELF%PTR)
     IF (IAND (SELF%ISTATUS, NHSTFRESH) == 0) THEN
       CALL SELF%COPY (ND2H)
       SELF%ISTATUS = IOR (SELF%ISTATUS, NHSTFRESH)
@@ -305,7 +304,9 @@ CONTAINS
     CLASS(${field_type_name}$), INTENT (INOUT) :: SELF
     INTEGER (KIND=JPIM),                INTENT (IN) :: MODE
     ${dtype}$, POINTER, INTENT(INOUT) :: PTR(${shapes[rank]}$)
+    INTEGER(KIND=JPIM) :: LBOUNDS(${rank}$)
 
+    LBOUNDS=LBOUND(SELF%PTR)
     IF (IAND (SELF%ISTATUS, NDEVFRESH) == 0) THEN
       IF (.NOT. ASSOCIATED (SELF%DEVPTR)) THEN
         ALLOCATE (SELF%DEVPTR, MOLD=SELF%PTR)

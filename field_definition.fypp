@@ -10,6 +10,6 @@
 #:set dumsize = '1'
 
 #:def lbptr (rank)
-  #:set lb = ", ".join (list (map (lambda i: "SELF%LBOUNDS(" + str (i+1) + "):", range (0, rank))))
+  #:set lb = ", ".join (list (map (lambda i: "LBOUNDS(" + str (i+1) + "):", range (0, rank))))
 $:lb
 #:enddef
