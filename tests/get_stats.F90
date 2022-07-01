@@ -39,5 +39,5 @@ PROGRAM INIT
         IF(W%STATS%TRANSFER_GPU_TO_CPU /= 1 ) THEN
                 ERROR STOP
         END IF
-#endif
+#endif /* _OPENACC */
 END PROGRAM INIT

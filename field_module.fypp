@@ -223,7 +223,7 @@ CONTAINS
   END IF
 #else
   SELF%DEVPTR => SELF%PTR
-#endif _OPENACC
+#endif /* _OPENACC */
 
   CONTAINS
 
@@ -261,7 +261,7 @@ CONTAINS
     END SUBROUTINE
 
 #:endfor
-#endif _OPENACC
+#endif /* _OPENACC */
   END SUBROUTINE ${field_type_name}$_COPY
 
 
