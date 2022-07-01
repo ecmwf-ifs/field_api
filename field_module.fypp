@@ -223,10 +223,11 @@ CONTAINS
   END IF
 #else
   SELF%DEVPTR => SELF%PTR
-#endif
+#endif _OPENACC
 
   CONTAINS
 
+#ifdef _OPENACC
 #:for d in range (0, rank+1)
     SUBROUTINE COPY_DIM${d}$_CONTIGUOUS (HST, DEV, KDIR)
     USE OPENACC
@@ -260,6 +261,7 @@ CONTAINS
     END SUBROUTINE
 
 #:endfor
+#endif _OPENACC
   END SUBROUTINE ${field_type_name}$_COPY
 
 
