@@ -14,10 +14,6 @@ PROGRAM INIT
         CALL W%INIT(D)
         CALL W%MOVE_DATA_TO_DEVICE_RDWR(D_GPU)
 
-        IF (W%IS_FRESH == .TRUE.) THEN
-                ERROR STOP
-        END IF
-
         !$ACC SERIAL PRESENT(D_GPU) COPY(RES)
         RES=.TRUE.
         DO I=1,10
@@ -35,9 +31,6 @@ PROGRAM INIT
         END IF
 
         CALL W%MOVE_DATA_FROM_DEVICE_RDONLY(D_CPU)
-        IF (W%IS_FRESH == .FALSE.) THEN
-                ERROR STOP
-        END IF
 
         DO I=1,10
         DO J=1,10
