@@ -8,7 +8,6 @@ set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/modules)
 get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
 if (Fortran_COMPILER_NAME MATCHES "nvfortran")
 	set (CMAKE_Fortran_FLAGS "-acc=gpu -Mcuda -Mlarge_arrays")
-	set (CMAKE_Fortran_FLAGS "-acc=gpu -Mcuda -Mlarge_arrays")
 endif()
 
 set(CMAKE_BUILD_TYPE "Debug")
