@@ -1,5 +1,6 @@
 PROGRAM CUDA
 
+#ifdef _OPENACC
 USE CUDAFOR
 USE OPENACC
 
@@ -35,6 +36,5 @@ DO I = 1, N
 ENDDO
 !$acc end serial
 
-
-
+#endif
 END
