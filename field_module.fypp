@@ -64,7 +64,7 @@ TYPE, ABSTRACT :: ${field_type_name}$
 
 CONTAINS
 
-  PROCEDURE :: FINAL => ${field_type_name}$_FINAL
+  PROCEDURE :: ${field_type_name}$_FINAL
   PROCEDURE :: DELETE_DEVICE => ${field_type_name}$_DELETE_DEVICE
   PROCEDURE :: GET_VIEW => ${field_type_name}$_GET_VIEW
   PROCEDURE :: MOVE_DATA_TO_DEVICE_RDONLY => ${field_type_name}$_MOVE_DATA_TO_DEVICE_RDONLY
@@ -188,7 +188,7 @@ CONTAINS
   SUBROUTINE ${field_type_name}$_WRAPPER_FINAL(SELF)
     ! Finalizes field and deallocates owned data
     CLASS(${field_type_name}$_WRAPPER) :: SELF
-    CALL SELF%${field_type_name}$%FINAL
+    CALL SELF%${field_type_name}$_FINAL
   END SUBROUTINE ${field_type_name}$_WRAPPER_FINAL
 
   SUBROUTINE ${field_type_name}$_OWNER_FINAL(SELF)
@@ -197,7 +197,7 @@ CONTAINS
     IF (ASSOCIATED(SELF%PTR)) THEN
       DEALLOCATE(SELF%PTR)
     END IF
-    CALL SELF%${field_type_name}$%FINAL
+    CALL SELF%${field_type_name}$_FINAL
   END SUBROUTINE ${field_type_name}$_OWNER_FINAL
 
   SUBROUTINE ${field_type_name}$_COPY (SELF, KDIR)
