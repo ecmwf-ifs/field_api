@@ -1,4 +1,5 @@
 set(TEST_FILES
+	delete_device_wrapper.F90
 	final_owner.F90
 	final_wrapper.F90
 	final_wrapper_gpu.F90

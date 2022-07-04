@@ -188,6 +188,8 @@ CONTAINS
   SUBROUTINE ${field_type_name}$_WRAPPER_FINAL(SELF)
     ! Finalizes field and deallocates owned data
     CLASS(${field_type_name}$_WRAPPER) :: SELF
+    ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
+    CALL SELF%GET_HOST_DATA_RDONLY(PTR)
     CALL SELF%${field_type_name}$_FINAL
   END SUBROUTINE ${field_type_name}$_WRAPPER_FINAL
 
