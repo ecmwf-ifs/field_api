@@ -67,13 +67,13 @@ CONTAINS
   PROCEDURE :: ${field_type_name}$_FINAL
   PROCEDURE :: DELETE_DEVICE => ${field_type_name}$_DELETE_DEVICE
   PROCEDURE :: GET_VIEW => ${field_type_name}$_GET_VIEW
-  PROCEDURE :: MOVE_DATA_TO_DEVICE_RDONLY => ${field_type_name}$_MOVE_DATA_TO_DEVICE_RDONLY
-  PROCEDURE :: MOVE_DATA_TO_DEVICE_RDWR => ${field_type_name}$_MOVE_DATA_TO_DEVICE_RDWR
-  PROCEDURE :: MOVE_DATA_FROM_DEVICE_RDONLY => ${field_type_name}$_MOVE_DATA_FROM_DEVICE_RDONLY
-  PROCEDURE :: MOVE_DATA_FROM_DEVICE_RDWR => ${field_type_name}$_MOVE_DATA_FROM_DEVICE_RDWR
+  PROCEDURE :: GET_DEVICE_DATA_RDONLY => ${field_type_name}$_GET_DEVICE_DATA_RDONLY
+  PROCEDURE :: GET_DEVICE_DATA_RDWR => ${field_type_name}$_GET_DEVICE_DATA_RDWR
+  PROCEDURE :: GET_HOST_DATA_RDONLY => ${field_type_name}$_GET_HOST_DATA_RDONLY
+  PROCEDURE :: GET_HOST_DATA_RDWR => ${field_type_name}$_GET_HOST_DATA_RDWR
 
-  PROCEDURE, PRIVATE :: MOVE_DATA_TO_DEVICE => ${field_type_name}$_MOVE_DATA_TO_DEVICE
-  PROCEDURE, PRIVATE :: MOVE_DATA_FROM_DEVICE => ${field_type_name}$_MOVE_DATA_FROM_DEVICE
+  PROCEDURE, PRIVATE :: GET_DEVICE_DATA => ${field_type_name}$_GET_DEVICE_DATA
+  PROCEDURE, PRIVATE :: GET_HOST_DATA => ${field_type_name}$_GET_HOST_DATA
   PROCEDURE, PRIVATE :: COPY =>  ${field_type_name}$_COPY
 END TYPE ${field_type_name}$
 
@@ -265,7 +265,7 @@ CONTAINS
   END SUBROUTINE ${field_type_name}$_COPY
 
 
-  SUBROUTINE ${field_type_name}$_MOVE_DATA_FROM_DEVICE (SELF, MODE, PTR)
+  SUBROUTINE ${field_type_name}$_GET_HOST_DATA (SELF, MODE, PTR)
     CLASS(${field_type_name}$), INTENT (INOUT) :: SELF
     INTEGER (KIND=JPIM),                INTENT (IN) :: MODE
     ${dtype}$, POINTER, INTENT(INOUT) :: PTR(${shapes[rank]}$)
@@ -281,25 +281,25 @@ CONTAINS
       SELF%ISTATUS = IAND (SELF%ISTATUS, NOT (NDEVFRESH))
     ENDIF
 
-  END SUBROUTINE ${field_type_name}$_MOVE_DATA_FROM_DEVICE
+  END SUBROUTINE ${field_type_name}$_GET_HOST_DATA
 
-  SUBROUTINE ${field_type_name}$_MOVE_DATA_FROM_DEVICE_RDONLY (SELF, PTR)
+  SUBROUTINE ${field_type_name}$_GET_HOST_DATA_RDONLY (SELF, PTR)
     CLASS(${field_type_name}$), INTENT (INOUT) :: SELF
     ${dtype}$, POINTER, INTENT(INOUT) :: PTR(${shapes[rank]}$)
 
-    CALL ${field_type_name}$_MOVE_DATA_FROM_DEVICE (SELF, NRD, PTR)
+    CALL ${field_type_name}$_GET_HOST_DATA (SELF, NRD, PTR)
 
-  END SUBROUTINE ${field_type_name}$_MOVE_DATA_FROM_DEVICE_RDONLY
+  END SUBROUTINE ${field_type_name}$_GET_HOST_DATA_RDONLY
 
-  SUBROUTINE ${field_type_name}$_MOVE_DATA_FROM_DEVICE_RDWR (SELF, PTR)
+  SUBROUTINE ${field_type_name}$_GET_HOST_DATA_RDWR (SELF, PTR)
     CLASS(${field_type_name}$), INTENT (INOUT) :: SELF
     ${dtype}$, POINTER, INTENT(INOUT) :: PTR(${shapes[rank]}$)
 
-    CALL ${field_type_name}$_MOVE_DATA_FROM_DEVICE (SELF, IOR (NRD, NWR), PTR)
+    CALL ${field_type_name}$_GET_HOST_DATA (SELF, IOR (NRD, NWR), PTR)
 
-  END SUBROUTINE ${field_type_name}$_MOVE_DATA_FROM_DEVICE_RDWR
+  END SUBROUTINE ${field_type_name}$_GET_HOST_DATA_RDWR
 
-  SUBROUTINE ${field_type_name}$_MOVE_DATA_TO_DEVICE (SELF, MODE, PTR)
+  SUBROUTINE ${field_type_name}$_GET_DEVICE_DATA (SELF, MODE, PTR)
     CLASS(${field_type_name}$), INTENT (INOUT) :: SELF
     INTEGER (KIND=JPIM),                INTENT (IN) :: MODE
     ${dtype}$, POINTER, INTENT(INOUT) :: PTR(${shapes[rank]}$)
@@ -319,23 +319,23 @@ CONTAINS
       SELF%ISTATUS = IAND (SELF%ISTATUS, NOT (NHSTFRESH))
     ENDIF
 
-  END SUBROUTINE ${field_type_name}$_MOVE_DATA_TO_DEVICE
+  END SUBROUTINE ${field_type_name}$_GET_DEVICE_DATA
 
-  SUBROUTINE ${field_type_name}$_MOVE_DATA_TO_DEVICE_RDONLY (SELF, PTR)
+  SUBROUTINE ${field_type_name}$_GET_DEVICE_DATA_RDONLY (SELF, PTR)
     CLASS(${field_type_name}$), INTENT (INOUT) :: SELF
     ${dtype}$, POINTER, INTENT(INOUT) :: PTR(${shapes[rank]}$)
 
-    CALL ${field_type_name}$_MOVE_DATA_TO_DEVICE (SELF, NRD, PTR)
+    CALL ${field_type_name}$_GET_DEVICE_DATA (SELF, NRD, PTR)
 
-  END SUBROUTINE ${field_type_name}$_MOVE_DATA_TO_DEVICE_RDONLY
+  END SUBROUTINE ${field_type_name}$_GET_DEVICE_DATA_RDONLY
 
-  SUBROUTINE ${field_type_name}$_MOVE_DATA_TO_DEVICE_RDWR (SELF, PTR)
+  SUBROUTINE ${field_type_name}$_GET_DEVICE_DATA_RDWR (SELF, PTR)
     CLASS(${field_type_name}$), INTENT (INOUT) :: SELF
     ${dtype}$, POINTER, INTENT(INOUT) :: PTR(${shapes[rank]}$)
 
-    CALL ${field_type_name}$_MOVE_DATA_TO_DEVICE (SELF, IOR (NRD, NWR), PTR)
+    CALL ${field_type_name}$_GET_DEVICE_DATA (SELF, IOR (NRD, NWR), PTR)
 
-  END SUBROUTINE ${field_type_name}$_MOVE_DATA_TO_DEVICE_RDWR
+  END SUBROUTINE ${field_type_name}$_GET_DEVICE_DATA_RDWR
 
 #:endfor
 
