@@ -10,6 +10,11 @@ if (Fortran_COMPILER_NAME MATCHES "nvfortran")
 	set (CMAKE_Fortran_FLAGS "-acc=gpu -Mcuda -Mlarge_arrays")
 endif()
 
+find_package(OpenMP)
+if(NOT OpenMP_Fortran_FOUND)
+	MESSAGE(FATAL_ERROR "Could not find OpenMP support.")
+endif()
+
 set(CMAKE_BUILD_TYPE "Debug")
 
 # Pre-process: .fpp -> .f90 via Fypp
@@ -24,6 +29,7 @@ add_custom_command(
 	VERBATIM)
 
 add_library(${LIBNAME} field_module.F90 abor1.F90 oml_mod.F90 parkind1.F90) 
+target_link_libraries(${LIBNAME} PUBLIC OpenMP::OpenMP_Fortran)
 
 add_executable(main.x main.F90)
 target_link_libraries(main.x PUBLIC ${LIBNAME})
