@@ -7,9 +7,11 @@ PROGRAM INIT_OWNER2
         USE OML_MOD
         IMPLICIT NONE
         TYPE(FIELD_2D_OWNER) :: O
+        REAL(KIND=JPRB), POINTER :: PTR(:,:)
 
         CALL O%INIT([10,1], [21,11], PERSISTENT=.TRUE.)
-        O%PTR=42
+        CALL O%GET_HOST_DATA_RDWR(PTR)
+        PTR=42
 
         IF (SIZE(O%PTR,1) /= 12) THEN
                 ERROR STOP

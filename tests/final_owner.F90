@@ -4,9 +4,11 @@ PROGRAM FINAL_OWNER
         USE FIELD_MODULE
         IMPLICIT NONE
         TYPE(FIELD_2D_OWNER) :: O
+        REAL(KIND=JPRB), POINTER :: PTR(:,:)
 
         CALL O%INIT([10,1],[21,11])
-        O%PTR=42
+        CALL O%GET_HOST_DATA_RDWR(PTR)
+        PTR=42
         CALL O%FINAL()
 
         IF (ASSOCIATED(O%PTR)) THEN
