@@ -16,7 +16,7 @@ PROGRAM INIT_OWNER2
         IF (SIZE(O%PTR,1) /= 12) THEN
                 ERROR STOP
         END IF
-        IF (SIZE(O%PTR,2) /= OML_GET_NUM_THREADS()) THEN
+        IF (SIZE(O%PTR,2) /= OML_MAX_THREADS()) THEN
                 ERROR STOP
         END IF
 
