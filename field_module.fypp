@@ -172,8 +172,10 @@ CONTAINS
     CLASS(${field_type_name}$) :: SELF
 
     IF (ASSOCIATED (SELF%DEVPTR)) THEN
+#ifdef _OPENACC
       !$acc exit data delete (SELF%DEVPTR)
       DEALLOCATE (SELF%DEVPTR)
+#endif /* _OPENACC */
       NULLIFY (SELF%DEVPTR)
     ENDIF
   END SUBROUTINE ${field_type_name}$_DELETE_DEVICE
@@ -206,11 +208,11 @@ CONTAINS
   CLASS(${field_type_name}$) :: SELF
   INTEGER (KIND=JPIM), INTENT (IN) :: KDIR
   REAL :: START, FINISH
+#ifdef _OPENACC
 
   SELF%LAST_CONTIGUOUS_DIMENSION = ${field_type_name}$_GET_LAST_CONTIGUOUS_DIMENSION (SELF%PTR)
 
   CALL CPU_TIME(START)
-#ifdef _OPENACC
   SELECT CASE (SELF%LAST_CONTIGUOUS_DIMENSION)
 #:for d in range (rank + 1)
     CASE (${d}$)
@@ -223,13 +225,9 @@ CONTAINS
   ELSE IF (KDIR == ND2H) THEN
     CALL SELF%STATS%INC_GPU_TO_CPU_TRANSFER(START, FINISH)
   END IF
-#else
-  SELF%DEVPTR => SELF%PTR
-#endif /* _OPENACC */
 
   CONTAINS
 
-#ifdef _OPENACC
 #:for d in range (0, rank+1)
     SUBROUTINE COPY_DIM${d}$_CONTIGUOUS (HST, DEV, KDIR)
     USE OPENACC
@@ -275,7 +273,9 @@ CONTAINS
 
     LBOUNDS=LBOUND(SELF%PTR)
     IF (IAND (SELF%ISTATUS, NHSTFRESH) == 0) THEN
+#ifdef _OPENACC
       CALL SELF%COPY (ND2H)
+#endif /* _OPENACC */
       SELF%ISTATUS = IOR (SELF%ISTATUS, NHSTFRESH)
     ENDIF
     PTR (${lbptr (rank)}$) => SELF%PTR (${','.join(':' for _ in range(rank))}$)
@@ -309,11 +309,15 @@ CONTAINS
 
     LBOUNDS=LBOUND(SELF%PTR)
     IF (IAND (SELF%ISTATUS, NDEVFRESH) == 0) THEN
+#ifdef _OPENACC
       IF (.NOT. ASSOCIATED (SELF%DEVPTR)) THEN
         ALLOCATE (SELF%DEVPTR, MOLD=SELF%PTR)
         !$acc enter data create (SELF%DEVPTR)
       ENDIF
       CALL SELF%COPY (NH2D)
+#else
+      SELF%DEVPTR => SELF%PTR
+#endif /* _OPENACC */
       SELF%ISTATUS = IOR (SELF%ISTATUS, NDEVFRESH)
     ENDIF
     PTR (${lbptr (rank)}$) => SELF%DEVPTR (${','.join(':' for _ in range(rank))}$)
