@@ -64,6 +64,7 @@ TYPE, ABSTRACT :: ${field_type_name}$
 
 CONTAINS
 
+  PROCEDURE :: FINAL => ${field_type_name}$_FINAL
   PROCEDURE :: ${field_type_name}$_FINAL
   PROCEDURE :: DELETE_DEVICE => ${field_type_name}$_DELETE_DEVICE
   PROCEDURE :: GET_VIEW => ${field_type_name}$_GET_VIEW
@@ -89,6 +90,11 @@ CONTAINS
 END TYPE ${field_type_name}$_${dm}$
 
 #:endfor
+TYPE ${field_type_name}$_PTR
+  ! Struct to hold references to field objects
+  CLASS(${field_type_name}$), POINTER :: PTR => NULL()
+END TYPE ${field_type_name}$_PTR
+
 #:endfor
 
 CONTAINS
