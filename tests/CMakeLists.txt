@@ -12,6 +12,7 @@ set(TEST_FILES
 	init_wrapper.F90
 	init_wrapper_gpu.F90
 	init_wrapper_non_contiguous.F90
+	pointer_to_owner_wrapper.F90
 	wrapper_modify_gpu.F90
 	)
 
