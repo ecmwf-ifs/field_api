@@ -95,6 +95,11 @@ TYPE ${field_type_name}$_PTR
   CLASS(${field_type_name}$), POINTER :: PTR => NULL()
 END TYPE ${field_type_name}$_PTR
 
+TYPE ${field_type_name}$_VIEW
+  ! Struct to hold array views, so we can make arrays of them
+  ${dtype}$, POINTER :: P(${shapes[rank-1]}$) => NULL()
+END TYPE ${field_type_name}$_VIEW
+
 #:endfor
 
 CONTAINS
