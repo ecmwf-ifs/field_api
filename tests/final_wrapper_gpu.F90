@@ -5,7 +5,6 @@ PROGRAM FINAL_WRAPPER_GPU
         TYPE(FIELD_2D_WRAPPER) :: W
         REAL(KIND=JPRB), ALLOCATABLE :: D(:,:)
         REAL(KIND=JPRB), POINTER :: D_GPU(:,:), D_CPU(:,:)
-        LOGICAL :: RES
         INTEGER :: I,J
 
         ALLOCATE(D(10,10))
@@ -14,15 +13,13 @@ PROGRAM FINAL_WRAPPER_GPU
         CALL W%INIT(D)
         CALL W%GET_DEVICE_DATA_RDWR(D_GPU)
 
-        !$ACC SERIAL PRESENT(D_GPU) COPY(RES)
-        RES=.TRUE.
+        !$ACC SERIAL PRESENT(D_GPU)
         DO I=1,10
         DO J=1,10
         D_GPU(J,I)=I*J
         END DO
         END DO
         !$ACC END SERIAL
-
 
 #ifdef _OPENACC
         ! DATA SHOULD ALL BE 7 BECAUSE THEY HAVEN'T MOVED BACK FROM GPU
