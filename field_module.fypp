@@ -108,17 +108,22 @@ CONTAINS
 !
 #:for dtype, suffix, rank, default in field_descriptors
 #:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
-  SUBROUTINE ${field_type_name}$_WRAP(SELF, DATA, PERSISTENT)
+  SUBROUTINE ${field_type_name}$_WRAP(SELF, DATA, PERSISTENT, LBOUNDS)
     ! Create FIELD object by wrapping existing data
     CLASS(${field_type_name}$_WRAPPER), INTENT(INOUT) :: SELF
     ${dtype}$, TARGET, INTENT(IN) :: DATA(${shapes[rank]}$)
     LOGICAL, INTENT(IN), OPTIONAL :: PERSISTENT
+    INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: LBOUNDS(${rank}$)
     LOGICAL :: LLPERSISTENT
 
     LLPERSISTENT = .TRUE.
     IF (PRESENT (PERSISTENT)) LLPERSISTENT = PERSISTENT
 
-    SELF%PTR => DATA
+    IF (PRESENT(LBOUNDS)) THEN
+      SELF%PTR(${lbptr (rank)}$) => DATA
+    ELSE
+      SELF%PTR => DATA
+    ENDIF
     SELF%THREAD_BUFFER = .NOT. LLPERSISTENT
     SELF%ISTATUS = NHSTFRESH
 
@@ -141,6 +146,7 @@ CONTAINS
 
     REAL_LBOUNDS=LBOUNDS
     REAL_UBOUNDS=UBOUNDS
+    REAL_UBOUNDS(${rank}$) = OML_MAX_THREADS()
 
     ! By default we allocate thread-local temporaries
     SELF%THREAD_BUFFER = .TRUE.
@@ -151,32 +157,32 @@ CONTAINS
       IF (PERSISTENT) THEN
         SELF%THREAD_BUFFER = .FALSE.
         REAL_LBOUNDS(${rank}$) = 1
-        REAL_UBOUNDS(${rank}$) = OML_MAX_THREADS()
+	REAL_UBOUNDS(${rank}$) = UBOUNDS(${rank}$)
       END IF
     END IF
 
-    ! Allocate storage array and store metadata
     ALLOCATE(SELF%PTR(${','.join('REAL_LBOUNDS(%d):REAL_UBOUNDS(%d)'%(r+1,r+1) for r in range(rank))}$))
     SELF%ISTATUS = NHSTFRESH
   END SUBROUTINE ${field_type_name}$_ALLOCATE
 
-  SUBROUTINE ${field_type_name}$_GET_VIEW(SELF, VIEW_PTR, BLOCK_INDEX, ZERO)
+  FUNCTION ${field_type_name}$_GET_VIEW(SELF, BLOCK_INDEX, ZERO) RESULT(VIEW_PTR)
     CLASS(${field_type_name}$) :: SELF
-    ${dtype}$, POINTER, INTENT(OUT) :: VIEW_PTR(${shapes[rank-1]}$)
+    ${dtype}$, POINTER :: VIEW_PTR(${shapes[rank-1]}$)
     INTEGER(KIND=JPIM), INTENT(IN) :: BLOCK_INDEX
     LOGICAL, OPTIONAL, INTENT(IN) :: ZERO
     INTEGER(KIND=JPIM) :: IDX
     INTEGER(KIND=JPIM) :: LBOUNDS(${rank}$)
 
     IDX = BLOCK_INDEX
-    LBOUNDS=LBOUND(SELF%PTR)
     IF (SELF%THREAD_BUFFER) IDX = OML_MY_THREAD()
-    VIEW_PTR (${lbptr (rank-1)}$) => SELF%PTR(${','.join(':' for _ in range(rank-1))}$,IDX)
+
+    LBOUNDS=LBOUND(SELF%PTR)
+    VIEW_PTR(${','.join('LBOUNDS(%d):'%(r+1) for r in range(rank-1))}$) => SELF%PTR(${','.join(':' for _ in range(rank-1))}$,IDX)
 
     IF (PRESENT(ZERO)) THEN
       IF (ZERO) VIEW_PTR(${shapes[rank-1]}$) = ${default}$
     END IF
-  END SUBROUTINE ${field_type_name}$_GET_VIEW
+  END FUNCTION ${field_type_name}$_GET_VIEW
 
   SUBROUTINE ${field_type_name}$_DELETE_DEVICE(SELF)
     ! Delete the copy of this field on GPU device

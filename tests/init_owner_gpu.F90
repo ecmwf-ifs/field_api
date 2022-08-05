@@ -9,7 +9,7 @@ PROGRAM INIT_OWNER_GPU
         LOGICAL :: RES
         INTEGER :: I,J
 
-        CALL O%INIT([10,1],[21,11])
+        CALL O%INIT([10,1],[21,11], PERSISTENT=.TRUE.)
         CALL O%GET_HOST_DATA_RDWR(PTR_CPU)
         PTR_CPU=42
 

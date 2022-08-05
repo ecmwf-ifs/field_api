@@ -14,7 +14,7 @@ PROGRAM GET_VIEW
         !$OMP PARALLEL PRIVATE(VIEW, JLON) 
         !$OMP DO
         DO IBLK=1,NBLOCKS
-          CALL W%GET_VIEW(VIEW, IBLK)
+          VIEW => W%GET_VIEW(IBLK)
           DO JLON = 1, NPROMA
             VIEW(JLON) = 7
           ENDDO
