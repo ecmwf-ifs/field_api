@@ -9,6 +9,7 @@ set(TEST_FILES
 	init_owner.F90
 	init_owner2.F90
 	init_owner_gpu.F90
+	init_owner_openmp.F90
 	init_wrapper.F90
 	init_wrapper_gpu.F90
 	init_wrapper_lbounds.F90
