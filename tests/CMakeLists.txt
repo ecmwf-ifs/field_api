@@ -6,11 +6,12 @@ set(TEST_FILES
 	get_stats.F90
 	get_stats_no_openacc.F90
 	get_view.F90
-	init_owner2.F90
 	init_owner.F90
+	init_owner2.F90
 	init_owner_gpu.F90
 	init_wrapper.F90
 	init_wrapper_gpu.F90
+	init_wrapper_lbounds.F90
 	init_wrapper_non_contiguous.F90
 	pointer_to_owner_wrapper.F90
 	wrapper_modify_gpu.F90
