@@ -302,11 +302,11 @@ CONTAINS
 
   END SUBROUTINE ${field_type_name}$_GET_HOST_DATA
 
-  SUBROUTINE ${field_type_name}$_GET_HOST_DATA_RDONLY (SELF, PTR)
+  SUBROUTINE ${field_type_name}$_GET_HOST_DATA_RDONLY (SELF, PPTR)
     CLASS(${field_type_name}$), INTENT (INOUT) :: SELF
-    ${dtype}$, POINTER, INTENT(INOUT) :: PTR(${shapes[rank]}$)
+    ${dtype}$, POINTER, INTENT(INOUT) :: PPTR(${shapes[rank]}$)
 
-    CALL ${field_type_name}$_GET_HOST_DATA (SELF, NRD, PTR)
+    CALL ${field_type_name}$_GET_HOST_DATA (SELF, NRD, PPTR)
 
   END SUBROUTINE ${field_type_name}$_GET_HOST_DATA_RDONLY
 
@@ -344,11 +344,11 @@ CONTAINS
 
   END SUBROUTINE ${field_type_name}$_GET_DEVICE_DATA
 
-  SUBROUTINE ${field_type_name}$_GET_DEVICE_DATA_RDONLY (SELF, PTR)
+  SUBROUTINE ${field_type_name}$_GET_DEVICE_DATA_RDONLY (SELF, PPTR)
     CLASS(${field_type_name}$), INTENT (INOUT) :: SELF
-    ${dtype}$, POINTER, INTENT(INOUT) :: PTR(${shapes[rank]}$)
+    ${dtype}$, POINTER, INTENT(INOUT) :: PPTR(${shapes[rank]}$)
 
-    CALL ${field_type_name}$_GET_DEVICE_DATA (SELF, NRD, PTR)
+    CALL ${field_type_name}$_GET_DEVICE_DATA (SELF, NRD, PPTR)
 
   END SUBROUTINE ${field_type_name}$_GET_DEVICE_DATA_RDONLY
 
