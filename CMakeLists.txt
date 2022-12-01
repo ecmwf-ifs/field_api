@@ -28,7 +28,7 @@ add_custom_command(
 	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/field_module.fypp
 	VERBATIM)
 
-add_library(${LIBNAME} field_module.F90 abor1.F90 oml_mod.F90 parkind1.F90)
+add_library(${LIBNAME} field_module.F90 abor1.F90 parkind1.F90)
 target_link_libraries(${LIBNAME} PUBLIC OpenMP::OpenMP_Fortran)
 
 add_executable(main.x main.F90)
