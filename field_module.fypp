@@ -31,9 +31,35 @@ TYPE GPU_STATS
   PROCEDURE :: INC_GPU_TO_CPU_TRANSFER
 END TYPE GPU_STATS
 
+TYPE, ABSTRACT :: FIELD_BASIC
+  ! Flag indicating the use a single block-buffer per thread
+  LOGICAL :: THREAD_BUFFER = .FALSE.
+
+  INTEGER(KIND=JPIM) :: ISTATUS = 0
+  INTEGER(KIND=JPIM) :: LAST_CONTIGUOUS_DIMENSION = 0
+
+  TYPE(GPU_STATS) :: STATS
+
+  LOGICAL :: LOBJECT_COPIED = .FALSE.
+
+CONTAINS
+  PROCEDURE (SYNC), DEFERRED :: SYNC_HOST_RDWR
+  PROCEDURE (SYNC), DEFERRED :: SYNC_HOST_RDONLY
+  PROCEDURE (SYNC), DEFERRED :: SYNC_DEVICE_RDWR
+  PROCEDURE (SYNC), DEFERRED :: SYNC_DEVICE_RDONLY
+END TYPE FIELD_BASIC
+
+ABSTRACT INTERFACE
+  SUBROUTINE SYNC (SELF)
+    IMPORT FIELD_BASIC
+    CLASS(FIELD_BASIC), INTENT (INOUT) :: SELF
+  END SUBROUTINE
+END INTERFACE
+
+
 #:for dtype, suffix, rank, default in field_descriptors
 #:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
-TYPE, ABSTRACT :: ${field_type_name}$
+TYPE, ABSTRACT, EXTENDS (FIELD_BASIC) :: ${field_type_name}$
   ! A FIELD encapsulates a single multi-dimensional array and can
   ! provide block-indexed "views" of the data for automating the
   ! allocation and parallel iterration of NPROMA blocks.
@@ -54,14 +80,6 @@ TYPE, ABSTRACT :: ${field_type_name}$
   ! device, should the %DATA pointer be discontiguous.
   ${dtype}$, POINTER, CONTIGUOUS :: DEVPTR(${shapes[rank]}$) => NULL()
 
-  ! Flag indicating the use a single block-buffer per thread
-  LOGICAL :: THREAD_BUFFER = .FALSE.
-
-  INTEGER(KIND=JPIM) :: ISTATUS = 0
-  INTEGER(KIND=JPIM) :: LAST_CONTIGUOUS_DIMENSION = 0
-
-  TYPE(GPU_STATS) :: STATS
-
 CONTAINS
 
   PROCEDURE :: FINAL => ${field_type_name}$_FINAL
@@ -72,10 +90,17 @@ CONTAINS
   PROCEDURE :: GET_DEVICE_DATA_RDWR => ${field_type_name}$_GET_DEVICE_DATA_RDWR
   PROCEDURE :: GET_HOST_DATA_RDONLY => ${field_type_name}$_GET_HOST_DATA_RDONLY
   PROCEDURE :: GET_HOST_DATA_RDWR => ${field_type_name}$_GET_HOST_DATA_RDWR
+  PROCEDURE :: SYNC_HOST_RDWR => ${field_type_name}$_SYNC_HOST_RDWR
+  PROCEDURE :: SYNC_HOST_RDONLY => ${field_type_name}$_SYNC_HOST_RDONLY
+  PROCEDURE :: SYNC_DEVICE_RDWR => ${field_type_name}$_SYNC_DEVICE_RDWR
+  PROCEDURE :: SYNC_DEVICE_RDONLY => ${field_type_name}$_SYNC_DEVICE_RDONLY
+  PROCEDURE :: COPY_OBJECT => ${field_type_name}$_COPY_OBJECT
+  PROCEDURE :: WIPE_OBJECT => ${field_type_name}$_WIPE_OBJECT
 
   PROCEDURE, PRIVATE :: GET_DEVICE_DATA => ${field_type_name}$_GET_DEVICE_DATA
   PROCEDURE, PRIVATE :: GET_HOST_DATA => ${field_type_name}$_GET_HOST_DATA
-  PROCEDURE, PRIVATE :: COPY =>  ${field_type_name}$_COPY
+  PROCEDURE, PRIVATE :: COPY_DATA =>  ${field_type_name}$_COPY_DATA
+  PROCEDURE, PRIVATE :: CREATE_DEVICE_DATA => ${field_type_name}$_CREATE_DEVICE_DATA
 END TYPE ${field_type_name}$
 
 #:for dm in data_management_type
@@ -191,8 +216,8 @@ CONTAINS
     IF (ASSOCIATED (SELF%DEVPTR)) THEN
 #ifdef _OPENACC
       !$acc exit data delete (SELF%DEVPTR)
-      DEALLOCATE (SELF%DEVPTR)
 #endif /* _OPENACC */
+      DEALLOCATE (SELF%DEVPTR)
       NULLIFY (SELF%DEVPTR)
     ENDIF
   END SUBROUTINE ${field_type_name}$_DELETE_DEVICE
@@ -221,11 +246,52 @@ CONTAINS
     CALL SELF%${field_type_name}$_FINAL
   END SUBROUTINE ${field_type_name}$_OWNER_FINAL
 
-  SUBROUTINE ${field_type_name}$_COPY (SELF, KDIR)
+  SUBROUTINE ${field_type_name}$_COPY_OBJECT (SELF, LDCREATED)
+  CLASS(${field_type_name}$) :: SELF
+  LOGICAL, INTENT (IN), OPTIONAL :: LDCREATED
+  LOGICAL :: LLCREATED
+
+  LLCREATED = .FALSE.
+  IF (PRESENT (LDCREATED)) LLCREATED = LDCREATED
+
+  IF (.NOT. LLCREATED) STOP 1
+
+  IF (.NOT. SELF%LOBJECT_COPIED) THEN
+    SELF%LOBJECT_COPIED = .TRUE.
+#ifdef _OPENACC
+    IF (ASSOCIATED (SELF%DEVPTR)) THEN
+      !$acc enter data attach (SELF%DEVPTR)
+    ENDIF
+#endif
+  ENDIF
+
+  END SUBROUTINE ${field_type_name}$_COPY_OBJECT
+
+  SUBROUTINE ${field_type_name}$_WIPE_OBJECT (SELF, LDDELETED)
+  CLASS(${field_type_name}$) :: SELF
+  LOGICAL, INTENT (IN), OPTIONAL :: LDDELETED
+  LOGICAL :: LLDELETED
+
+  LLDELETED = .FALSE.
+  IF (PRESENT (LDDELETED)) LLDELETED = LDDELETED
+
+  IF (.NOT. LLDELETED) STOP 1
+
+  IF (SELF%LOBJECT_COPIED) THEN
+    SELF%LOBJECT_COPIED = .FALSE.
+#ifdef _OPENACC
+    IF (ASSOCIATED (SELF%DEVPTR)) THEN
+      !$acc exit data detach (SELF%DEVPTR)
+    ENDIF
+#endif
+  ENDIF
+
+  END SUBROUTINE ${field_type_name}$_WIPE_OBJECT
+
+  SUBROUTINE ${field_type_name}$_COPY_DATA (SELF, KDIR)
   CLASS(${field_type_name}$) :: SELF
   INTEGER (KIND=JPIM), INTENT (IN) :: KDIR
   REAL :: START, FINISH
-#ifdef _OPENACC
 
   SELF%LAST_CONTIGUOUS_DIMENSION = ${field_type_name}$_GET_LAST_CONTIGUOUS_DIMENSION (SELF%PTR)
 
@@ -237,17 +303,21 @@ CONTAINS
 #:endfor
   END SELECT
   CALL CPU_TIME(FINISH)
+#ifdef _OPENACC
   IF (KDIR == NH2D) THEN
     CALL SELF%STATS%INC_CPU_TO_GPU_TRANSFER(START, FINISH)
   ELSE IF (KDIR == ND2H) THEN
     CALL SELF%STATS%INC_GPU_TO_CPU_TRANSFER(START, FINISH)
   END IF
+#endif
 
   CONTAINS
 
 #:for d in range (0, rank+1)
     SUBROUTINE COPY_DIM${d}$_CONTIGUOUS (HST, DEV, KDIR)
+#ifdef _OPENACC
     USE OPENACC
+#endif
     ${dtype}$, POINTER :: HST (${shapes[rank]}$), DEV (${shapes[rank]}$)
     INTEGER (KIND=JPIM), INTENT (IN) :: KDIR
     INTEGER (KIND=JPIM) :: ISIZE
@@ -264,13 +334,21 @@ CONTAINS
     ${indent}$  ISIZE = KIND (HST) * SIZE (HST (${ar}$))
     #:endif
     ${indent}$  IF (KDIR == NH2D) THEN
+#ifdef _OPENACC
     ${indent}$    !$acc host_data use_device (DEV)
     ${indent}$    CALL ACC_MEMCPY_TO_DEVICE (DEV (${ar}$), HST (${ar}$), ISIZE)
     ${indent}$    !$acc end host_data
+#else
+    ${indent}$    DEV (${ar}$) = HST (${ar}$)
+#endif
     ${indent}$  ELSEIF (KDIR == ND2H) THEN
+#ifdef _OPENACC
     ${indent}$    !$acc host_data use_device (DEV)
     ${indent}$    CALL ACC_MEMCPY_FROM_DEVICE (HST (${ar}$), DEV (${ar}$), ISIZE)
     ${indent}$    !$acc end host_data
+#else
+    ${indent}$    HST (${ar}$) = DEV (${ar}$)
+#endif
     ${indent}$  ENDIF
   #:for e in range (d, rank)
     ${'  ' * (rank - e - 1)}$ENDDO
@@ -278,8 +356,8 @@ CONTAINS
     END SUBROUTINE
 
 #:endfor
-#endif /* _OPENACC */
-  END SUBROUTINE ${field_type_name}$_COPY
+
+  END SUBROUTINE ${field_type_name}$_COPY_DATA
 
 
   SUBROUTINE ${field_type_name}$_GET_HOST_DATA (SELF, MODE, PTR)
@@ -290,9 +368,7 @@ CONTAINS
 
     LBOUNDS=LBOUND(SELF%PTR)
     IF (IAND (SELF%ISTATUS, NHSTFRESH) == 0) THEN
-#ifdef _OPENACC
-      CALL SELF%COPY (ND2H)
-#endif /* _OPENACC */
+      CALL SELF%COPY_DATA (ND2H)
       SELF%ISTATUS = IOR (SELF%ISTATUS, NHSTFRESH)
     ENDIF
     PTR (${lbptr (rank)}$) => SELF%PTR (${','.join(':' for _ in range(rank))}$)
@@ -310,13 +386,47 @@ CONTAINS
 
   END SUBROUTINE ${field_type_name}$_GET_HOST_DATA_RDONLY
 
-  SUBROUTINE ${field_type_name}$_GET_HOST_DATA_RDWR (SELF, PTR)
+  SUBROUTINE ${field_type_name}$_SYNC_HOST_RDONLY (SELF)
     CLASS(${field_type_name}$), INTENT (INOUT) :: SELF
-    ${dtype}$, POINTER, INTENT(INOUT) :: PTR(${shapes[rank]}$)
+    ${dtype}$, POINTER :: ZPTR(${shapes[rank]}$)
 
-    CALL ${field_type_name}$_GET_HOST_DATA (SELF, IOR (NRD, NWR), PTR)
+    CALL SELF%GET_HOST_DATA_RDONLY (ZPTR)
+
+  END SUBROUTINE ${field_type_name}$_SYNC_HOST_RDONLY
+
+  SUBROUTINE ${field_type_name}$_GET_HOST_DATA_RDWR (SELF, PPTR)
+    CLASS(${field_type_name}$), INTENT (INOUT) :: SELF
+    ${dtype}$, POINTER, INTENT(INOUT) :: PPTR(${shapes[rank]}$)
+
+    CALL ${field_type_name}$_GET_HOST_DATA (SELF, IOR (NRD, NWR), PPTR)
 
   END SUBROUTINE ${field_type_name}$_GET_HOST_DATA_RDWR
+
+  SUBROUTINE ${field_type_name}$_SYNC_HOST_RDWR (SELF)
+    CLASS(${field_type_name}$), INTENT (INOUT) :: SELF
+    ${dtype}$, POINTER :: ZPTR(${shapes[rank]}$)
+
+    CALL SELF%GET_HOST_DATA_RDWR (ZPTR)
+
+  END SUBROUTINE ${field_type_name}$_SYNC_HOST_RDWR
+
+  SUBROUTINE ${field_type_name}$_CREATE_DEVICE_DATA (SELF)
+    CLASS(${field_type_name}$), INTENT (INOUT) :: SELF
+#ifdef _OPENACC
+#if __INTEL_COMPILER == 1800 && __INTEL_COMPILER_UPDATE == 5
+! Bug with Intel 18.0.5.274
+    ALLOCATE (SELF%DEVPTR (${ ', '.join (map (lambda i: 'LBOUND (SELF%PTR, ' + str (i) + '):UBOUND (SELF%PTR,' + str (i) + ')', range (1, rank+1))) }$))
+#else
+    ALLOCATE (SELF%DEVPTR, MOLD=SELF%PTR)
+#endif
+    !$acc enter data create (SELF%DEVPTR)
+    IF (SELF%LOBJECT_COPIED) THEN
+      !$acc enter data attach (SELF%DEVPTR)
+    ENDIF
+#else
+    SELF%DEVPTR => SELF%PTR
+#endif
+  END SUBROUTINE
 
   SUBROUTINE ${field_type_name}$_GET_DEVICE_DATA (SELF, MODE, PTR)
     CLASS(${field_type_name}$), INTENT (INOUT) :: SELF
@@ -326,15 +436,10 @@ CONTAINS
 
     LBOUNDS=LBOUND(SELF%PTR)
     IF (IAND (SELF%ISTATUS, NDEVFRESH) == 0) THEN
-#ifdef _OPENACC
       IF (.NOT. ASSOCIATED (SELF%DEVPTR)) THEN
-        ALLOCATE (SELF%DEVPTR, MOLD=SELF%PTR)
-        !$acc enter data create (SELF%DEVPTR)
+        CALL SELF%CREATE_DEVICE_DATA
       ENDIF
-      CALL SELF%COPY (NH2D)
-#else
-      SELF%DEVPTR => SELF%PTR
-#endif /* _OPENACC */
+      CALL SELF%COPY_DATA (NH2D)
       SELF%ISTATUS = IOR (SELF%ISTATUS, NDEVFRESH)
     ENDIF
     PTR (${lbptr (rank)}$) => SELF%DEVPTR (${','.join(':' for _ in range(rank))}$)
@@ -352,13 +457,29 @@ CONTAINS
 
   END SUBROUTINE ${field_type_name}$_GET_DEVICE_DATA_RDONLY
 
-  SUBROUTINE ${field_type_name}$_GET_DEVICE_DATA_RDWR (SELF, PTR)
+  SUBROUTINE ${field_type_name}$_SYNC_DEVICE_RDONLY (SELF)
     CLASS(${field_type_name}$), INTENT (INOUT) :: SELF
-    ${dtype}$, POINTER, INTENT(INOUT) :: PTR(${shapes[rank]}$)
+    ${dtype}$, POINTER :: ZPTR(${shapes[rank]}$)
 
-    CALL ${field_type_name}$_GET_DEVICE_DATA (SELF, IOR (NRD, NWR), PTR)
+    CALL SELF%GET_DEVICE_DATA_RDONLY (ZPTR)
+
+  END SUBROUTINE ${field_type_name}$_SYNC_DEVICE_RDONLY
+
+  SUBROUTINE ${field_type_name}$_GET_DEVICE_DATA_RDWR (SELF, PPTR)
+    CLASS(${field_type_name}$), INTENT (INOUT) :: SELF
+    ${dtype}$, POINTER, INTENT(INOUT) :: PPTR(${shapes[rank]}$)
+
+    CALL ${field_type_name}$_GET_DEVICE_DATA (SELF, IOR (NRD, NWR), PPTR)
 
   END SUBROUTINE ${field_type_name}$_GET_DEVICE_DATA_RDWR
+
+  SUBROUTINE ${field_type_name}$_SYNC_DEVICE_RDWR (SELF)
+    CLASS(${field_type_name}$), INTENT (INOUT) :: SELF
+    ${dtype}$, POINTER :: ZPTR(${shapes[rank]}$)
+
+    CALL SELF%GET_DEVICE_DATA_RDWR (ZPTR)
+
+  END SUBROUTINE ${field_type_name}$_SYNC_DEVICE_RDWR
 
 #:endfor
 
