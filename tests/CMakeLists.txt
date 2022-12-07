@@ -16,6 +16,8 @@ set(TEST_FILES
 	init_wrapper_non_contiguous.F90
 	pointer_to_owner_wrapper.F90
 	wrapper_modify_gpu.F90
+	sync_host.F90
+	sync_device.F90
 	)
 
 foreach(TEST_FILE ${TEST_FILES})
