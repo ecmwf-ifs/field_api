@@ -1,5 +1,4 @@
 PROGRAM SYNC_HOST
-#ifdef _OPENACC
         USE FIELD_MODULE
         IMPLICIT NONE
 
@@ -18,5 +17,4 @@ PROGRAM SYNC_HOST
         ENDDO
         ENDDO
         !$ACC END KERNELS
-#endif //_OPENACC
 END PROGRAM

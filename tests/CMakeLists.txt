@@ -4,7 +4,6 @@ set(TEST_FILES
 	final_wrapper.F90
 	final_wrapper_gpu.F90
 	get_stats.F90
-	get_stats_no_openacc.F90
 	get_view.F90
 	init_owner.F90
 	init_owner2.F90
