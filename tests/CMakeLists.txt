@@ -1,4 +1,5 @@
 set(TEST_FILES
+	async_host.F90
 	delete_device_wrapper.F90
 	final_owner.F90
 	final_wrapper.F90
@@ -14,9 +15,9 @@ set(TEST_FILES
 	init_wrapper_lbounds.F90
 	init_wrapper_non_contiguous.F90
 	pointer_to_owner_wrapper.F90
-	wrapper_modify_gpu.F90
-	sync_host.F90
 	sync_device.F90
+	sync_host.F90
+	wrapper_modify_gpu.F90
 	)
 
 foreach(TEST_FILE ${TEST_FILES})
