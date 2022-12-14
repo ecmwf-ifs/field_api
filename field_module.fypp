@@ -20,7 +20,6 @@ IMPLICIT NONE
 
 INTEGER (KIND=JPIM), PARAMETER :: NDEVFRESH = B'00000001', NHSTFRESH = B'00000010', UNALLOCATED = B'00000100'
 INTEGER (KIND=JPIM), PARAMETER, PRIVATE :: NH2D = 1, ND2H = 2, NRD = B'00000001', NWR = B'00000010'
-INTEGER (KIND=JPIM), PARAMETER :: NO_ASYNC = -1
 
 #ifdef _OPENACC
 LOGICAL, PARAMETER :: IS_DEVICE_SIMULATED = .FALSE.
@@ -316,10 +315,10 @@ CONTAINS
   END SUBROUTINE ${field_type_name}$_WIPE_OBJECT
 
   SUBROUTINE ${field_type_name}$_COPY_DATA (SELF, KDIR, QUEUE)
-  CLASS(${field_type_name}$)      :: SELF
-  INTEGER (KIND=JPIM), INTENT(IN) :: KDIR
-  INTEGER (KIND=JPIM), INTENT(IN) :: QUEUE
-  REAL                            :: START, FINISH
+  CLASS(${field_type_name}$)                :: SELF
+  INTEGER (KIND=JPIM),           INTENT(IN) :: KDIR
+  INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN) :: QUEUE
+  REAL :: START, FINISH
 
   SELF%LAST_CONTIGUOUS_DIMENSION = ${field_type_name}$_GET_LAST_CONTIGUOUS_DIMENSION (SELF%PTR)
 
@@ -345,8 +344,8 @@ CONTAINS
     USE OPENACC
 #endif
     ${dtype}$, POINTER :: HST (${shapes[rank]}$), DEV (${shapes[rank]}$)
-    INTEGER (KIND=JPIM), INTENT (IN) :: KDIR
-    INTEGER (KIND=JPIM), INTENT (IN) :: QUEUE
+    INTEGER (KIND=JPIM),           INTENT (IN) :: KDIR
+    INTEGER (KIND=JPIM), OPTIONAL, INTENT (IN) :: QUEUE
     INTEGER (KIND=JPIM) :: ISIZE
     INTEGER :: ${', '.join (['J'] + list (map (lambda i: 'J' + str (i+1), range (d, rank))))}$
 
@@ -363,10 +362,10 @@ CONTAINS
     ${indent}$  IF (KDIR == NH2D) THEN
 #ifdef _OPENACC
     ${indent}$    !$acc host_data use_device (DEV)
-    ${indent}$    IF(QUEUE == -1)THEN
-    ${indent}$      CALL ACC_MEMCPY_TO_DEVICE (DEV (${ar}$), HST (${ar}$), ISIZE)
-    ${indent}$    ELSE
+    ${indent}$    IF(PRESENT(QUEUE))THEN
     ${indent}$      CALL ACC_MEMCPY_TO_DEVICE_ASYNC (DEV (${ar}$), HST (${ar}$), ISIZE, QUEUE)
+    ${indent}$    ELSE
+    ${indent}$      CALL ACC_MEMCPY_TO_DEVICE (DEV (${ar}$), HST (${ar}$), ISIZE)
     ${indent}$    ENDIF
     ${indent}$    !$acc end host_data
 #else
@@ -396,11 +395,11 @@ CONTAINS
 
 
   SUBROUTINE ${field_type_name}$_GET_HOST_DATA (SELF, MODE, PTR, QUEUE)
-    CLASS(${field_type_name}$), INTENT(INOUT) :: SELF
-    INTEGER (KIND=JPIM),        INTENT(IN)    :: MODE
+    CLASS(${field_type_name}$),    INTENT(INOUT) :: SELF
+    INTEGER (KIND=JPIM),           INTENT(IN)    :: MODE
 
-    ${dtype}$, POINTER,         INTENT(INOUT) :: PTR(${shapes[rank]}$)
-    INTEGER (KIND=JPIM),        INTENT(IN)    :: QUEUE
+    ${dtype}$, POINTER,            INTENT(INOUT) :: PTR(${shapes[rank]}$)
+    INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
 
     INTEGER(KIND=JPIM) :: LBOUNDS(${rank}$)
 
@@ -418,9 +417,9 @@ CONTAINS
 
   SUBROUTINE ${field_type_name}$_OWNER_GET_HOST_DATA (SELF, MODE, PTR, QUEUE)
     CLASS(${field_type_name}$_OWNER), INTENT(INOUT) :: SELF
-    INTEGER (KIND=JPIM),        INTENT(IN)    :: MODE
-    ${dtype}$, POINTER,         INTENT(INOUT) :: PTR(${shapes[rank]}$)
-    INTEGER (KIND=JPIM),        INTENT(IN)    :: QUEUE
+    INTEGER (KIND=JPIM),           INTENT(IN)    :: MODE
+    ${dtype}$, POINTER,            INTENT(INOUT) :: PTR(${shapes[rank]}$)
+    INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
 
     IF(SELF%ISTATUS==UNALLOCATED)THEN
       CALL SELF%ALLOCATE()
@@ -434,11 +433,7 @@ CONTAINS
     ${dtype}$, POINTER,           INTENT(INOUT) :: PPTR(${shapes[rank]}$)
     INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
 
-    IF(PRESENT(QUEUE))THEN
-      CALL SELF%GET_HOST_DATA (NRD, PPTR, QUEUE)
-    ELSE
-      CALL SELF%GET_HOST_DATA (NRD, PPTR, NO_ASYNC)
-    ENDIF
+    CALL SELF%GET_HOST_DATA (NRD, PPTR, QUEUE)
 
   END SUBROUTINE ${field_type_name}$_GET_HOST_DATA_RDONLY
 
@@ -460,11 +455,7 @@ CONTAINS
     ${dtype}$, POINTER,           INTENT(INOUT) :: PPTR(${shapes[rank]}$)
     INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
 
-    IF(PRESENT(QUEUE))THEN
-      CALL SELF%GET_HOST_DATA (IOR (NRD, NWR), PPTR, QUEUE)
-    ELSE
-      CALL SELF%GET_HOST_DATA (IOR (NRD, NWR), PPTR, NO_ASYNC)
-    ENDIF
+    CALL SELF%GET_HOST_DATA (IOR (NRD, NWR), PPTR, QUEUE)
 
   END SUBROUTINE ${field_type_name}$_GET_HOST_DATA_RDWR
 
@@ -498,11 +489,11 @@ CONTAINS
   END SUBROUTINE
 
   SUBROUTINE ${field_type_name}$_GET_DEVICE_DATA (SELF, MODE, PTR, QUEUE)
-    CLASS(${field_type_name}$), INTENT(INOUT) :: SELF
-    INTEGER (KIND=JPIM),        INTENT(IN)    :: MODE
-    ${dtype}$, POINTER,         INTENT(INOUT) :: PTR(${shapes[rank]}$)
-    INTEGER (KIND=JPIM),        INTENT(IN)    :: QUEUE
-    INTEGER(KIND=JPIM)                        :: LBOUNDS(${rank}$)
+    CLASS(${field_type_name}$),    INTENT(INOUT) :: SELF
+    INTEGER (KIND=JPIM),           INTENT(IN)    :: MODE
+    ${dtype}$, POINTER,            INTENT(INOUT) :: PTR(${shapes[rank]}$)
+    INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
+    INTEGER(KIND=JPIM)                           :: LBOUNDS(${rank}$)
 
     LBOUNDS=LBOUND(SELF%PTR)
     IF (IAND (SELF%ISTATUS, NDEVFRESH) == 0) THEN
@@ -524,11 +515,7 @@ CONTAINS
     ${dtype}$, POINTER,           INTENT(INOUT) :: PPTR(${shapes[rank]}$)
     INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
 
-    IF(PRESENT(QUEUE))THEN
-      CALL ${field_type_name}$_GET_DEVICE_DATA (SELF, NRD, PPTR, QUEUE)
-    ELSE
-      CALL ${field_type_name}$_GET_DEVICE_DATA (SELF, NRD, PPTR, NO_ASYNC)
-    ENDIF
+    CALL ${field_type_name}$_GET_DEVICE_DATA (SELF, NRD, PPTR, QUEUE)
 
   END SUBROUTINE ${field_type_name}$_GET_DEVICE_DATA_RDONLY
 
@@ -550,11 +537,7 @@ CONTAINS
     ${dtype}$, POINTER,           INTENT(INOUT) :: PPTR(${shapes[rank]}$)
     INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
 
-    IF(PRESENT(QUEUE))THEN
-      CALL ${field_type_name}$_GET_DEVICE_DATA (SELF, IOR (NRD, NWR), PPTR, QUEUE)
-    ELSE
-      CALL ${field_type_name}$_GET_DEVICE_DATA (SELF, IOR (NRD, NWR), PPTR, NO_ASYNC)
-    ENDIF
+    CALL ${field_type_name}$_GET_DEVICE_DATA (SELF, IOR (NRD, NWR), PPTR, QUEUE)
 
   END SUBROUTINE ${field_type_name}$_GET_DEVICE_DATA_RDWR
 
