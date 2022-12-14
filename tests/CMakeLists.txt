@@ -6,6 +6,7 @@ set(TEST_FILES
 	final_wrapper_gpu.F90
 	get_stats.F90
 	get_view.F90
+	init_delayed_owner.F90
 	init_owner.F90
 	init_owner2.F90
 	init_owner_gpu.F90
