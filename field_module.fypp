@@ -378,10 +378,10 @@ CONTAINS
     ${indent}$  ELSEIF (KDIR == ND2H) THEN
 #ifdef _OPENACC
     ${indent}$    !$acc host_data use_device (DEV)
-    ${indent}$    IF(QUEUE == -1)THEN
-    ${indent}$      CALL ACC_MEMCPY_FROM_DEVICE (HST (${ar}$), DEV (${ar}$), ISIZE)
-    ${indent}$    ELSE
+    ${indent}$    IF(PRESENT(QUEUE))THEN
     ${indent}$      CALL ACC_MEMCPY_FROM_DEVICE_ASYNC (HST (${ar}$), DEV (${ar}$), ISIZE, QUEUE)
+    ${indent}$    ELSE
+    ${indent}$      CALL ACC_MEMCPY_FROM_DEVICE (HST (${ar}$), DEV (${ar}$), ISIZE)
     ${indent}$    ENDIF
     ${indent}$    !$acc end host_data
 #else
@@ -447,7 +447,7 @@ CONTAINS
     ${dtype}$, POINTER                          :: ZPTR(${shapes[rank]}$)
 
     IF(PRESENT(QUEUE))THEN
-      CALL SELF%GET_HOST_DATA_RDONLY (ZPTR, QUEUE=QUEUE)
+      CALL SELF%GET_HOST_DATA_RDONLY (ZPTR, QUEUE)
     ELSE
       CALL SELF%GET_HOST_DATA_RDONLY (ZPTR)
     ENDIF
@@ -469,7 +469,7 @@ CONTAINS
     ${dtype}$, POINTER                          :: ZPTR(${shapes[rank]}$)
 
     IF(PRESENT(QUEUE))THEN
-      CALL SELF%GET_HOST_DATA_RDWR (ZPTR, QUEUE=QUEUE)
+      CALL SELF%GET_HOST_DATA_RDWR (ZPTR, QUEUE)
     ELSE
       CALL SELF%GET_HOST_DATA_RDWR (ZPTR)
     ENDIF
