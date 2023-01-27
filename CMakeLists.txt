@@ -30,12 +30,12 @@ add_custom_command(
 
 add_library(${LIBNAME} field_module.F90 abor1.F90 parkind1.F90)
 target_link_libraries(${LIBNAME} PUBLIC OpenMP::OpenMP_Fortran)
+if(OpenACC_Fortran_FOUND AND USE_OPENACC)
+	target_link_libraries(${LIBNAME} PUBLIC OpenACC::OpenACC_Fortran)
+endif()
 
 add_executable(main.x main.F90)
 target_link_libraries(main.x PUBLIC ${LIBNAME})
-
-add_executable(cuda.x cuda.F90)
-target_link_libraries(cuda.x PUBLIC ${LIBNAME})
 
 enable_testing()
 add_subdirectory(tests)
