@@ -4,10 +4,17 @@ project(field_api)
 enable_language (Fortran)
 set(LIBNAME field_api)
 set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/modules)
+set(CMAKE_BUILD_TYPE "Debug")
 
 get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
 if (Fortran_COMPILER_NAME MATCHES "nvfortran")
-	set (CMAKE_Fortran_FLAGS "-acc=gpu -Mcuda -Mlarge_arrays")
+	set (CMAKE_Fortran_FLAGS "-Mlarge_arrays")
+endif()
+
+option(USE_OPENACC "Necessary to use field api on GPU" OFF)
+find_package(OpenACC)
+if(NOT OpenACC_Fortran_FOUND)
+	set(USE_OPENACC OFF)
 endif()
 
 find_package(OpenMP)
@@ -15,7 +22,6 @@ if(NOT OpenMP_Fortran_FOUND)
 	MESSAGE(FATAL_ERROR "Could not find OpenMP support.")
 endif()
 
-set(CMAKE_BUILD_TYPE "Debug")
 
 # Pre-process: .fpp -> .f90 via Fypp
 find_program(FYPP fypp)
