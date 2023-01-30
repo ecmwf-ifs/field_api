@@ -584,8 +584,9 @@ CONTAINS
   INTEGER (KIND=JPIM) FUNCTION ${field_type_name}$_GET_LAST_CONTIGUOUS_DIMENSION (PTR) RESULT (JDIM)
   ${dtype}$, POINTER :: PTR (${shapes[rank]}$)
   INTEGER*8 :: ISTRIDE (${rank}$)
-  INTEGER (KIND=JPIM) :: J
+  INTEGER (KIND=JPIM) :: J, LB(${rank}$)
 
+  LB = LBOUND(PTR)
   ISTRIDE (1) = KIND (PTR)
   DO J = 2, ${rank}$
     ISTRIDE (J) = ISTRIDE (J-1) * SIZE (PTR, J-1)
@@ -593,9 +594,15 @@ CONTAINS
 
   JDIM = 0
 #:for d in range (1, rank+1)
-  #:set ind0 = ['1'] * rank
-  #:set ind1 = ['1'] * (d - 1) + ['2'] + ['1'] * (rank - d)
-  IF (LOC (PTR (${', '.join (ind1)}$)) - LOC (PTR (${', '.join (ind0)}$)) /= ISTRIDE (${d}$)) THEN
+  #:set ind0 = ""
+  #:set ind1 = ""
+  #:for i in range(1,rank+1)
+    #:set ind0 = ind0 + "LB({}), ".format(i)
+    #:set ind1 = ind1 + "LB({}){}, ".format(i,"+1"*(i==d))
+  #:endfor
+  #:set ind0 = ind0[:-2]
+  #:set ind1 = ind1[:-2]
+  IF (LOC (PTR (${ind1}$)) - LOC (PTR (${ind0}$)) /= ISTRIDE (${d}$)) THEN
     RETURN
   ENDIF
 
