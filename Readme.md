@@ -63,7 +63,7 @@ and owners
 ## WRAPPER
 
 The field API wrappers (eg. FIELD\_2D\_WRAPPER) provide a way to encapsulate
-data which was already allocated before entering a part of the code which use
+data which was already allocated before entering a part of the code which uses
 field API. It is really just adding a wrapper around an array.
 
 For instance, let say there are some data used in the code that has nothing to
@@ -92,7 +92,7 @@ MYDATA(1,2) = 7
 
 The field API owners (eg. FIELD\_2D\_OWNER) provide a way to declare and
 allocate  data to be used on CPU and GPU. The data is allocated by the API, the 
-user don't have to allocate data by itself. Similarly, the user doesn't 
+user doesn't have to allocate data by itself. Similarly, the user doesn't 
 deallocate the data by himself, it is done by the API. When creating a owner,
 the user will need to provide the two arrays used to specify the lower and
 upper bounds of the array that will be created by field api.
@@ -117,7 +117,7 @@ FW%FINALIZE()
 Field owners also provide a way to delay the allocation of data. The user can
 ask a field owner to be created without allocating the data. The allocation
 would then happen only if the data would be requested at some point, later in
-the program. It can be useful if one don't want to waste memory on data that
+the program. It can be useful if one doesn't want to waste memory on data that
 might be only conditionally used. But please keep in mind, that allocating data
 can be slow and will slow down the program if done during a computation heavy
 part of the code.
