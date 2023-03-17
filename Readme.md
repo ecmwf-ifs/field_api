@@ -42,7 +42,7 @@ dimension is used to store the thread number, and then each thread will access
 only a single dimension of the array through a view.
 
 ```
-SUBROUTINE SUB1()
+SUBROUTINE SUB()
 TYPE(FIELD_2D_OWNER) :: FW
 TYPE(FIELD_2D_VIEW_PTR) :: V
 
@@ -73,7 +73,7 @@ having to declare a field API object high in the call stack, one could simply
 declare a field api wrapper when needed.
 
 ```
-SUBROUTINE SUB(D)
+SUBROUTINE SUB(MYDATA)
 INTEGER, INTENT(INOUT) :: MYDATA(:,:)
 TYPE(FIELD_2D_WRAPPER) :: FW
 
