@@ -1,13 +1,13 @@
 # Field API
 
 Field API aims to ease the management and the transfer of data between CPUs and
-GPUs for the MF/ECMWF software.
+GPUs for the Météo-France/ECMWF software.
 
-The API is using fypp heavily to generate the code for several type and
-dimension. It might looks complicated, but if you are just using the API then
+The API is using fypp heavily to generate the code for several types and
+dimensions. It might look complicated, but if you are just using the API then
 you should not worry about it.
 
-This library should be consired highly experimental.
+This library should be considered highly experimental.
 
 # Compilation
 
@@ -57,7 +57,7 @@ ENDDO
 FW%FINALIZE()
 ```
 
-Furthermore field API uses provides two way of encapsulating the data: wrappers
+Furthermore field API provides two way of encapsulating the data: wrappers
 and owners
 
 ## WRAPPER
@@ -67,8 +67,8 @@ data which was already allocated before entering a part of the code which use
 field API. It is really just adding a wrapper around an array.
 
 For instance, let say there are some data used in the code that has nothing to
-dowith GPUs. The data are allocated there and used there. But at some point,
-maybe deeper in the code, those are data are in fact needed on GPU. Instead of
+do with GPUs. The data are allocated there and used there. But at some point,
+maybe deeper in the code, those data are in fact needed on GPU. Instead of
 having to declare a field API object high in the call stack, one could simply
 declare a field api wrapper when needed.
 
@@ -91,11 +91,11 @@ MYDATA(1,2) = 7
 ## OWNER
 
 The field API owners (eg. FIELD\_2D\_OWNER) provide a way to declare and
-allocate  data to be used on CPU and GPU. The data is allocated by the API, the
-user don't have to allocate data by itself. Simillarly, the user don't
-deallocate the data by himself, it is done by the API. When create a owner, the
-user will need to provide the two arrays used to specify the lower and upper
-bounds of the array that will be created by field api.
+allocate  data to be used on CPU and GPU. The data is allocated by the API, the 
+user don't have to allocate data by itself. Similarly, the user doesn't 
+deallocate the data by himself, it is done by the API. When creating a owner,
+the user will need to provide the two arrays used to specify the lower and
+upper bounds of the array that will be created by field api.
 
 ```
 SUBROUTINE SUB()
@@ -116,11 +116,11 @@ FW%FINALIZE()
 
 Field owners also provide a way to delay the allocation of data. The user can
 ask a field owner to be created without allocating the data. The allocation
-would then happened only if the data would be requested at some point, later in
-the program. It can be useful one don't want to waste memory on data that might
-be only conditionally used. But please keep in mind, that allocating data can
-be slow and will slow down the program if done during a compuation heavy part
-of the code.
+would then happen only if the data would be requested at some point, later in
+the program. It can be useful if one don't want to waste memory on data that
+might be only conditionally used. But please keep in mind, that allocating data
+can be slow and will slow down the program if done during a computation heavy
+part of the code.
 
 ```
 SUBROUTINE SUB(MYTEST)
