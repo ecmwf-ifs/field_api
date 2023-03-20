@@ -104,7 +104,7 @@ TYPE(FIELD_2D_OWNER) :: FW
 !Allocate data with field API 
 !The allocated data will have a first dimension
 !going from 1 to 10 and a second from 0 to 10.
-FW%INIT(/1.0/, /10,10/, PERSISTENT=.FALSE.)
+FW%INIT(/1,0/, /10,10/, PERSISTENT=.FALSE.)
 
 !do stuff
 
@@ -128,7 +128,7 @@ LOGICAL, INTENT(IN) :: MYTEST
 TYPE(FIELD_2D_OWNER) :: FW
 
 !Declare a field owner, no allocation will happen here
-FW%INIT(/1.0/, /10,10/, PERSISTENT=.FALSE., DELAYED=.TRUE.)
+FW%INIT(/1,0/, /10,10/, PERSISTENT=.FALSE., DELAYED=.TRUE.)
 
 IF (MYTEST) THEN
 !do stuff with FW
@@ -141,8 +141,90 @@ FW%FINALIZE()
 
 ## Asynchronism
 
+By default all data transfers are synchronous. So every call to the subroutines
+GET\_HOST\_DATA, GET\_DEVICE\_DATA, SYNC\_HOST, SYNC\_DEVICE will stop the
+program until the data are actually transfered. But sometimes it is possible to
+interleave the data transfer with the computations. To do so you can add the
+QUEUE parameter when calling the aforementioned subroutines. With this QUEUE
+parameter the user will specify on which queue he wants the data transfer to
+happen, and the subroutines will return without waiting for the data transfer
+to finish. It is up to the user to be sure the data transfer has been done when
+he actually wants to use the data. This can be checked by using the
+WAIT\_FOR\_ASYNC\_QUEUE subroutine.
+
+```
+SUBROUTINE SUB(MYTEST)
+LOGICAL, INTENT(IN) :: MYTEST
+TYPE(FIELD_2D_OWNER) :: FW
+TYPE(FIELD_2D_OWNER) :: FW2
+
+FW%INIT(/1,0/, /10,10/)
+FW2%INIT(/1,0/, /10,10/)
+
+!Do stuff with FW on GPUs
+!Then transfer data to CPU
+FW%SYNC_HOST_RDONLY(QUEUE=2)
+
+!Do stuff with FW2 on GPUs
+!We didn't have to wait for the data transfer of FW to finish
+
+!Make sure the data transfer for FW is finished
+CALL WAIT_FOR_ASYNC_QUEUE(QUEUE=2)
+
+...
+
+```
+
 ## Statistics
 
-# API listing
+Each field API variable maintains statistics about the time it spend on data
+transfer and the number of time it happened. You can access them through the
+field ```FW%STATS```
 
-TODO
+For instance:
+```
+...
+NUM_CPU_GPU_TR=FW%STATS%TRANSFER_CPU_TO_GPU
+AVG=FW%STATS%TOTAL_TIME_TRANSFER_CPU_TO_GPU/FW%STATS%TRANSFER_CPU_TO_GPU
+write(*,*)"Num transfer CPU->GPU", NUM_CPU_GPU_TR
+write(*,*)"Total/Avg Time spend on transfer CPU->GPU", NUM_CPU_GPU_TR, "/" AVG, 
+...
+```
+
+# Public API
+
+For field api type:
+```
+SUBROUTINE INIT(SELF)
+SUBROUTINE FINAL(SELF)
+SUBROUTINE DELETE_DEVICE
+FUNCTION GET_VIEW(SELF, BLOCK_INDEX, ZERO) RESULT(VIEW_PTR)
+SUBROUTINE GET_DEVICE_DATA_RDONLY (SELF, PPTR, QUEUE)
+SUBROUTINE GET_DEVICE_DATA_RDWR (SELF, PPTR, QUEUE)
+SUBROUTINE GET_HOST_DATA_RDONLY (SELF, PPTR, QUEUE)
+SUBROUTINE GET_HOST_DATA_RDWR (SELF, PPTR, QUEUE)
+SUBROUTINE SYNC_HOST_RDWR (SELF, QUEUE)
+SUBROUTINE SYNC_HOST_RDONLY (SELF, QUEUE)
+SUBROUTINE SYNC_DEVICE_RDWR (SELF, QUEUE)
+SUBROUTINE SYNC_DEVICE_RDONLY (SELF, QUEUE)
+SUBROUTINE COPY_OBJECT (SELF, LDCREATED)
+SUBROUTINE WIPE_OBJECT (SELF, LDDELETED)
+```
+
+Utils:
+
+```
+SUBROUTINE WAIT_FOR_ASYNC_QUEUE(QUEUE)
+TYPE FIELD_*D_PTR
+```
+
+Stats:
+```
+INTEGER :: TRANSFER_CPU_TO_GPU 
+INTEGER :: TRANSFER_GPU_TO_CPU
+REAL :: TOTAL_TIME_TRANSFER_CPU_TO_GPU
+REAL :: TOTAL_TIME_TRANSFER_GPU_TO_CPU
+```
+
+
+
