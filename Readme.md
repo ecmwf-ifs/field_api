@@ -47,7 +47,7 @@ TYPE(FIELD_2D_OWNER) :: FW
 TYPE(FIELD_2D_VIEW_PTR) :: V
 
 !Will create a field with the first dimension going from 1 to 10 and second from 1 to OMP_NUM_THREADS
-FW%INIT(/1.1/, /10,1/)
+FW%INIT(/1,1/, /10,1/)
 
 DO JLON=KIDIA,KFDIA
   V => FW%GET_VIEW(JLON)
