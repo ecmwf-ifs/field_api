@@ -47,14 +47,14 @@ TYPE(FIELD_2D_OWNER) :: FW
 TYPE(FIELD_2D_VIEW_PTR) :: V
 
 !Will create a field with the first dimension going from 1 to 10 and second from 1 to OMP_NUM_THREADS
-FW%INIT(/1,1/, /10,1/)
+CALL FW%INIT(/1,1/, /10,1/)
 
-DO JLON=KIDIA,KFDIA
-  V => FW%GET_VIEW(JLON)
+DO IBLK=1,NBLKS
+  V => FW%GET_VIEW(IBLK)
   !do stuff with v
 ENDDO
   
-FW%FINALIZE()
+CALL FW%FINALIZE()
 ```
 
 Furthermore field API provides two way of encapsulating the data: wrappers
@@ -78,11 +78,11 @@ INTEGER, INTENT(INOUT) :: MYDATA(:,:)
 TYPE(FIELD_2D_WRAPPER) :: FW
 
 !Wrap MYDATA into field wrapper FW
-FW%INIT(MYDATA)
+CALL FW%INIT(MYDATA)
 
 !do stuff
 
-FW%FINALIZE()
+CALL FW%FINALIZE()
 
 !MYDATA is still accessible
 MYDATA(1,2) = 7
@@ -104,11 +104,11 @@ TYPE(FIELD_2D_OWNER) :: FW
 !Allocate data with field API 
 !The allocated data will have a first dimension
 !going from 1 to 10 and a second from 0 to 10.
-FW%INIT(/1,0/, /10,10/, PERSISTENT=.FALSE.)
+CALL FW%INIT(/1,0/, /10,10/, PERSISTENT=.FALSE.)
 
 !do stuff
 
-FW%FINALIZE()
+CALL FW%FINALIZE()
 !The data has now be freed on CPU and GPU and cannot be accessed anymore
 ```
 
@@ -128,14 +128,14 @@ LOGICAL, INTENT(IN) :: MYTEST
 TYPE(FIELD_2D_OWNER) :: FW
 
 !Declare a field owner, no allocation will happen here
-FW%INIT(/1,0/, /10,10/, PERSISTENT=.FALSE., DELAYED=.TRUE.)
+CALL FW%INIT(/1,0/, /10,10/, PERSISTENT=.FALSE., DELAYED=.TRUE.)
 
 IF (MYTEST) THEN
 !do stuff with FW
 !allocation wil happen here
 ENDIF
 
-FW%FINALIZE()
+CALL FW%FINALIZE()
 !The data will be freed if MYTEST was true, otherwise there are no data to deallocate
 ```
 
@@ -158,12 +158,12 @@ LOGICAL, INTENT(IN) :: MYTEST
 TYPE(FIELD_2D_OWNER) :: FW
 TYPE(FIELD_2D_OWNER) :: FW2
 
-FW%INIT(/1,0/, /10,10/)
-FW2%INIT(/1,0/, /10,10/)
+CALL FW%INIT(/1,0/, /10,10/)
+CALL FW2%INIT(/1,0/, /10,10/)
 
 !Do stuff with FW on GPUs
 !Then transfer data to CPU
-FW%SYNC_HOST_RDONLY(QUEUE=2)
+CALL FW%SYNC_HOST_RDONLY(QUEUE=2)
 
 !Do stuff with FW2 on GPUs
 !We didn't have to wait for the data transfer of FW to finish
