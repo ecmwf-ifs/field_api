@@ -4,7 +4,7 @@ MODULE NON_CONTI
 CONTAINS
         SUBROUTINE DO_STUFF_WITH_NONCONTIGUOUS_DATA(D)
                 REAL(KIND=JPRB) :: D(:,:)
-                TYPE(FIELD_2D_WRAPPER) :: W
+                TYPE(FIELD2RB_WRAPPER) :: W
                 REAL(KIND=JPRB), POINTER :: PTR(:,:)
                 CALL W%INIT(D)
                 CALL W%GET_HOST_DATA_RDWR(PTR)

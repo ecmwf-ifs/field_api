@@ -2,7 +2,7 @@ PROGRAM SYNC_HOST
         USE FIELD_MODULE
         IMPLICIT NONE
 
-        TYPE(FIELD_2D_WRAPPER) :: W
+        TYPE(FIELD2RB_WRAPPER) :: W
         REAL(KIND=JPRB), ALLOCATABLE :: D(:,:)
         REAL(KIND=JPRB), POINTER :: D_GPU(:,:)
         INTEGER :: I, J

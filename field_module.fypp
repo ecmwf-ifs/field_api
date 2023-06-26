@@ -1,18 +1,8 @@
-! Rank and shape definitions for simple templating
-!
-! Note that the ranks encode coneptual dimensions here, eg. FIELD_2D encodes
-! a surface field and FIELD_3D represents a field with a vertical component.
-#:include "field_definition.fypp"
+#:include "field_definition.hypp"
 
 MODULE FIELD_MODULE
-  ! The FIELD types provided by this module provide data abstractions that
-  ! decouple data storage in memory from the data views used in thread-parallel
-  ! sections of the code. They are intended to thinly wrap ATLAS_FIELD
-  ! objects and provide additional features that may later be
-  ! incorporated into Atlas. They can also provide backward-compatibility
-  ! for non-Atlas execution modes.
 
-USE PARKIND1, ONLY: JPIM, JPRB
+USE PARKIND1, ONLY: JPIM, JPRB, JPRD, JPLM, JPRM
 USE OMP_LIB, ONLY: OMP_GET_MAX_THREADS, OMP_GET_THREAD_NUM
 USE IEEE_ARITHMETIC, ONLY: IEEE_SIGNALING_NAN
 
@@ -42,7 +32,6 @@ TYPE GPU_STATS
 END TYPE GPU_STATS
 
 TYPE, ABSTRACT :: FIELD_BASIC
-  ! Flag indicating the use a single block-buffer per thread
   LOGICAL :: THREAD_BUFFER = .FALSE.
 
   INTEGER(KIND=JPIM) :: ISTATUS = 0
@@ -69,88 +58,66 @@ END INTERFACE
 
 
 #:for dtype, suffix, rank, default in field_descriptors
-#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
-TYPE, ABSTRACT, EXTENDS (FIELD_BASIC) :: ${field_type_name}$
-  ! A FIELD encapsulates a single multi-dimensional array and can
-  ! provide block-indexed "views" of the data for automating the
-  ! allocation and parallel iterration of NPROMA blocks.
-
-  ! TODO: Atlas-based field data storage field
-  ! TODO: Do we still need to use pointers here?
-  ! TYPE(ATLAS_FIELD), POINTER :: DATA
-
-  ! Storage pointer for non-Atlas backward-compatibility mode
-  !
-  ! The underlying storage pointer has the rank as the dimension,
-  ! where the innermost dimension represents the horizontal and
-  ! the outermost one is the block index.
+#:set ftn = fieldTypeName (suffix, rank)
+TYPE, ABSTRACT, EXTENDS (FIELD_BASIC) :: ${ftn}$
   ${dtype}$, POINTER :: PTR(${shapes[rank]}$) => NULL()
-
-  ! A separate data pointer that can be used to create
-  ! a contiguous chunk of host memory to cleanly map to
-  ! device, should the %DATA pointer be discontiguous.
   ${dtype}$, POINTER, CONTIGUOUS :: DEVPTR(${shapes[rank]}$) => NULL()
-
 CONTAINS
 
-  PROCEDURE :: FINAL => ${field_type_name}$_FINAL
-  PROCEDURE :: ${field_type_name}$_FINAL
-  PROCEDURE :: DELETE_DEVICE => ${field_type_name}$_DELETE_DEVICE
-  PROCEDURE :: GET_VIEW => ${field_type_name}$_GET_VIEW
-  PROCEDURE :: GET_DEVICE_DATA_RDONLY => ${field_type_name}$_GET_DEVICE_DATA_RDONLY
-  PROCEDURE :: GET_DEVICE_DATA_RDWR => ${field_type_name}$_GET_DEVICE_DATA_RDWR
-  PROCEDURE :: GET_HOST_DATA_RDONLY => ${field_type_name}$_GET_HOST_DATA_RDONLY
-  PROCEDURE :: GET_HOST_DATA_RDWR => ${field_type_name}$_GET_HOST_DATA_RDWR
-  PROCEDURE :: SYNC_HOST_RDWR => ${field_type_name}$_SYNC_HOST_RDWR
-  PROCEDURE :: SYNC_HOST_RDONLY => ${field_type_name}$_SYNC_HOST_RDONLY
-  PROCEDURE :: SYNC_DEVICE_RDWR => ${field_type_name}$_SYNC_DEVICE_RDWR
-  PROCEDURE :: SYNC_DEVICE_RDONLY => ${field_type_name}$_SYNC_DEVICE_RDONLY
-  PROCEDURE :: COPY_OBJECT => ${field_type_name}$_COPY_OBJECT
-  PROCEDURE :: WIPE_OBJECT => ${field_type_name}$_WIPE_OBJECT
+  PROCEDURE :: FINAL => ${ftn}$_FINAL
+  PROCEDURE :: ${ftn}$_FINAL
+  PROCEDURE :: DELETE_DEVICE => ${ftn}$_DELETE_DEVICE
+  PROCEDURE :: GET_VIEW => ${ftn}$_GET_VIEW
+  PROCEDURE :: GET_DEVICE_DATA_RDONLY => ${ftn}$_GET_DEVICE_DATA_RDONLY
+  PROCEDURE :: GET_DEVICE_DATA_RDWR => ${ftn}$_GET_DEVICE_DATA_RDWR
+  PROCEDURE :: GET_HOST_DATA_RDONLY => ${ftn}$_GET_HOST_DATA_RDONLY
+  PROCEDURE :: GET_HOST_DATA_RDWR => ${ftn}$_GET_HOST_DATA_RDWR
+  PROCEDURE :: SYNC_HOST_RDWR => ${ftn}$_SYNC_HOST_RDWR
+  PROCEDURE :: SYNC_HOST_RDONLY => ${ftn}$_SYNC_HOST_RDONLY
+  PROCEDURE :: SYNC_DEVICE_RDWR => ${ftn}$_SYNC_DEVICE_RDWR
+  PROCEDURE :: SYNC_DEVICE_RDONLY => ${ftn}$_SYNC_DEVICE_RDONLY
+  PROCEDURE :: COPY_OBJECT => ${ftn}$_COPY_OBJECT
+  PROCEDURE :: WIPE_OBJECT => ${ftn}$_WIPE_OBJECT
 
-  PROCEDURE, PRIVATE :: GET_DEVICE_DATA => ${field_type_name}$_GET_DEVICE_DATA
-  PROCEDURE, PRIVATE :: GET_HOST_DATA => ${field_type_name}$_GET_HOST_DATA
-  PROCEDURE, PRIVATE :: ${field_type_name}$_GET_HOST_DATA
-  PROCEDURE, PRIVATE :: COPY_DATA =>  ${field_type_name}$_COPY_DATA
-  PROCEDURE, PRIVATE :: CREATE_DEVICE_DATA => ${field_type_name}$_CREATE_DEVICE_DATA
-END TYPE ${field_type_name}$
+  PROCEDURE, PRIVATE :: GET_DEVICE_DATA => ${ftn}$_GET_DEVICE_DATA
+  PROCEDURE, PRIVATE :: GET_HOST_DATA => ${ftn}$_GET_HOST_DATA
+  PROCEDURE, PRIVATE :: ${ftn}$_GET_HOST_DATA
+  PROCEDURE, PRIVATE :: COPY_DATA =>  ${ftn}$_COPY_DATA
+  PROCEDURE, PRIVATE :: CREATE_DEVICE_DATA => ${ftn}$_CREATE_DEVICE_DATA
+END TYPE ${ftn}$
 
-TYPE, EXTENDS(${field_type_name}$) :: ${field_type_name}$_WRAPPER
+TYPE, EXTENDS(${ftn}$) :: ${ftn}$_WRAPPER
 CONTAINS
-  PROCEDURE :: INIT => ${field_type_name}$_WRAP
-  PROCEDURE :: FINAL => ${field_type_name}$_WRAPPER_FINAL
-END TYPE ${field_type_name}$_WRAPPER
+  PROCEDURE :: INIT => ${ftn}$_WRAP
+  PROCEDURE :: FINAL => ${ftn}$_WRAPPER_FINAL
+END TYPE ${ftn}$_WRAPPER
 
-TYPE, EXTENDS(${field_type_name}$) :: ${field_type_name}$_OWNER
+TYPE, EXTENDS(${ftn}$) :: ${ftn}$_OWNER
   INTEGER(KIND=JPIM) :: LBOUNDS(${rank}$), UBOUNDS(${rank}$)
 CONTAINS
-  PROCEDURE :: INIT => ${field_type_name}$_OWNER_INIT
-  PROCEDURE :: FINAL => ${field_type_name}$_OWNER_FINAL
-  PROCEDURE, PRIVATE :: ALLOCATE => ${field_type_name}$_ALLOCATE
-  PROCEDURE, PRIVATE :: GET_HOST_DATA => ${field_type_name}$_OWNER_GET_HOST_DATA
-END TYPE ${field_type_name}$_OWNER
+  PROCEDURE :: INIT => ${ftn}$_OWNER_INIT
+  PROCEDURE :: FINAL => ${ftn}$_OWNER_FINAL
+  PROCEDURE, PRIVATE :: ALLOCATE => ${ftn}$_ALLOCATE
+  PROCEDURE, PRIVATE :: GET_HOST_DATA => ${ftn}$_OWNER_GET_HOST_DATA
+END TYPE ${ftn}$_OWNER
 
-TYPE ${field_type_name}$_PTR
-  ! Struct to hold references to field objects
-  CLASS(${field_type_name}$), POINTER :: PTR => NULL()
-END TYPE ${field_type_name}$_PTR
+TYPE ${ftn}$_PTR
+  CLASS(${ftn}$), POINTER :: PTR => NULL()
+END TYPE ${ftn}$_PTR
 
-TYPE ${field_type_name}$_VIEW
-  ! Struct to hold array views, so we can make arrays of them
+TYPE ${ftn}$_VIEW
   ${dtype}$, POINTER :: P(${shapes[rank-1]}$) => NULL()
-END TYPE ${field_type_name}$_VIEW
+END TYPE ${ftn}$_VIEW
 
 #:endfor
 
 CONTAINS
-!
-! CLASS METHODS
-!
+
 #:for dtype, suffix, rank, default in field_descriptors
-#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
-  SUBROUTINE ${field_type_name}$_WRAP(SELF, DATA, PERSISTENT, LBOUNDS)
+#:set ftn = fieldTypeName (suffix, rank)
+  SUBROUTINE ${ftn}$_WRAP(SELF, DATA, PERSISTENT, LBOUNDS)
     ! Create FIELD object by wrapping existing data
-    CLASS(${field_type_name}$_WRAPPER), INTENT(INOUT) :: SELF
+    CLASS(${ftn}$_WRAPPER), INTENT(INOUT) :: SELF
     ${dtype}$, TARGET, INTENT(IN) :: DATA(${shapes[rank]}$)
     LOGICAL, INTENT(IN), OPTIONAL :: PERSISTENT
     INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: LBOUNDS(${rank}$)
@@ -169,14 +136,14 @@ CONTAINS
 
     IF (.NOT. LLPERSISTENT) THEN
       IF (OMP_GET_MAX_THREADS() /= SIZE (DATA, ${rank}$)) THEN
-        CALL ABOR1 ('${field_type_name}$_WRAP: DIMENSION MISMATCH')
+        CALL ABOR1 ('${ftn}$_WRAP: DIMENSION MISMATCH')
       ENDIF
     ENDIF
 
-  END SUBROUTINE ${field_type_name}$_WRAP
+  END SUBROUTINE ${ftn}$_WRAP
 
-  SUBROUTINE ${field_type_name}$_OWNER_INIT (SELF, LBOUNDS, UBOUNDS, PERSISTENT, DELAYED)
-    CLASS(${field_type_name}$_OWNER) :: SELF
+  SUBROUTINE ${ftn}$_OWNER_INIT (SELF, LBOUNDS, UBOUNDS, PERSISTENT, DELAYED)
+    CLASS(${ftn}$_OWNER) :: SELF
     INTEGER(KIND=JPIM), INTENT(IN) :: LBOUNDS(${rank}$)
     INTEGER(KIND=JPIM), INTENT(IN) :: UBOUNDS(${rank}$)
     LOGICAL, OPTIONAL,  INTENT(IN) :: PERSISTENT
@@ -209,18 +176,18 @@ CONTAINS
     IF(.NOT. IS_DELAYED) THEN
       CALL SELF%ALLOCATE()
     ENDIF
-  END SUBROUTINE ${field_type_name}$_OWNER_INIT
+  END SUBROUTINE ${ftn}$_OWNER_INIT
 
-  SUBROUTINE ${field_type_name}$_ALLOCATE (SELF)
+  SUBROUTINE ${ftn}$_ALLOCATE (SELF)
     ! Create FIELD object by explicitly allocating new data
-    CLASS(${field_type_name}$_OWNER) :: SELF
+    CLASS(${ftn}$_OWNER) :: SELF
 
     ALLOCATE(SELF%PTR(${', '.join(map(lambda r: 'SELF%LBOUNDS('+str(r+1)+'):SELF%UBOUNDS('+str(r+1)+')', range(0, rank)))}$))
     SELF%ISTATUS = NHSTFRESH
-  END SUBROUTINE ${field_type_name}$_ALLOCATE
+  END SUBROUTINE ${ftn}$_ALLOCATE
 
-  FUNCTION ${field_type_name}$_GET_VIEW(SELF, BLOCK_INDEX, ZERO) RESULT(VIEW_PTR)
-    CLASS(${field_type_name}$) :: SELF
+  FUNCTION ${ftn}$_GET_VIEW(SELF, BLOCK_INDEX, ZERO) RESULT(VIEW_PTR)
+    CLASS(${ftn}$) :: SELF
     ${dtype}$, POINTER :: VIEW_PTR(${shapes[rank-1]}$)
     INTEGER(KIND=JPIM), INTENT(IN) :: BLOCK_INDEX
     LOGICAL, OPTIONAL, INTENT(IN) :: ZERO
@@ -236,11 +203,11 @@ CONTAINS
     IF (PRESENT(ZERO)) THEN
       IF (ZERO) VIEW_PTR(${shapes[rank-1]}$) = ${default}$
     END IF
-  END FUNCTION ${field_type_name}$_GET_VIEW
+  END FUNCTION ${ftn}$_GET_VIEW
 
-  SUBROUTINE ${field_type_name}$_DELETE_DEVICE(SELF)
+  SUBROUTINE ${ftn}$_DELETE_DEVICE(SELF)
     ! Delete the copy of this field on GPU device
-    CLASS(${field_type_name}$) :: SELF
+    CLASS(${ftn}$) :: SELF
 
     IF (ASSOCIATED (SELF%DEVPTR)) THEN
 #ifdef _OPENACC
@@ -249,34 +216,34 @@ CONTAINS
       DEALLOCATE (SELF%DEVPTR)
       NULLIFY (SELF%DEVPTR)
     ENDIF
-  END SUBROUTINE ${field_type_name}$_DELETE_DEVICE
+  END SUBROUTINE ${ftn}$_DELETE_DEVICE
 
-  SUBROUTINE ${field_type_name}$_FINAL(SELF)
+  SUBROUTINE ${ftn}$_FINAL(SELF)
     ! Finalizes field and deallocates owned data
-    CLASS(${field_type_name}$) :: SELF
+    CLASS(${ftn}$) :: SELF
     NULLIFY(SELF%PTR)
     CALL SELF%DELETE_DEVICE()
-  END SUBROUTINE ${field_type_name}$_FINAL
+  END SUBROUTINE ${ftn}$_FINAL
 
-  SUBROUTINE ${field_type_name}$_WRAPPER_FINAL(SELF)
+  SUBROUTINE ${ftn}$_WRAPPER_FINAL(SELF)
     ! Finalizes field and deallocates owned data
-    CLASS(${field_type_name}$_WRAPPER) :: SELF
+    CLASS(${ftn}$_WRAPPER) :: SELF
     ${dtype}$, POINTER :: PTR(${shapes[rank]}$)
     CALL SELF%GET_HOST_DATA_RDONLY(PTR)
-    CALL SELF%${field_type_name}$_FINAL
-  END SUBROUTINE ${field_type_name}$_WRAPPER_FINAL
+    CALL SELF%${ftn}$_FINAL
+  END SUBROUTINE ${ftn}$_WRAPPER_FINAL
 
-  SUBROUTINE ${field_type_name}$_OWNER_FINAL(SELF)
+  SUBROUTINE ${ftn}$_OWNER_FINAL(SELF)
     ! Finalizes field and deallocates owned data
-    CLASS(${field_type_name}$_OWNER) :: SELF
+    CLASS(${ftn}$_OWNER) :: SELF
     IF (ASSOCIATED(SELF%PTR)) THEN
       DEALLOCATE(SELF%PTR)
     END IF
-    CALL SELF%${field_type_name}$_FINAL
-  END SUBROUTINE ${field_type_name}$_OWNER_FINAL
+    CALL SELF%${ftn}$_FINAL
+  END SUBROUTINE ${ftn}$_OWNER_FINAL
 
-  SUBROUTINE ${field_type_name}$_COPY_OBJECT (SELF, LDCREATED)
-  CLASS(${field_type_name}$) :: SELF
+  SUBROUTINE ${ftn}$_COPY_OBJECT (SELF, LDCREATED)
+  CLASS(${ftn}$) :: SELF
   LOGICAL, INTENT (IN), OPTIONAL :: LDCREATED
   LOGICAL :: LLCREATED
 
@@ -295,10 +262,10 @@ CONTAINS
 #endif
   ENDIF
 
-  END SUBROUTINE ${field_type_name}$_COPY_OBJECT
+  END SUBROUTINE ${ftn}$_COPY_OBJECT
 
-  SUBROUTINE ${field_type_name}$_WIPE_OBJECT (SELF, LDDELETED)
-  CLASS(${field_type_name}$) :: SELF
+  SUBROUTINE ${ftn}$_WIPE_OBJECT (SELF, LDDELETED)
+  CLASS(${ftn}$) :: SELF
   LOGICAL, INTENT (IN), OPTIONAL :: LDDELETED
   LOGICAL :: LLDELETED
 
@@ -316,15 +283,15 @@ CONTAINS
 #endif
   ENDIF
 
-  END SUBROUTINE ${field_type_name}$_WIPE_OBJECT
+  END SUBROUTINE ${ftn}$_WIPE_OBJECT
 
-  SUBROUTINE ${field_type_name}$_COPY_DATA (SELF, KDIR, QUEUE)
-  CLASS(${field_type_name}$)                :: SELF
+  SUBROUTINE ${ftn}$_COPY_DATA (SELF, KDIR, QUEUE)
+  CLASS(${ftn}$)                :: SELF
   INTEGER (KIND=JPIM),           INTENT(IN) :: KDIR
   INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN) :: QUEUE
   REAL :: START, FINISH
 
-  SELF%LAST_CONTIGUOUS_DIMENSION = ${field_type_name}$_GET_LAST_CONTIGUOUS_DIMENSION (SELF%PTR)
+  SELF%LAST_CONTIGUOUS_DIMENSION = ${ftn}$_GET_LAST_CONTIGUOUS_DIMENSION (SELF%PTR)
 
   CALL CPU_TIME(START)
   SELECT CASE (SELF%LAST_CONTIGUOUS_DIMENSION)
@@ -395,11 +362,11 @@ CONTAINS
 
 #:endfor
 
-  END SUBROUTINE ${field_type_name}$_COPY_DATA
+  END SUBROUTINE ${ftn}$_COPY_DATA
 
 
-  SUBROUTINE ${field_type_name}$_GET_HOST_DATA (SELF, MODE, PTR, QUEUE)
-    CLASS(${field_type_name}$),    INTENT(INOUT) :: SELF
+  SUBROUTINE ${ftn}$_GET_HOST_DATA (SELF, MODE, PTR, QUEUE)
+    CLASS(${ftn}$),    INTENT(INOUT) :: SELF
     INTEGER (KIND=JPIM),           INTENT(IN)    :: MODE
 
     ${dtype}$, POINTER,            INTENT(INOUT) :: PTR(${shapes[rank]}$)
@@ -417,10 +384,10 @@ CONTAINS
       SELF%ISTATUS = IAND (SELF%ISTATUS, NOT (NDEVFRESH))
     ENDIF
 
-  END SUBROUTINE ${field_type_name}$_GET_HOST_DATA
+  END SUBROUTINE ${ftn}$_GET_HOST_DATA
 
-  SUBROUTINE ${field_type_name}$_OWNER_GET_HOST_DATA (SELF, MODE, PTR, QUEUE)
-    CLASS(${field_type_name}$_OWNER), INTENT(INOUT) :: SELF
+  SUBROUTINE ${ftn}$_OWNER_GET_HOST_DATA (SELF, MODE, PTR, QUEUE)
+    CLASS(${ftn}$_OWNER), INTENT(INOUT) :: SELF
     INTEGER (KIND=JPIM),           INTENT(IN)    :: MODE
     ${dtype}$, POINTER,            INTENT(INOUT) :: PTR(${shapes[rank]}$)
     INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
@@ -428,21 +395,21 @@ CONTAINS
     IF(SELF%ISTATUS==UNALLOCATED)THEN
       CALL SELF%ALLOCATE()
     ENDIF
-    CALL SELF%${field_type_name}$_GET_HOST_DATA(MODE, PTR, QUEUE)
+    CALL SELF%${ftn}$_GET_HOST_DATA(MODE, PTR, QUEUE)
 
-  END SUBROUTINE ${field_type_name}$_OWNER_GET_HOST_DATA
+  END SUBROUTINE ${ftn}$_OWNER_GET_HOST_DATA
 
-  SUBROUTINE ${field_type_name}$_GET_HOST_DATA_RDONLY (SELF, PPTR, QUEUE)
-    CLASS(${field_type_name}$),   INTENT(INOUT) :: SELF
+  SUBROUTINE ${ftn}$_GET_HOST_DATA_RDONLY (SELF, PPTR, QUEUE)
+    CLASS(${ftn}$),   INTENT(INOUT) :: SELF
     ${dtype}$, POINTER,           INTENT(INOUT) :: PPTR(${shapes[rank]}$)
     INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
 
     CALL SELF%GET_HOST_DATA (NRD, PPTR, QUEUE)
 
-  END SUBROUTINE ${field_type_name}$_GET_HOST_DATA_RDONLY
+  END SUBROUTINE ${ftn}$_GET_HOST_DATA_RDONLY
 
-  SUBROUTINE ${field_type_name}$_SYNC_HOST_RDONLY (SELF, QUEUE)
-    CLASS(${field_type_name}$),   INTENT(INOUT) :: SELF
+  SUBROUTINE ${ftn}$_SYNC_HOST_RDONLY (SELF, QUEUE)
+    CLASS(${ftn}$),   INTENT(INOUT) :: SELF
     INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
     ${dtype}$, POINTER                          :: ZPTR(${shapes[rank]}$)
 
@@ -452,19 +419,19 @@ CONTAINS
       CALL SELF%GET_HOST_DATA_RDONLY (ZPTR)
     ENDIF
 
-  END SUBROUTINE ${field_type_name}$_SYNC_HOST_RDONLY
+  END SUBROUTINE ${ftn}$_SYNC_HOST_RDONLY
 
-  SUBROUTINE ${field_type_name}$_GET_HOST_DATA_RDWR (SELF, PPTR, QUEUE)
-    CLASS(${field_type_name}$),   INTENT(INOUT) :: SELF
+  SUBROUTINE ${ftn}$_GET_HOST_DATA_RDWR (SELF, PPTR, QUEUE)
+    CLASS(${ftn}$),   INTENT(INOUT) :: SELF
     ${dtype}$, POINTER,           INTENT(INOUT) :: PPTR(${shapes[rank]}$)
     INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
 
     CALL SELF%GET_HOST_DATA (IOR (NRD, NWR), PPTR, QUEUE)
 
-  END SUBROUTINE ${field_type_name}$_GET_HOST_DATA_RDWR
+  END SUBROUTINE ${ftn}$_GET_HOST_DATA_RDWR
 
-  SUBROUTINE ${field_type_name}$_SYNC_HOST_RDWR (SELF, QUEUE)
-    CLASS(${field_type_name}$),   INTENT(INOUT) :: SELF
+  SUBROUTINE ${ftn}$_SYNC_HOST_RDWR (SELF, QUEUE)
+    CLASS(${ftn}$),   INTENT(INOUT) :: SELF
     INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
     ${dtype}$, POINTER                          :: ZPTR(${shapes[rank]}$)
 
@@ -474,10 +441,10 @@ CONTAINS
       CALL SELF%GET_HOST_DATA_RDWR (ZPTR)
     ENDIF
 
-  END SUBROUTINE ${field_type_name}$_SYNC_HOST_RDWR
+  END SUBROUTINE ${ftn}$_SYNC_HOST_RDWR
 
-  SUBROUTINE ${field_type_name}$_CREATE_DEVICE_DATA (SELF)
-    CLASS(${field_type_name}$), INTENT (INOUT) :: SELF
+  SUBROUTINE ${ftn}$_CREATE_DEVICE_DATA (SELF)
+    CLASS(${ftn}$), INTENT (INOUT) :: SELF
 #if __INTEL_COMPILER == 1800 && __INTEL_COMPILER_UPDATE == 5
 ! Bug with Intel 18.0.5.274
     ALLOCATE (SELF%DEVPTR (${ ', '.join (map (lambda i: 'LBOUND (SELF%PTR, ' + str (i) + '):UBOUND (SELF%PTR,' + str (i) + ')', range (1, rank+1))) }$))
@@ -492,8 +459,8 @@ CONTAINS
 #endif
   END SUBROUTINE
 
-  SUBROUTINE ${field_type_name}$_GET_DEVICE_DATA (SELF, MODE, PTR, QUEUE)
-    CLASS(${field_type_name}$),    INTENT(INOUT) :: SELF
+  SUBROUTINE ${ftn}$_GET_DEVICE_DATA (SELF, MODE, PTR, QUEUE)
+    CLASS(${ftn}$),    INTENT(INOUT) :: SELF
     INTEGER (KIND=JPIM),           INTENT(IN)    :: MODE
     ${dtype}$, POINTER,            INTENT(INOUT) :: PTR(${shapes[rank]}$)
     INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
@@ -512,19 +479,19 @@ CONTAINS
       SELF%ISTATUS = IAND (SELF%ISTATUS, NOT (NHSTFRESH))
     ENDIF
 
-  END SUBROUTINE ${field_type_name}$_GET_DEVICE_DATA
+  END SUBROUTINE ${ftn}$_GET_DEVICE_DATA
 
-  SUBROUTINE ${field_type_name}$_GET_DEVICE_DATA_RDONLY (SELF, PPTR, QUEUE)
-    CLASS(${field_type_name}$),   INTENT(INOUT) :: SELF
+  SUBROUTINE ${ftn}$_GET_DEVICE_DATA_RDONLY (SELF, PPTR, QUEUE)
+    CLASS(${ftn}$),   INTENT(INOUT) :: SELF
     ${dtype}$, POINTER,           INTENT(INOUT) :: PPTR(${shapes[rank]}$)
     INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
 
-    CALL ${field_type_name}$_GET_DEVICE_DATA (SELF, NRD, PPTR, QUEUE)
+    CALL ${ftn}$_GET_DEVICE_DATA (SELF, NRD, PPTR, QUEUE)
 
-  END SUBROUTINE ${field_type_name}$_GET_DEVICE_DATA_RDONLY
+  END SUBROUTINE ${ftn}$_GET_DEVICE_DATA_RDONLY
 
-  SUBROUTINE ${field_type_name}$_SYNC_DEVICE_RDONLY (SELF, QUEUE)
-    CLASS(${field_type_name}$),   INTENT(INOUT) :: SELF
+  SUBROUTINE ${ftn}$_SYNC_DEVICE_RDONLY (SELF, QUEUE)
+    CLASS(${ftn}$),   INTENT(INOUT) :: SELF
     INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
     ${dtype}$, POINTER                          :: ZPTR(${shapes[rank]}$)
 
@@ -534,19 +501,19 @@ CONTAINS
       CALL SELF%GET_DEVICE_DATA_RDONLY (ZPTR)
     ENDIF
 
-  END SUBROUTINE ${field_type_name}$_SYNC_DEVICE_RDONLY
+  END SUBROUTINE ${ftn}$_SYNC_DEVICE_RDONLY
 
-  SUBROUTINE ${field_type_name}$_GET_DEVICE_DATA_RDWR (SELF, PPTR, QUEUE)
-    CLASS(${field_type_name}$),   INTENT(INOUT) :: SELF
+  SUBROUTINE ${ftn}$_GET_DEVICE_DATA_RDWR (SELF, PPTR, QUEUE)
+    CLASS(${ftn}$),   INTENT(INOUT) :: SELF
     ${dtype}$, POINTER,           INTENT(INOUT) :: PPTR(${shapes[rank]}$)
     INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
 
-    CALL ${field_type_name}$_GET_DEVICE_DATA (SELF, IOR (NRD, NWR), PPTR, QUEUE)
+    CALL ${ftn}$_GET_DEVICE_DATA (SELF, IOR (NRD, NWR), PPTR, QUEUE)
 
-  END SUBROUTINE ${field_type_name}$_GET_DEVICE_DATA_RDWR
+  END SUBROUTINE ${ftn}$_GET_DEVICE_DATA_RDWR
 
-  SUBROUTINE ${field_type_name}$_SYNC_DEVICE_RDWR (SELF, QUEUE)
-    CLASS(${field_type_name}$),   INTENT(INOUT) :: SELF
+  SUBROUTINE ${ftn}$_SYNC_DEVICE_RDWR (SELF, QUEUE)
+    CLASS(${ftn}$),   INTENT(INOUT) :: SELF
     INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
     ${dtype}$, POINTER                          :: ZPTR(${shapes[rank]}$)
 
@@ -556,7 +523,7 @@ CONTAINS
       CALL SELF%GET_DEVICE_DATA_RDWR (ZPTR)
     ENDIF
 
-  END SUBROUTINE ${field_type_name}$_SYNC_DEVICE_RDWR
+  END SUBROUTINE ${ftn}$_SYNC_DEVICE_RDWR
 
 #:endfor
 
@@ -575,13 +542,9 @@ CONTAINS
   END SUBROUTINE
 
 
-!
-! HELPERS
-!
-
 #:for dtype, suffix, rank, default in field_descriptors
-#:set field_type_name = 'FIELD_%s%sD' % (suffix, rank)
-  INTEGER (KIND=JPIM) FUNCTION ${field_type_name}$_GET_LAST_CONTIGUOUS_DIMENSION (PTR) RESULT (JDIM)
+#:set ftn = fieldTypeName (suffix, rank)
+  INTEGER (KIND=JPIM) FUNCTION ${ftn}$_GET_LAST_CONTIGUOUS_DIMENSION (PTR) RESULT (JDIM)
   ${dtype}$, POINTER :: PTR (${shapes[rank]}$)
   INTEGER*8 :: ISTRIDE (${rank}$)
   INTEGER (KIND=JPIM) :: J, LB(${rank}$)
@@ -609,7 +572,7 @@ CONTAINS
   JDIM = ${d}$
 
 #:endfor
-  END FUNCTION ${field_type_name}$_GET_LAST_CONTIGUOUS_DIMENSION
+  END FUNCTION ${ftn}$_GET_LAST_CONTIGUOUS_DIMENSION
 #:endfor
 
   SUBROUTINE WAIT_FOR_ASYNC_QUEUE(QUEUE)
