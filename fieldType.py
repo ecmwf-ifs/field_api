@@ -25,6 +25,6 @@ class fieldType (object):
 kinds = ['JPRM', 'JPRB', 'JPRD', 'JPIM', 'JPLM']
 
 
-def getFieldTypeList (ranks):
+def getFieldTypeList (ranks=[2,3,4,5]):
   return [fieldType (kind=kind, rank=rank) for (kind) in kinds for rank in ranks]
 

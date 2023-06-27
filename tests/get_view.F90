@@ -1,6 +1,7 @@
 PROGRAM GET_VIEW
         USE FIELD_module
         USE OMP_LIB
+        USE PARKIND1
 
         TYPE(FIELD_2RB_WRAPPER) :: W
         REAL(KIND=JPRB), POINTER :: DATA(:,:)
