@@ -7,46 +7,13 @@ USE FIELD_HELPER_MODULE
 USE FIELD_MANAGEMENT_MODULE
 ${fieldType.useParkind1 ()}$
 
+#:for ft in fieldTypeList
+USE ${ft.name}$_GATHSCAT_MODULE
+#:endfor
+
 IMPLICIT NONE
 
 PRIVATE
-
-#:for what in ['DEVICE', 'HOST']
-#:for mode in ['RDONLY', 'RDWR']
-
-INTERFACE GATHER_${what}$_DATA_${mode}$
-#:for ft in fieldTypeList
-  MODULE PROCEDURE :: ${ft.name}$_GATHER_${what}$_DATA_${mode}$
-#:endfor
-END INTERFACE GATHER_${what}$_DATA_${mode}$
-
-PUBLIC :: GATHER_${what}$_DATA_${mode}$
-
-#:endfor
-
-INTERFACE SCATTER_${what}$_DATA
-#:for ft in fieldTypeList
-  MODULE PROCEDURE :: ${ft.name}$_SCATTER_${what}$_DATA
-#:endfor
-END INTERFACE SCATTER_${what}$_DATA
-
-PUBLIC :: SCATTER_${what}$_DATA
-
-#:endfor
-
-INTEGER (KIND=JPIM), PARAMETER :: NRDWR = 0, NRDONLY = 1, NHOST = 2, NDEVICE = 3
-INTEGER (KIND=JPIM), PARAMETER :: NLONDIM = 1, NBLKDIM = 2
-
-#:for ft in fieldTypeList
-TYPE ${ft.name}$_GATHSCAT_PAIR
-  INTEGER (KIND=JPIM) :: IMODE = -1
-  INTEGER (KIND=JPIM) :: IWHAT = -1
-  CLASS (${ft.name}$), POINTER :: YLSCAT => NULL ()
-  CLASS (${ft.name}$), POINTER :: YLGATH => NULL ()
-  TYPE (${ft.name}$_GATHSCAT_PAIR), POINTER :: NEXT => NULL ()
-END TYPE ${ft.name}$_GATHSCAT_PAIR
-
-#:endfor
 
 TYPE FIELD_GATHSCAT
   INTEGER (KIND=JPIM) :: KGPBLKS = -1, KLON = -1, KGPTOT = -1
@@ -62,7 +29,25 @@ CONTAINS
   PROCEDURE :: SCATTER => SCATTER_FIELD_GATHSCAT
 END TYPE FIELD_GATHSCAT
 
+
 PUBLIC :: FIELD_GATHSCAT
+#:for what in ['DEVICE', 'HOST']
+#:for mode in ['RDONLY', 'RDWR']
+INTERFACE GATHER_${what}$_DATA_${mode}$
+#:for ft in fieldTypeList
+  MODULE PROCEDURE :: ${ft.name}$_GATHER_${what}$_DATA_${mode}$
+#:endfor
+END INTERFACE
+
+PUBLIC :: GATHER_${what}$_DATA_${mode}$
+#:endfor
+#:endfor
+
+
+PUBLIC :: FIELD_GATHSCAT
+
+INTEGER (KIND=JPIM), PARAMETER :: NRDWR = 0, NRDONLY = 1, NHOST = 2, NDEVICE = 3
+INTEGER (KIND=JPIM), PARAMETER :: NLONDIM = 1, NBLKDIM = 2
 
 CONTAINS
 
@@ -164,9 +149,9 @@ ELSE
     ! Scatter back results
     IF (${ft.name}$_LIST%IMODE == NRDWR) THEN
       IF (${ft.name}$_LIST%IWHAT == NDEVICE) THEN
-        CALL SCATTER_DEVICE_DATA (SELF, ${ft.name}$_LIST%YLGATH, ${ft.name}$_LIST%YLSCAT)
+        CALL PAIR_SCATTER_DEVICE_DATA (SELF%${ft.name}$_LIST, ${ft.name}$_LIST%YLGATH, ${ft.name}$_LIST%YLSCAT, SELF%YLFINDS)
       ELSEIF (${ft.name}$_LIST%IWHAT == NHOST) THEN
-        CALL SCATTER_HOST_DATA (SELF, ${ft.name}$_LIST%YLGATH, ${ft.name}$_LIST%YLSCAT)
+        CALL PAIR_SCATTER_HOST_DATA (SELF%${ft.name}$_LIST, ${ft.name}$_LIST%YLGATH, ${ft.name}$_LIST%YLSCAT, SELF%YLFINDS)
       ENDIF
     ENDIF
 
@@ -197,147 +182,21 @@ SELF%KGPTOT = -1
 
 END SUBROUTINE
 
-#:for ft in fieldTypeList
-
 #:for what in ['DEVICE', 'HOST']
 #:for mode in ['RDONLY', 'RDWR']
-
+#:for ft in fieldTypeList
 FUNCTION ${ft.name}$_GATHER_${what}$_DATA_${mode}$ (SELF, YLF) RESULT (PTR)
-CLASS(FIELD_GATHSCAT) :: SELF
-CLASS (${ft.name}$), POINTER, INTENT (IN) :: YLF
-${ft.type}$, POINTER :: PTR(${ft.shape}$), ZTRG(${ft.shape}$), ZTRS(${ft.shape}$)
-${ft.type}$, POINTER :: PTR1(${ft.shape}$)
-TYPE (${ft.name}$_GATHSCAT_PAIR), POINTER :: YLPAIR
-CLASS (${ft.name}$), POINTER :: YLGATH_DUMM
-INTEGER (KIND=JPIM) :: ILBOUNDS (${ft.rank}$), IUBOUNDS (${ft.rank}$)
-INTEGER (KIND=JPIM), POINTER :: INDS (:,:,:)
 
-IF (SELF%LNULL) THEN
+CLASS (FIELD_GATHSCAT)                      :: SELF
+CLASS (${ft.name}$),   POINTER, INTENT (IN) :: YLF
 
-  ! Return dummy pointer
-  YLGATH_DUMM => NULL ()
-  PTR => GET_${what}$_DATA_${mode}$ (YLGATH_DUMM)
+${ft.type}$, POINTER :: PTR(${ft.shape}$)
 
-ELSEIF (SELF%LFULL) THEN
-
-  ! Return pointer on packed array
-  PTR => GET_${what}$_DATA_${mode}$ (YLF)
-
-ELSE
-
-  PTR => GET_${what}$_DATA_RDONLY (YLF)
-
-  ALLOCATE (YLPAIR)
-  YLPAIR%IMODE = N${mode}$
-  YLPAIR%IWHAT = N${what}$
-  YLPAIR%NEXT => SELF%${ft.name}$_LIST
-  SELF%${ft.name}$_LIST => YLPAIR
-  YLPAIR%YLSCAT => YLF
-
-  ILBOUNDS = LBOUND (PTR)
-  IUBOUNDS = UBOUND (PTR)
-  IUBOUNDS (${ft.rank}$) = SELF%KGPBLKS
-  CALL TEMPORARY_FIELD (YLPAIR%YLGATH, LBOUNDS=ILBOUNDS, UBOUNDS=IUBOUNDS, PERSISTENT=.TRUE.)
-
-  INDS => GET_${what}$_DATA_RDONLY (SELF%YLFINDS)
-  ZTRS => GET_${what}$_DATA_RDONLY (YLPAIR%YLSCAT)
-  ZTRG => GET_${what}$_DATA_RDWR   (YLPAIR%YLGATH)
-
-  CALL GATHER (INDS, ZTRG, ZTRS)
-
-  ! Return pointer on packed array
-  PTR => GET_${what}$_DATA_${mode}$ (YLPAIR%YLGATH)
-
-ENDIF
-
-
-CONTAINS
-
-SUBROUTINE GATHER (KNDS, PTRG, PTRS)
-
-${ft.type}$, INTENT (OUT) :: PTRG(${ft.shape}$)
-${ft.type}$, INTENT (IN)  :: PTRS(${ft.shape}$)
-INTEGER (KIND=JPIM), INTENT (IN)  :: KNDS (:,:,:)
-INTEGER (KIND=JPIM) :: JLONS, JBLKS, JLONG, JBLKG
-
-#:set dc = ', ' + (':, ' * (ft.rank-2))
-
-#:if what == 'DEVICE'
-!$acc parallel loop gang present (PTRG, PTRS, KNDS)
-#:elif what == 'HOST'
-!$OMP PARALLEL DO PRIVATE (JBLKG, JLONG, JBLKS, JLONS)
-#:endif
-DO JBLKG = 1, SIZE (KNDS, 3)
-#:if what == 'DEVICE'
-!$acc loop vector private (JLONG, JBLKS, JLONS) 
-#:endif
-  DO JLONG = 1, SIZE (KNDS, 2)
-    JLONS = KNDS (NLONDIM, JLONG, JBLKG)
-    JBLKS = KNDS (NBLKDIM, JLONG, JBLKG)
-    IF (JLONS > 0) THEN
-      PTRG (JLONG${dc}$JBLKG) = PTRS (JLONS${dc}$JBLKS)
-    ENDIF
-  ENDDO
-ENDDO
-
-END SUBROUTINE
+PTR => PAIR_GATHER_${what}$_DATA_${mode}$ (SELF%${ft.name}$_LIST, SELF%LNULL, SELF%LFULL, SELF%KGPBLKS, SELF%YLFINDS, YLF)
 
 END FUNCTION ${ft.name}$_GATHER_${what}$_DATA_${mode}$
 
 #:endfor
-#:endfor
-#:endfor
-
-#:for ft in fieldTypeList
-
-#:for what in ['DEVICE', 'HOST']
-
-SUBROUTINE ${ft.name}$_SCATTER_${what}$_DATA (SELF, YDGATH, YDSCAT)
-CLASS(FIELD_GATHSCAT) :: SELF
-
-CLASS (${ft.name}$), POINTER :: YDGATH, YDSCAT
-${ft.type}$, POINTER :: PTRG(${ft.shape}$), PTRS(${ft.shape}$)
-INTEGER (KIND=JPIM), POINTER :: INDS (:,:,:)
-
-INDS => GET_${what}$_DATA_RDONLY (SELF%YLFINDS)
-PTRG => GET_${what}$_DATA_RDONLY (YDGATH)
-PTRS => GET_${what}$_DATA_RDWR   (YDSCAT)
-
-CALL SCATTER (INDS, PTRG, PTRS)
-
-CONTAINS
-
-SUBROUTINE SCATTER (KNDS, PTRG, PTRS)
-
-${ft.type}$, INTENT (IN)  :: PTRG(${ft.shape}$)
-${ft.type}$, INTENT (OUT) :: PTRS(${ft.shape}$)
-INTEGER (KIND=JPIM), INTENT (IN) :: KNDS (:,:,:)
-INTEGER (KIND=JPIM) :: JLONS, JBLKS, JLONG, JBLKG
-
-#:set dc = ', ' + (':, ' * (ft.rank-2))
-
-#:if what == 'DEVICE'
-!$acc parallel loop gang present (PTRG, PTRS, KNDS)
-#:elif what == 'HOST'
-!$OMP PARALLEL DO PRIVATE (JBLKG, JLONG, JBLKS, JLONS)
-#:endif
-DO JBLKG = 1, SIZE (KNDS, 3)
-#:if what == 'DEVICE'
-!$acc loop vector private (JLONG, JBLKS, JLONS) 
-#:endif
-  DO JLONG = 1, SIZE (KNDS, 2)
-    JLONS = KNDS (NLONDIM, JLONG, JBLKG)
-    JBLKS = KNDS (NBLKDIM, JLONG, JBLKG)
-    IF (JLONS > 0) THEN
-      PTRS (JLONS${dc}$JBLKS) = PTRG (JLONG${dc}$JBLKG) 
-    ENDIF
-  ENDDO
-ENDDO
-
-END SUBROUTINE
-
-END SUBROUTINE ${ft.name}$_SCATTER_${what}$_DATA
-
 #:endfor
 #:endfor
 

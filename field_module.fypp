@@ -16,10 +16,12 @@ IMPLICIT NONE
 
 PRIVATE
 
-PUBLIC :: FIELD_BASIC
-
 #:for ft in fieldTypeList
 PUBLIC :: ${ft.name}$
+PUBLIC :: ${ft.name}$_OWNER
+PUBLIC :: ${ft.name}$_WRAPPER
+PUBLIC :: ${ft.name}$_PTR
+PUBLIC :: ${ft.name}$_VIEW
 #:endfor
 
 PUBLIC :: WAIT_FOR_ASYNC_QUEUE
