@@ -25,6 +25,8 @@ class fieldType (object):
 kinds = ['JPRM', 'JPRB', 'JPRD', 'JPIM', 'JPLM']
 
 
-def getFieldTypeList (ranks=[2,3,4,5]):
+def getFieldTypeList (ranks=[2,3,4,5], kinds=kinds):
   return [fieldType (kind=kind, rank=rank) for (kind) in kinds for rank in ranks]
 
+def useParkind1 (kinds=kinds):
+  return 'USE PARKIND1, ONLY : ' + ','.join (kinds)
