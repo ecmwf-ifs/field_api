@@ -11,7 +11,7 @@ IMPLICIT NONE
 PRIVATE
 
 #:for mode in ['RDONLY', 'RDWR']
-#:for what in ['HOST', 'DEVICE']
+#:for what in ['DEVICE', 'HOST']
 
 INTERFACE GET_${what}$_DATA_${mode}$
 #:for ft in fieldTypeList
@@ -33,7 +33,7 @@ ${ft.type}$, TARGET, SAVE :: DUMMY_${ft.name}$ (${ ', '.join ([dumsize] * (ft.ra
 CONTAINS
 
 #:for mode in ['RDONLY', 'RDWR']
-#:for what in ['HOST', 'DEVICE']
+#:for what in ['DEVICE', 'HOST']
 
 #:for ft in fieldTypeList
   FUNCTION GET_${what}$_DATA_${mode}$_${ft.name}$ (FIELD_PTR) RESULT (PTR)
