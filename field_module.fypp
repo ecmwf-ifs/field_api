@@ -60,8 +60,8 @@ END INTERFACE
 #:for ft in fieldTypeList
 #:set ftn = ft.name
 TYPE, ABSTRACT, EXTENDS (FIELD_BASIC) :: ${ftn}$
-  ${ft.dtype}$, POINTER :: PTR(${ft.shape}$) => NULL()
-  ${ft.dtype}$, POINTER, CONTIGUOUS :: DEVPTR(${ft.shape}$) => NULL()
+  ${ft.type}$, POINTER :: PTR(${ft.shape}$) => NULL()
+  ${ft.type}$, POINTER, CONTIGUOUS :: DEVPTR(${ft.shape}$) => NULL()
 CONTAINS
 
   PROCEDURE :: FINAL => ${ftn}$_FINAL
@@ -106,7 +106,7 @@ TYPE ${ftn}$_PTR
 END TYPE ${ftn}$_PTR
 
 TYPE ${ftn}$_VIEW
-  ${ft.dtype}$, POINTER :: P(${ft.viewShape}$) => NULL()
+  ${ft.type}$, POINTER :: P(${ft.viewShape}$) => NULL()
 END TYPE ${ftn}$_VIEW
 
 #:endfor
@@ -118,7 +118,7 @@ CONTAINS
   SUBROUTINE ${ftn}$_WRAP(SELF, DATA, PERSISTENT, LBOUNDS)
     ! Create FIELD object by wrapping existing data
     CLASS(${ftn}$_WRAPPER), INTENT(INOUT) :: SELF
-    ${ft.dtype}$, TARGET, INTENT(IN) :: DATA(${ft.shape}$)
+    ${ft.type}$, TARGET, INTENT(IN) :: DATA(${ft.shape}$)
     LOGICAL, INTENT(IN), OPTIONAL :: PERSISTENT
     INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: LBOUNDS(${ft.rank}$)
     LOGICAL :: LLPERSISTENT
@@ -188,9 +188,9 @@ CONTAINS
 
   FUNCTION ${ftn}$_GET_VIEW(SELF, BLOCK_INDEX, ZERO) RESULT(VIEW_PTR)
     CLASS(${ftn}$) :: SELF
-    ${ft.dtype}$, POINTER :: VIEW_PTR(${ft.viewShape}$)
+    ${ft.type}$, POINTER :: VIEW_PTR(${ft.viewShape}$)
     INTEGER(KIND=JPIM), INTENT(IN) :: BLOCK_INDEX
-    LOGICAL, OPTIONAL, INTENT(IN) :: ZERO
+    LOGICAL, OPTIONAL,  INTENT(IN) :: ZERO
     INTEGER(KIND=JPIM) :: IDX
     INTEGER(KIND=JPIM) :: LBOUNDS(${ft.rank}$)
 
@@ -228,7 +228,7 @@ CONTAINS
   SUBROUTINE ${ftn}$_WRAPPER_FINAL(SELF)
     ! Finalizes field and deallocates owned data
     CLASS(${ftn}$_WRAPPER) :: SELF
-    ${ft.dtype}$, POINTER :: PTR(${ft.shape}$)
+    ${ft.type}$, POINTER :: PTR(${ft.shape}$)
     CALL SELF%GET_HOST_DATA_RDONLY(PTR)
     CALL SELF%${ftn}$_FINAL
   END SUBROUTINE ${ftn}$_WRAPPER_FINAL
@@ -286,7 +286,7 @@ CONTAINS
   END SUBROUTINE ${ftn}$_WIPE_OBJECT
 
   SUBROUTINE ${ftn}$_COPY_DATA (SELF, KDIR, QUEUE)
-  CLASS(${ftn}$)                :: SELF
+  CLASS(${ftn}$) :: SELF
   INTEGER (KIND=JPIM),           INTENT(IN) :: KDIR
   INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN) :: QUEUE
   REAL :: START, FINISH
@@ -314,7 +314,7 @@ CONTAINS
 #ifdef _OPENACC
     USE OPENACC
 #endif
-    ${ft.dtype}$, POINTER :: HST (${ft.shape}$), DEV (${ft.shape}$)
+    ${ft.type}$, POINTER :: HST (${ft.shape}$), DEV (${ft.shape}$)
     INTEGER (KIND=JPIM),           INTENT (IN) :: KDIR
     INTEGER (KIND=JPIM), OPTIONAL, INTENT (IN) :: QUEUE
     INTEGER (KIND=JPIM) :: ISIZE
@@ -366,10 +366,10 @@ CONTAINS
 
 
   SUBROUTINE ${ftn}$_GET_HOST_DATA (SELF, MODE, PTR, QUEUE)
-    CLASS(${ftn}$),    INTENT(INOUT) :: SELF
+    CLASS(${ftn}$),                INTENT(INOUT) :: SELF
     INTEGER (KIND=JPIM),           INTENT(IN)    :: MODE
 
-    ${ft.dtype}$, POINTER,         INTENT(INOUT) :: PTR(${ft.shape}$)
+    ${ft.type}$, POINTER,          INTENT(INOUT) :: PTR(${ft.shape}$)
     INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
 
     INTEGER(KIND=JPIM) :: LBOUNDS(${ft.rank}$)
@@ -387,9 +387,9 @@ CONTAINS
   END SUBROUTINE ${ftn}$_GET_HOST_DATA
 
   SUBROUTINE ${ftn}$_OWNER_GET_HOST_DATA (SELF, MODE, PTR, QUEUE)
-    CLASS(${ftn}$_OWNER), INTENT(INOUT) :: SELF
+    CLASS(${ftn}$_OWNER),          INTENT(INOUT) :: SELF
     INTEGER (KIND=JPIM),           INTENT(IN)    :: MODE
-    ${ft.dtype}$, POINTER,         INTENT(INOUT) :: PTR(${ft.shape}$)
+    ${ft.type}$, POINTER,          INTENT(INOUT) :: PTR(${ft.shape}$)
     INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
 
     IF(SELF%ISTATUS==UNALLOCATED)THEN
@@ -400,8 +400,8 @@ CONTAINS
   END SUBROUTINE ${ftn}$_OWNER_GET_HOST_DATA
 
   SUBROUTINE ${ftn}$_GET_HOST_DATA_RDONLY (SELF, PPTR, QUEUE)
-    CLASS(${ftn}$),   INTENT(INOUT) :: SELF
-    ${ft.dtype}$, POINTER,        INTENT(INOUT) :: PPTR(${ft.shape}$)
+    CLASS(${ftn}$),               INTENT(INOUT) :: SELF
+    ${ft.type}$, POINTER,         INTENT(INOUT) :: PPTR(${ft.shape}$)
     INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
 
     CALL SELF%GET_HOST_DATA (NRD, PPTR, QUEUE)
@@ -409,9 +409,9 @@ CONTAINS
   END SUBROUTINE ${ftn}$_GET_HOST_DATA_RDONLY
 
   SUBROUTINE ${ftn}$_SYNC_HOST_RDONLY (SELF, QUEUE)
-    CLASS(${ftn}$),   INTENT(INOUT) :: SELF
+    CLASS(${ftn}$),               INTENT(INOUT) :: SELF
     INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
-    ${ft.dtype}$, POINTER                       :: ZPTR(${ft.shape}$)
+    ${ft.type}$, POINTER                        :: ZPTR(${ft.shape}$)
 
     IF(PRESENT(QUEUE))THEN
       CALL SELF%GET_HOST_DATA_RDONLY (ZPTR, QUEUE)
@@ -423,7 +423,7 @@ CONTAINS
 
   SUBROUTINE ${ftn}$_GET_HOST_DATA_RDWR (SELF, PPTR, QUEUE)
     CLASS(${ftn}$),   INTENT(INOUT) :: SELF
-    ${ft.dtype}$, POINTER,        INTENT(INOUT) :: PPTR(${ft.shape}$)
+    ${ft.type}$, POINTER,         INTENT(INOUT) :: PPTR(${ft.shape}$)
     INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
 
     CALL SELF%GET_HOST_DATA (IOR (NRD, NWR), PPTR, QUEUE)
@@ -431,9 +431,9 @@ CONTAINS
   END SUBROUTINE ${ftn}$_GET_HOST_DATA_RDWR
 
   SUBROUTINE ${ftn}$_SYNC_HOST_RDWR (SELF, QUEUE)
-    CLASS(${ftn}$),   INTENT(INOUT) :: SELF
+    CLASS(${ftn}$),               INTENT(INOUT) :: SELF
     INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
-    ${ft.dtype}$, POINTER                       :: ZPTR(${ft.shape}$)
+    ${ft.type}$, POINTER                        :: ZPTR(${ft.shape}$)
 
     IF(PRESENT(QUEUE))THEN
       CALL SELF%GET_HOST_DATA_RDWR (ZPTR, QUEUE)
@@ -460,9 +460,9 @@ CONTAINS
   END SUBROUTINE
 
   SUBROUTINE ${ftn}$_GET_DEVICE_DATA (SELF, MODE, PTR, QUEUE)
-    CLASS(${ftn}$),    INTENT(INOUT) :: SELF
+    CLASS(${ftn}$),                INTENT(INOUT) :: SELF
     INTEGER (KIND=JPIM),           INTENT(IN)    :: MODE
-    ${ft.dtype}$, POINTER,         INTENT(INOUT) :: PTR(${ft.shape}$)
+    ${ft.type}$, POINTER,          INTENT(INOUT) :: PTR(${ft.shape}$)
     INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
     INTEGER(KIND=JPIM)                           :: LBOUNDS(${ft.rank}$)
 
@@ -482,8 +482,8 @@ CONTAINS
   END SUBROUTINE ${ftn}$_GET_DEVICE_DATA
 
   SUBROUTINE ${ftn}$_GET_DEVICE_DATA_RDONLY (SELF, PPTR, QUEUE)
-    CLASS(${ftn}$),   INTENT(INOUT) :: SELF
-    ${ft.dtype}$, POINTER,        INTENT(INOUT) :: PPTR(${ft.shape}$)
+    CLASS(${ftn}$),               INTENT(INOUT) :: SELF
+    ${ft.type}$, POINTER,         INTENT(INOUT) :: PPTR(${ft.shape}$)
     INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
 
     CALL ${ftn}$_GET_DEVICE_DATA (SELF, NRD, PPTR, QUEUE)
@@ -491,9 +491,9 @@ CONTAINS
   END SUBROUTINE ${ftn}$_GET_DEVICE_DATA_RDONLY
 
   SUBROUTINE ${ftn}$_SYNC_DEVICE_RDONLY (SELF, QUEUE)
-    CLASS(${ftn}$),   INTENT(INOUT) :: SELF
+    CLASS(${ftn}$),               INTENT(INOUT) :: SELF
     INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
-    ${ft.dtype}$, POINTER                       :: ZPTR(${ft.shape}$)
+    ${ft.type}$, POINTER                        :: ZPTR(${ft.shape}$)
 
     IF(PRESENT(QUEUE))THEN
       CALL SELF%GET_DEVICE_DATA_RDONLY (ZPTR, QUEUE)
@@ -504,8 +504,8 @@ CONTAINS
   END SUBROUTINE ${ftn}$_SYNC_DEVICE_RDONLY
 
   SUBROUTINE ${ftn}$_GET_DEVICE_DATA_RDWR (SELF, PPTR, QUEUE)
-    CLASS(${ftn}$),   INTENT(INOUT) :: SELF
-    ${ft.dtype}$, POINTER,        INTENT(INOUT) :: PPTR(${ft.shape}$)
+    CLASS(${ftn}$),               INTENT(INOUT) :: SELF
+    ${ft.type}$, POINTER,         INTENT(INOUT) :: PPTR(${ft.shape}$)
     INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
 
     CALL ${ftn}$_GET_DEVICE_DATA (SELF, IOR (NRD, NWR), PPTR, QUEUE)
@@ -513,9 +513,9 @@ CONTAINS
   END SUBROUTINE ${ftn}$_GET_DEVICE_DATA_RDWR
 
   SUBROUTINE ${ftn}$_SYNC_DEVICE_RDWR (SELF, QUEUE)
-    CLASS(${ftn}$),   INTENT(INOUT) :: SELF
+    CLASS(${ftn}$),               INTENT(INOUT) :: SELF
     INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
-    ${ft.dtype}$, POINTER                       :: ZPTR(${ft.shape}$)
+    ${ft.type}$, POINTER                        :: ZPTR(${ft.shape}$)
 
     IF(PRESENT(QUEUE))THEN
       CALL SELF%GET_DEVICE_DATA_RDWR (ZPTR, QUEUE)
@@ -529,14 +529,14 @@ CONTAINS
 
   SUBROUTINE INC_CPU_TO_GPU_TRANSFER(SELF, START, FINISH)
     CLASS(GPU_STATS), INTENT(INOUT) :: SELF
-    REAL, INTENT(IN) :: START, FINISH
+    REAL,             INTENT(IN)    :: START, FINISH
     SELF%TRANSFER_CPU_TO_GPU = SELF%TRANSFER_CPU_TO_GPU + 1
     SELF%TOTAL_TIME_TRANSFER_CPU_TO_GPU = SELF%TOTAL_TIME_TRANSFER_CPU_TO_GPU + FINISH - START
   END SUBROUTINE
 
   SUBROUTINE INC_GPU_TO_CPU_TRANSFER(SELF, START, FINISH)
     CLASS(GPU_STATS), INTENT(INOUT) :: SELF
-    REAL, INTENT(IN) :: START, FINISH
+    REAL,             INTENT(IN)    :: START, FINISH
     SELF%TRANSFER_GPU_TO_CPU = SELF%TRANSFER_GPU_TO_CPU + 1
     SELF%TOTAL_TIME_TRANSFER_GPU_TO_CPU = SELF%TOTAL_TIME_TRANSFER_GPU_TO_CPU + FINISH - START
   END SUBROUTINE
@@ -545,7 +545,7 @@ CONTAINS
 #:for ft in fieldTypeList
 #:set ftn = ft.name
   INTEGER (KIND=JPIM) FUNCTION ${ftn}$_GET_LAST_CONTIGUOUS_DIMENSION (PTR) RESULT (JDIM)
-  ${ft.dtype}$, POINTER :: PTR (${ft.shape}$)
+  ${ft.type}$, POINTER :: PTR (${ft.shape}$)
   INTEGER*8 :: ISTRIDE (${ft.rank}$)
   INTEGER (KIND=JPIM) :: J, LB(${ft.rank}$)
 
@@ -576,9 +576,9 @@ CONTAINS
 #:endfor
 
   SUBROUTINE WAIT_FOR_ASYNC_QUEUE(QUEUE)
-    INTEGER(KIND=JPIM), intent(in) :: queue
+    INTEGER(KIND=JPIM), INTENT(IN) :: QUEUE
     !Wait for all data transfer initiated on queue by the current thread
-!$acc wait (queue)
+!$acc wait (QUEUE)
   END SUBROUTINE WAIT_FOR_ASYNC_QUEUE
 
 
