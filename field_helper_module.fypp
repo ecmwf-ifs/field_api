@@ -1,0 +1,54 @@
+MODULE FIELD_HELPER_MODULE
+
+#:set fieldTypeList = fieldType.getFieldTypeList ([2,3,4,5])
+#:set dumsize = '1'
+
+USE FIELD_MODULE
+
+IMPLICIT NONE
+
+#:for mode in ['RDONLY', 'RDWR']
+#:for what in ['HOST', 'DEVICE']
+
+INTERFACE GET_${what}$_DATA_${mode}$
+#:for ft in fieldTypeList
+  MODULE PROCEDURE :: GET_${what}$_DATA_${mode}$_${ft.name}$
+#:endfor
+END INTERFACE GET_${what}$_DATA_${mode}$
+
+#:endfor
+#:endfor
+
+#:for ft in fieldTypeList
+${ft.type}$, TARGET, SAVE :: DUMMY_${ft.name}$ (${ ', '.join ([dumsize] * (ft.rank-1) + ['1']) }$)
+!$acc declare create (DUMMY_${ft.name}$)
+
+#:endfor
+
+CONTAINS
+
+#:for mode in ['RDONLY', 'RDWR']
+#:for what in ['HOST', 'DEVICE']
+
+#:for ft in fieldTypeList
+  FUNCTION GET_${what}$_DATA_${mode}$_${ft.name}$ (FIELD_PTR) RESULT (PTR)
+    CLASS (${ft.name}$), POINTER :: FIELD_PTR
+    ${ft.type}$, POINTER :: PTR(${ft.shape}$)
+
+    IF (ASSOCIATED (FIELD_PTR)) THEN
+      CALL FIELD_PTR%GET_${what}$_DATA_${mode}$ (PTR)
+    ELSE
+      PTR => DUMMY_${ft.name}$
+    ENDIF
+
+  END FUNCTION GET_${what}$_DATA_${mode}$_${ft.name}$
+
+#:endfor
+
+#:endfor
+#:endfor
+
+END MODULE FIELD_HELPER_MODULE
+
+
+
