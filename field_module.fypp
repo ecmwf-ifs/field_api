@@ -257,7 +257,6 @@ CONTAINS
 #ifdef _OPENACC
     IF (ASSOCIATED (SELF%DEVPTR)) THEN
       !$acc enter data attach (SELF%DEVPTR)
-
     ENDIF
 #endif
   ENDIF
