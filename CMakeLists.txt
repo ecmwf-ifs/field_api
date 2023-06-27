@@ -37,15 +37,15 @@ add_custom_command(
 	VERBATIM)
 
 add_custom_command(
-	OUTPUT dev_alloc_mod.F90
-	COMMAND fypp -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/dev_alloc_mod.fypp > dev_alloc_mod.F90
-	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/dev_alloc_mod.fypp
+	OUTPUT dev_alloc_module.F90
+	COMMAND fypp -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/dev_alloc_module.fypp > dev_alloc_module.F90
+	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/dev_alloc_module.fypp
 	VERBATIM)
 
 add_custom_command(
-	OUTPUT field_management_mod.F90
-	COMMAND fypp -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/field_management_mod.fypp > field_management_mod.F90
-	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/field_management_mod.fypp
+	OUTPUT field_management_module.F90
+	COMMAND fypp -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/field_management_module.fypp > field_management_module.F90
+	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/field_management_module.fypp
 	VERBATIM)
 
 add_custom_command(
@@ -55,9 +55,9 @@ add_custom_command(
 	VERBATIM)
 
 add_custom_command(
-	OUTPUT array_field_wrapper_mod.F90
-	COMMAND fypp -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/array_field_wrapper_mod.fypp > array_field_wrapper_mod.F90
-	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/array_field_wrapper_mod.fypp
+	OUTPUT array_field_wrapper_module.F90
+	COMMAND fypp -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/array_field_wrapper_module.fypp > array_field_wrapper_module.F90
+	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/array_field_wrapper_module.fypp
 	VERBATIM)
 
 add_custom_command(
@@ -66,7 +66,7 @@ add_custom_command(
 	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/field_gathscat_module.fypp
 	VERBATIM)
 
-add_library(${LIBNAME} field_module.F90 abor1.F90 parkind1.F90 dev_alloc_mod.F90 dev_alloc.c field_management_mod.F90 field_helper_module.F90 array_field_wrapper_mod.F90 field_gathscat_module.F90)
+add_library(${LIBNAME} field_module.F90 abor1.F90 parkind1.F90 dev_alloc_module.F90 dev_alloc.c field_management_module.F90 field_helper_module.F90 array_field_wrapper_module.F90 field_gathscat_module.F90)
 target_link_libraries(${LIBNAME} PUBLIC OpenMP::OpenMP_Fortran)
 
 target_include_directories(${LIBNAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

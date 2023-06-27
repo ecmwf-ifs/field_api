@@ -1,4 +1,4 @@
-MODULE DEV_ALLOC_MOD
+MODULE DEV_ALLOC_MODULE
 
 #:set fieldTypeList = list (filter (lambda ft: not ft.alias, fieldType.getFieldTypeList ([1,2,3,4,5])))
 
@@ -160,4 +160,4 @@ END SUBROUTINE ${ft.name}$_DEV_DEALLOCATE
 
 #:endfor
 
-END MODULE DEV_ALLOC_MOD
+END MODULE DEV_ALLOC_MODULE
