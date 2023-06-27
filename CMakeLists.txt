@@ -30,7 +30,7 @@ if (NOT FYPP)
 endif()
 add_custom_command(
 	OUTPUT field_module.F90
-	COMMAND fypp -m os ${CMAKE_CURRENT_SOURCE_DIR}/field_module.fypp > field_module.F90
+	COMMAND fypp -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/field_module.fypp > field_module.F90
 	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/field_module.fypp
 	VERBATIM)
 

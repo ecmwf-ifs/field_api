@@ -3,7 +3,7 @@ PROGRAM FINAL_OWNER
 
         USE FIELD_MODULE
         IMPLICIT NONE
-        TYPE(FIELD2RB_OWNER) :: O
+        TYPE(FIELD_2RB_OWNER) :: O
         REAL(KIND=JPRB), POINTER :: PTR(:,:)
 
         CALL O%INIT([10,1],[21,11])

@@ -1,16 +1,18 @@
+#:mute 
+
 #:set ranks  = [2,3,4,5]
-#:set shapes = ['',':',':,:',':,:,:',':,:,:,:',':,:,:,:,:',':,:,:,:,:,:']
 #:set dtypes  = ['REAL(KIND=JPRM)', 'REAL(KIND=JPRB)', 'REAL(KIND=JPRD)', 'INTEGER(KIND=JPIM)', 'LOGICAL(KIND=JPLM)']
 #:set defaults = ['0.0_JPRM', '0.0_JPRB', '0.0_JPRD', '0.0_JPIM', '.FALSE._JPLM']
 #:set suffixes  = ['RM', 'RB', 'RD', 'IM', 'LM']
-#:set field_descriptors = [(dtype, suffix, rank, default) &
-  &                        for (dtype, suffix, default) in zip(dtypes, suffixes, defaults) &
-  &                        for rank in ranks]
 #:set data_management_type = ['WRAPPER', 'OWNER']
 #:set dumsize = '1'
-#:set fieldTypeName = lambda suffix, rank : 'FIELD%s%s' % (rank, suffix)
 
 #:def lbptr (rank)
   #:set lb = ", ".join (list (map (lambda i: "LBOUNDS(" + str (i+1) + "):", range (0, rank))))
 $:lb
 #:enddef
+
+#:set fieldTypeList = [fieldType.fieldType (dtype=dtype, suffix=suffix, rank=rank, default=default) &
+  &                     for (dtype, suffix, default) in zip(dtypes, suffixes, defaults) for rank in ranks]
+
+#:endmute

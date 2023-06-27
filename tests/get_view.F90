@@ -2,7 +2,7 @@ PROGRAM GET_VIEW
         USE FIELD_module
         USE OMP_LIB
 
-        TYPE(FIELD2RB_WRAPPER) :: W
+        TYPE(FIELD_2RB_WRAPPER) :: W
         REAL(KIND=JPRB), POINTER :: DATA(:,:)
         INTEGER :: NPROMA = 24
         INTEGER :: NBLOCKS= 100
