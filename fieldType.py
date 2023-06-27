@@ -18,4 +18,5 @@ class fieldType (object):
     self.shape = ','.join ([':'] * int (self.rank))
     self.viewRank = self.rank-1
     self.viewShape = ','.join ([':'] * (self.rank-1))
+    self.lbptr = ', '.join (list (map (lambda i: "LBOUNDS(" + str (i+1) + "):", range (0, self.rank))))
 

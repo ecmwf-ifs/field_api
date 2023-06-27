@@ -1,6 +1,6 @@
-#:include "field_definition.hypp"
-
 MODULE FIELD_MODULE
+
+#:include "field_definition.hypp"
 
 USE PARKIND1, ONLY: JPIM, JPRB, JPRD, JPLM, JPRM
 USE OMP_LIB, ONLY: OMP_GET_MAX_THREADS, OMP_GET_THREAD_NUM
@@ -127,7 +127,7 @@ CONTAINS
     IF (PRESENT (PERSISTENT)) LLPERSISTENT = PERSISTENT
 
     IF (PRESENT(LBOUNDS)) THEN
-      SELF%PTR(${lbptr (ft.rank)}$) => DATA
+      SELF%PTR(${ft.lbptr}$) => DATA
     ELSE
       SELF%PTR => DATA
     ENDIF
@@ -379,7 +379,7 @@ CONTAINS
       CALL SELF%COPY_DATA (ND2H, QUEUE)
       SELF%ISTATUS = IOR (SELF%ISTATUS, NHSTFRESH)
     ENDIF
-    PTR (${lbptr (ft.rank)}$) => SELF%PTR (${','.join(':' for _ in range(ft.rank))}$)
+    PTR (${ft.lbptr}$) => SELF%PTR (${','.join(':' for _ in range(ft.rank))}$)
     IF (IAND (MODE, NWR) /= 0) THEN
       SELF%ISTATUS = IAND (SELF%ISTATUS, NOT (NDEVFRESH))
     ENDIF
@@ -474,7 +474,7 @@ CONTAINS
       CALL SELF%COPY_DATA (NH2D, QUEUE)
       SELF%ISTATUS = IOR (SELF%ISTATUS, NDEVFRESH)
     ENDIF
-    PTR (${lbptr (ft.rank)}$) => SELF%DEVPTR (${','.join(':' for _ in range(ft.rank))}$)
+    PTR (${ft.lbptr}$) => SELF%DEVPTR (${','.join(':' for _ in range(ft.rank))}$)
     IF (IAND (MODE, NWR) /= 0) THEN
       SELF%ISTATUS = IAND (SELF%ISTATUS, NOT (NHSTFRESH))
     ENDIF

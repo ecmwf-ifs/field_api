@@ -2,15 +2,5 @@
 
 #:set ranks = [2,3,4,5]
 #:set kinds = ['JPRM', 'JPRB', 'JPRD', 'JPIM', 'JPLM']
-
-#:set data_management_type = ['WRAPPER', 'OWNER']
-#:set dumsize = '1'
-
-#:def lbptr (rank)
-  #:set lb = ", ".join (list (map (lambda i: "LBOUNDS(" + str (i+1) + "):", range (0, rank))))
-$:lb
-#:enddef
-
 #:set fieldTypeList = [fieldType.fieldType (kind=kind, rank=rank) for (kind) in kinds for rank in ranks]
-
 #:endmute
