@@ -7,6 +7,8 @@ USE FIELD_MODULE
 
 IMPLICIT NONE
 
+PRIVATE
+
 #:for mode in ['RDONLY', 'RDWR']
 #:for what in ['HOST', 'DEVICE']
 
@@ -15,6 +17,8 @@ INTERFACE GET_${what}$_DATA_${mode}$
   MODULE PROCEDURE :: GET_${what}$_DATA_${mode}$_${ft.name}$
 #:endfor
 END INTERFACE GET_${what}$_DATA_${mode}$
+
+PUBLIC :: GET_${what}$_DATA_${mode}$
 
 #:endfor
 #:endfor
