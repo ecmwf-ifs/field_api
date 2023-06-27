@@ -30,43 +30,34 @@ if (NOT FYPP)
 	MESSAGE(FATAL_ERROR "Could not find fypp.")
 endif()
 
-add_custom_command(
-	OUTPUT field_module.F90
-	COMMAND fypp -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/field_module.fypp > field_module.F90
-	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/field_module.fypp
-	VERBATIM)
 
-add_custom_command(
-	OUTPUT dev_alloc_module.F90
-	COMMAND fypp -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/dev_alloc_module.fypp > dev_alloc_module.F90
-	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/dev_alloc_module.fypp
+foreach (SUFF in ITEMS IM RM RB RD LM)
+  string (TOLOWER ${SUFF} suff)
+  foreach (RANK RANGE 2 5)
+    add_custom_command(
+        OUTPUT field_${RANK}${suff}_module.F90
+	COMMAND fypp -DRANK=${RANK} -DSUFF='${SUFF}' -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/field_ranksuff_module.fypp > field_${RANK}${suff}_module.F90
+	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/field_ranksuff_module.fypp
 	VERBATIM)
+  endforeach ()
+endforeach ()
 
-add_custom_command(
-	OUTPUT field_management_module.F90
-	COMMAND fypp -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/field_management_module.fypp > field_management_module.F90
-	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/field_management_module.fypp
+foreach (SRC IN ITEMS dev_alloc_module field_management_module field_helper_module array_field_wrapper_module field_gathscat_module field_module)
+  add_custom_command(
+	OUTPUT ${SRC}.F90
+	COMMAND fypp -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/${SRC}.fypp > ${SRC}.F90
+	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${SRC}.fypp
 	VERBATIM)
+endforeach ()
 
-add_custom_command(
-	OUTPUT field_helper_module.F90
-	COMMAND fypp -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/field_helper_module.fypp > field_helper_module.F90
-	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/field_helper_module.fypp
-	VERBATIM)
-
-add_custom_command(
-	OUTPUT array_field_wrapper_module.F90
-	COMMAND fypp -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/array_field_wrapper_module.fypp > array_field_wrapper_module.F90
-	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/array_field_wrapper_module.fypp
-	VERBATIM)
-
-add_custom_command(
-	OUTPUT field_gathscat_module.F90
-	COMMAND fypp -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/field_gathscat_module.fypp > field_gathscat_module.F90
-	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/field_gathscat_module.fypp
-	VERBATIM)
-
-add_library(${LIBNAME} field_module.F90 abor1.F90 parkind1.F90 dev_alloc_module.F90 dev_alloc.c field_management_module.F90 field_helper_module.F90 array_field_wrapper_module.F90 field_gathscat_module.F90)
+add_library(${LIBNAME}  
+            field_2im_module.F90 field_3im_module.F90 field_4im_module.F90 field_5im_module.F90 
+            field_2rm_module.F90 field_3rm_module.F90 field_4rm_module.F90 field_5rm_module.F90 
+            field_2rb_module.F90 field_3rb_module.F90 field_4rb_module.F90 field_5rb_module.F90 
+            field_2rd_module.F90 field_3rd_module.F90 field_4rd_module.F90 field_5rd_module.F90 
+            field_2lm_module.F90 field_3lm_module.F90 field_4lm_module.F90 field_5lm_module.F90 
+            field_module.F90 field_basic_module.F90 abor1.F90 parkind1.F90 dev_alloc_module.F90 dev_alloc.c 
+            field_management_module.F90 field_helper_module.F90 array_field_wrapper_module.F90 field_gathscat_module.F90)
 target_link_libraries(${LIBNAME} PUBLIC OpenMP::OpenMP_Fortran)
 
 target_include_directories(${LIBNAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
