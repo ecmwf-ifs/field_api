@@ -24,17 +24,26 @@ endif()
 
 
 # Pre-process: .fpp -> .f90 via Fypp
+
 find_program(FYPP fypp)
 if (NOT FYPP)
 	MESSAGE(FATAL_ERROR "Could not find fypp.")
 endif()
+
 add_custom_command(
 	OUTPUT field_module.F90
 	COMMAND fypp -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/field_module.fypp > field_module.F90
 	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/field_module.fypp
 	VERBATIM)
 
-add_library(${LIBNAME} field_module.F90 abor1.F90 parkind1.F90)
+add_custom_command(
+	OUTPUT dev_alloc_mod.F90
+	COMMAND fypp -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/dev_alloc_mod.fypp > dev_alloc_mod.F90
+	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/dev_alloc_mod.fypp
+	VERBATIM)
+
+
+add_library(${LIBNAME} field_module.F90 abor1.F90 parkind1.F90 dev_alloc_mod.F90 dev_alloc.c)
 target_link_libraries(${LIBNAME} PUBLIC OpenMP::OpenMP_Fortran)
 if(OpenACC_Fortran_FOUND AND USE_OPENACC)
 	target_link_libraries(${LIBNAME} PUBLIC OpenACC::OpenACC_Fortran)

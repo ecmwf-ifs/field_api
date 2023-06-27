@@ -12,6 +12,7 @@ class fieldType (object):
 
     self.type = th[tt] + '(KIND=' + self.kind + ')'
     self.default = td[tt] + '_' + self.kind
+    self.alias = self.suffix == 'RB'
 
     self.name = 'FIELD_%s%s' % (self.rank, self.suffix);
     self.rank = int (self.rank)
@@ -19,4 +20,11 @@ class fieldType (object):
     self.viewRank = self.rank-1
     self.viewShape = ','.join ([':'] * (self.rank-1))
     self.lbptr = ', '.join (list (map (lambda i: "LBOUNDS(" + str (i+1) + "):", range (0, self.rank))))
+
+
+kinds = ['JPRM', 'JPRB', 'JPRD', 'JPIM', 'JPLM']
+
+
+def getFieldTypeList (ranks):
+  return [fieldType (kind=kind, rank=rank) for (kind) in kinds for rank in ranks]
 

@@ -1,6 +1,0 @@
-#:mute 
-
-#:set ranks = [2,3,4,5]
-#:set kinds = ['JPRM', 'JPRB', 'JPRD', 'JPIM', 'JPLM']
-#:set fieldTypeList = [fieldType.fieldType (kind=kind, rank=rank) for (kind) in kinds for rank in ranks]
-#:endmute

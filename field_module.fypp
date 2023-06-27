@@ -1,10 +1,11 @@
 MODULE FIELD_MODULE
 
-#:include "field_definition.hypp"
+#:set fieldTypeList = fieldType.getFieldTypeList ([2,3,4,5])
 
 USE PARKIND1, ONLY: JPIM, JPRB, JPRD, JPLM, JPRM
 USE OMP_LIB, ONLY: OMP_GET_MAX_THREADS, OMP_GET_THREAD_NUM
 USE IEEE_ARITHMETIC, ONLY: IEEE_SIGNALING_NAN
+USE DEV_ALLOC_MOD
 
 IMPLICIT NONE
 
@@ -210,11 +211,7 @@ CONTAINS
     CLASS(${ftn}$) :: SELF
 
     IF (ASSOCIATED (SELF%DEVPTR)) THEN
-#ifdef _OPENACC
-      !$acc exit data delete (SELF%DEVPTR)
-#endif /* _OPENACC */
-      DEALLOCATE (SELF%DEVPTR)
-      NULLIFY (SELF%DEVPTR)
+      CALL DEV_DEALLOCATE (SELF%DEVPTR)
     ENDIF
   END SUBROUTINE ${ftn}$_DELETE_DEVICE
 
@@ -444,18 +441,7 @@ CONTAINS
 
   SUBROUTINE ${ftn}$_CREATE_DEVICE_DATA (SELF)
     CLASS(${ftn}$), INTENT (INOUT) :: SELF
-#if __INTEL_COMPILER == 1800 && __INTEL_COMPILER_UPDATE == 5
-! Bug with Intel 18.0.5.274
-    ALLOCATE (SELF%DEVPTR (${ ', '.join (map (lambda i: 'LBOUND (SELF%PTR, ' + str (i) + '):UBOUND (SELF%PTR,' + str (i) + ')', range (1, ft.rank+1))) }$))
-#else
-    ALLOCATE (SELF%DEVPTR, MOLD=SELF%PTR)
-#endif
-#ifdef _OPENACC
-    !$acc enter data create (SELF%DEVPTR)
-    IF (SELF%LOBJECT_COPIED) THEN
-      !$acc enter data attach (SELF%DEVPTR)
-    ENDIF
-#endif
+    CALL DEV_ALLOCATE_HST (DEV=SELF%DEVPTR, HST=SELF%PTR)
   END SUBROUTINE
 
   SUBROUTINE ${ftn}$_GET_DEVICE_DATA (SELF, MODE, PTR, QUEUE)
