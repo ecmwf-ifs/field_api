@@ -139,34 +139,9 @@ ELSEIF (SELF%LFULL) THEN
 ELSE
 
 #:for ft in fieldTypeList
-
-
-  ${ft.name}$_LIST => SELF%${ft.name}$_LIST
-  DO WHILE (ASSOCIATED (${ft.name}$_LIST))
-
-    ! Scatter back results
-    IF (${ft.name}$_LIST%IMODE == NRDWR) THEN
-      IF (${ft.name}$_LIST%IWHAT == NDEVICE) THEN
-        CALL PAIR_SCATTER_DEVICE_DATA (SELF%${ft.name}$_LIST, ${ft.name}$_LIST%YLGATH, ${ft.name}$_LIST%YLSCAT, SELF%YLFINDS)
-      ELSEIF (${ft.name}$_LIST%IWHAT == NHOST) THEN
-        CALL PAIR_SCATTER_HOST_DATA (SELF%${ft.name}$_LIST, ${ft.name}$_LIST%YLGATH, ${ft.name}$_LIST%YLSCAT, SELF%YLFINDS)
-      ENDIF
-    ENDIF
-
-    ${ft.name}$_LIST => ${ft.name}$_LIST%NEXT
-  ENDDO
-
-  ${ft.name}$_LIST => SELF%${ft.name}$_LIST
-  SELF%${ft.name}$_LIST => NULL ()
-  DO WHILE (ASSOCIATED (${ft.name}$_LIST))
-    CALL DELETE_FIELD (${ft.name}$_LIST%YLGATH)
-    ${ft.name}$_NEXT => ${ft.name}$_LIST%NEXT
-    DEALLOCATE (${ft.name}$_LIST)
-    ${ft.name}$_LIST => ${ft.name}$_NEXT
-  ENDDO
+  CALL PAIR_SCATTER_DATA (SELF%${ft.name}$_LIST, SELF%YLFINDS)
 
 #:endfor
-
 
   CALL DELETE_FIELD (SELF%YLFINDS)
 
