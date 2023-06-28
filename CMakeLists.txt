@@ -12,9 +12,13 @@ if (Fortran_COMPILER_NAME MATCHES "nvfortran")
 endif()
 
 option(USE_OPENACC "Necessary to use field api on GPU" OFF)
-find_package(OpenACC)
-if(NOT OpenACC_Fortran_FOUND)
-	set(USE_OPENACC OFF)
+
+if(USE_OPENACC)
+
+  if(CMAKE_Fortran_COMPILER_ID STREQUAL "PGI" OR CMAKE_Fortran_COMPILER_ID STREQUAL "NVIDIA" OR CMAKE_Fortran_COMPILER_ID STREQUAL "NVHPC")
+    set (CMAKE_Fortran_FLAGS "-acc=gpu -Mlarge_arrays -O1 -gopt -gpu=cc70 -Minfo=accel,all,intensity,ccff")
+  endif()
+
 endif()
 
 find_package(OpenMP)
