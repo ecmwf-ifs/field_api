@@ -1,4 +1,4 @@
-MODULE ARRAY_FIELD_WRAPPER_MODULE
+MODULE FIELD_ARRAY_WRAPPER_MODULE
 
 #:set fieldTypeList = fieldType.getFieldTypeList ()
 
