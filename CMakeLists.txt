@@ -37,8 +37,8 @@ foreach (SUFF IN ITEMS IM RM RB RD LM)
     foreach (FUNC IN ITEMS "" _gathscat _access)
     add_custom_command(
         OUTPUT field_${RANK}${suff}${FUNC}_module.F90
-	COMMAND fypp -DRANK=${RANK} -DSUFF='${SUFF}' -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/field_ranksuff${FUNC}_module.fypp > field_${RANK}${suff}${FUNC}_module.F90
-	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/field_ranksuff${FUNC}_module.fypp
+	COMMAND fypp -DRANK=${RANK} -DSUFF='${SUFF}' -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/field_RANKSUFF${FUNC}_module.fypp > field_${RANK}${suff}${FUNC}_module.F90
+	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/field_RANKSUFF${FUNC}_module.fypp
 	VERBATIM)
     endforeach ()
   endforeach ()
