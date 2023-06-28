@@ -47,7 +47,7 @@ foreach (SUFF in ITEMS IM RM RB RD LM)
   endforeach ()
 endforeach ()
 
-foreach (SRC IN ITEMS dev_alloc_module field_management_module field_helper_module array_field_wrapper_module field_module field_gathscat_module)
+foreach (SRC IN ITEMS dev_alloc_module field_factory_module field_helper_module array_field_wrapper_module field_module field_gathscat_module)
   add_custom_command(
 	OUTPUT ${SRC}.F90
 	COMMAND fypp -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/${SRC}.fypp > ${SRC}.F90
@@ -70,7 +70,7 @@ add_library(${LIBNAME}
             field_2lm_gathscat_module.F90 field_3lm_gathscat_module.F90 field_4lm_gathscat_module.F90 field_5lm_gathscat_module.F90 
 
             field_module.F90 field_basic_module.F90 abor1.F90 parkind1.F90 dev_alloc_module.F90 dev_alloc.c 
-            field_management_module.F90 field_helper_module.F90 array_field_wrapper_module.F90 field_gathscat_module.F90)
+            field_factory_module.F90 field_helper_module.F90 array_field_wrapper_module.F90 field_gathscat_module.F90)
 
 target_link_libraries(${LIBNAME} PUBLIC OpenMP::OpenMP_Fortran)
 

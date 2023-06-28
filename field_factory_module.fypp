@@ -1,4 +1,4 @@
-MODULE FIELD_MANAGEMENT_MODULE
+MODULE FIELD_FACTORY_MODULE
 
 #:set fieldTypeList = fieldType.getFieldTypeList ()
 
