@@ -30,16 +30,21 @@ if (NOT FYPP)
 	MESSAGE(FATAL_ERROR "Could not find fypp.")
 endif()
 
+set (SOURCES
+    field_module.F90 field_basic_module.F90 abor1.F90 parkind1.F90 dev_alloc_module.F90 dev_alloc.c 
+    field_factory_module.F90 field_access_module.F90 field_array_wrapper_module.F90 field_gathscat_module.F90)
+
 
 foreach (SUFF IN ITEMS IM RM RB RD LM)
   string (TOLOWER ${SUFF} suff)
   foreach (RANK RANGE 2 5)
     foreach (FUNC IN ITEMS "" _gathscat _access)
-    add_custom_command(
+      add_custom_command(
         OUTPUT field_${RANK}${suff}${FUNC}_module.F90
-	COMMAND fypp -DRANK=${RANK} -DSUFF='${SUFF}' -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/field_RANKSUFF${FUNC}_module.fypp > field_${RANK}${suff}${FUNC}_module.F90
-	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/field_RANKSUFF${FUNC}_module.fypp
-	VERBATIM)
+        COMMAND fypp -DRANK=${RANK} -DSUFF='${SUFF}' -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/field_RANKSUFF${FUNC}_module.fypp > field_${RANK}${suff}${FUNC}_module.F90
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/field_RANKSUFF${FUNC}_module.fypp
+        VERBATIM)
+      list (APPEND SOURCES "field_${RANK}${suff}${FUNC}_module.F90")
     endforeach ()
   endforeach ()
 endforeach ()
@@ -52,28 +57,7 @@ foreach (SRC IN ITEMS dev_alloc_module field_factory_module field_access_module 
 	VERBATIM)
 endforeach ()
 
-add_library(${LIBNAME}  
-
-            field_2im_module.F90          field_3im_module.F90          field_4im_module.F90          field_5im_module.F90 
-            field_2rm_module.F90          field_3rm_module.F90          field_4rm_module.F90          field_5rm_module.F90 
-            field_2rb_module.F90          field_3rb_module.F90          field_4rb_module.F90          field_5rb_module.F90 
-            field_2rd_module.F90          field_3rd_module.F90          field_4rd_module.F90          field_5rd_module.F90 
-            field_2lm_module.F90          field_3lm_module.F90          field_4lm_module.F90          field_5lm_module.F90 
-
-            field_2im_gathscat_module.F90 field_3im_gathscat_module.F90 field_4im_gathscat_module.F90 field_5im_gathscat_module.F90 
-            field_2rm_gathscat_module.F90 field_3rm_gathscat_module.F90 field_4rm_gathscat_module.F90 field_5rm_gathscat_module.F90 
-            field_2rb_gathscat_module.F90 field_3rb_gathscat_module.F90 field_4rb_gathscat_module.F90 field_5rb_gathscat_module.F90 
-            field_2rd_gathscat_module.F90 field_3rd_gathscat_module.F90 field_4rd_gathscat_module.F90 field_5rd_gathscat_module.F90 
-            field_2lm_gathscat_module.F90 field_3lm_gathscat_module.F90 field_4lm_gathscat_module.F90 field_5lm_gathscat_module.F90 
-
-            field_2im_access_module.F90   field_3im_access_module.F90   field_4im_access_module.F90   field_5im_access_module.F90 
-            field_2rm_access_module.F90   field_3rm_access_module.F90   field_4rm_access_module.F90   field_5rm_access_module.F90 
-            field_2rb_access_module.F90   field_3rb_access_module.F90   field_4rb_access_module.F90   field_5rb_access_module.F90 
-            field_2rd_access_module.F90   field_3rd_access_module.F90   field_4rd_access_module.F90   field_5rd_access_module.F90 
-            field_2lm_access_module.F90   field_3lm_access_module.F90   field_4lm_access_module.F90   field_5lm_access_module.F90 
-
-            field_module.F90 field_basic_module.F90 abor1.F90 parkind1.F90 dev_alloc_module.F90 dev_alloc.c 
-            field_factory_module.F90 field_access_module.F90 field_array_wrapper_module.F90 field_gathscat_module.F90)
+add_library(${LIBNAME} ${SOURCES})
 
 target_link_libraries(${LIBNAME} PUBLIC OpenMP::OpenMP_Fortran)
 
