@@ -1,4 +1,4 @@
-MODULE FIELD_HELPER_MODULE
+MODULE FIELD_ACCESS_MODULE
 
 #:set fieldTypeList = fieldType.getFieldTypeList ()
 #:set dumsize = '1'
@@ -53,7 +53,7 @@ CONTAINS
 #:endfor
 #:endfor
 
-END MODULE FIELD_HELPER_MODULE
+END MODULE FIELD_ACCESS_MODULE
 
 
 

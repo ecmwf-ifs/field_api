@@ -3,7 +3,7 @@ MODULE FIELD_${RANK}$${SUFF}$_GATHSCAT_MODULE
 #:set fieldTypeList = fieldType.getFieldTypeList (ranks=[RANK], kinds=['JP' + SUFF])
 
 USE FIELD_MODULE
-USE FIELD_HELPER_MODULE
+USE FIELD_ACCESS_MODULE
 USE FIELD_FACTORY_MODULE
 ${fieldType.useParkind1 ()}$
 
