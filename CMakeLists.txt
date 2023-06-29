@@ -84,5 +84,6 @@ target_link_libraries (main.x PUBLIC ${LIBNAME})
 enable_testing ()
 add_subdirectory (tests)
 
-
+install(TARGETS ${LIBNAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
+install(DIRECTORY ${CMAKE_Fortran_MODULE_DIRECTORY} DESTINATION ${CMAKE_INSTALL_PREFIX})
 
