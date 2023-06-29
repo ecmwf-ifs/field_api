@@ -15,7 +15,7 @@ if (USE_OPENACC)
   if (CMAKE_Fortran_COMPILER_ID STREQUAL "PGI" 
    OR CMAKE_Fortran_COMPILER_ID STREQUAL "NVIDIA" 
    OR CMAKE_Fortran_COMPILER_ID STREQUAL "NVHPC")
-    set (CMAKE_Fortran_FLAGS "-acc=gpu -Mlarge_arrays -O1 -gopt -gpu=cc70 -Minfo=accel,all,intensity,ccff")
+    set (CMAKE_Fortran_FLAGS "-acc=gpu -Mlarge_arrays -gopt -gpu=cc70 -Minfo=accel,all,intensity,ccff")
   endif ()
 
 endif ()
@@ -31,10 +31,10 @@ find_package (fiat REQUIRED)
 set (CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -I${fiat_BASE_DIR}/module/fiat -I${fiat_BASE_DIR}/include/fiat")
 set (CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -L${fiat_BASE_DIR}/lib64 -lfiat -Wl,-rpath,${fiat_BASE_DIR}/lib64")
 
-if (fiat_HAVE_SINGLE_PRECISION)
+if (fiat_HAVE_DOUBLE_PRECISION)
   set (CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -I${fiat_BASE_DIR}/module/parkind_dp")
-elseif (fiat_HAVE_DOUBLE_PRECISION)
-  set (CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -I${fiat_BASE_DIR}/module/parkind_dp")
+elseif (fiat_HAVE_SINGLE_PRECISION)
+  set (CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -I${fiat_BASE_DIR}/module/parkind_sp")
 endif ()
 
 find_program (FYPP fypp)
@@ -44,9 +44,8 @@ endif()
 
 set (SOURCES
     field_module.F90 field_basic_module.F90 dev_alloc_module.F90 dev_alloc.c 
-    field_factory_module.F90 field_access_module.F90 field_array_wrapper_module.F90 
+    field_factory_module.F90 field_access_module.F90 field_array_module.F90 
     field_gathscat_module.F90)
-
 
 foreach (SUFF IN ITEMS IM RM RB RD LM)
   string (TOLOWER ${SUFF} suff)
@@ -62,14 +61,15 @@ foreach (SUFF IN ITEMS IM RM RB RD LM)
   endforeach ()
 endforeach ()
 
-foreach (SRC IN ITEMS dev_alloc_module field_factory_module field_access_module field_array_wrapper_module field_module field_gathscat_module)
+foreach (SRC IN ITEMS dev_alloc_module field_factory_module field_access_module field_array_module field_module field_gathscat_module)
   add_custom_command (OUTPUT ${SRC}.F90
     COMMAND fypp -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/${SRC}.fypp > ${SRC}.F90
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${SRC}.fypp
     VERBATIM)
 endforeach ()
 
-add_library(${LIBNAME} ${SOURCES})
+add_library (${LIBNAME} ${SOURCES})
+set_property (TARGET ${LIBNAME} PROPERTY C_STANDARD 99)
 
 target_link_libraries (${LIBNAME} PUBLIC OpenMP::OpenMP_Fortran)
 
@@ -81,8 +81,8 @@ endif ()
 
 add_executable (main.x main.F90)
 target_link_libraries (main.x PUBLIC ${LIBNAME})
-
 enable_testing ()
 add_subdirectory (tests)
+
 
 
