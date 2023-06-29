@@ -1,17 +1,18 @@
 PROGRAM GET_VIEW
-        USE FIELD_module
+        USE FIELD_MODULE
+        use FIELD_FACTORY_MODULE
         USE OMP_LIB
         USE PARKIND1
 
-        TYPE(FIELD_2RB_WRAPPER) :: W
-        REAL(KIND=JPRB), POINTER :: DATA(:,:)
+        CLASS(FIELD_2RB), POINTER :: W => NULL()
+        REAL(KIND=JPRB), POINTER :: D(:,:)
         INTEGER :: NPROMA = 24
         INTEGER :: NBLOCKS= 100
         INTEGER :: IBLK,JLON
         REAL(KIND=JPRB), POINTER :: VIEW(:) => NULL()
 
-        ALLOCATE(DATA(NPROMA, NBLOCKS))
-        CALL W%INIT(DATA)
+        ALLOCATE(D(NPROMA, NBLOCKS))
+        CALL FIELD_NEW(W, DATA=D)
         !$OMP PARALLEL PRIVATE(VIEW, JLON) 
         !$OMP DO
         DO IBLK=1,NBLOCKS
@@ -22,7 +23,8 @@ PROGRAM GET_VIEW
         END DO
         !$OMP END DO
         !$OMP END PARALLEL
-        IF (.NOT. ALL(DATA == 7)) THEN
+        IF (.NOT. ALL(D == 7)) THEN
                 ERROR STOP
         END IF
+        CALL FIELD_DELETE(W)
 END PROGRAM GET_VIEW

@@ -4,18 +4,20 @@ PROGRAM INIT_WRAPPER
         ! WRAPPER TOO
 
         USE FIELD_MODULE
+        USE FIELD_FACTORY_MODULE
         USE PARKIND1
         IMPLICIT NONE
-        TYPE(FIELD_2RB_WRAPPER) :: W
+        CLASS(FIELD_2RB), POINTER :: W => NULL()
         REAL(KIND=JPRB), ALLOCATABLE :: D(:,:)
 
         ALLOCATE(D(10,10))
         D=7
 
-        CALL W%INIT(D)
+        CALL FIELD_NEW(W, DATA=D)
         D=42
 
         IF (.NOT. ALL(W%PTR == 42)) THEN
                 ERROR STOP
         END IF 
+        CALL FIELD_DELETE(W)
 END PROGRAM INIT_WRAPPER

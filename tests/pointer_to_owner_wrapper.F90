@@ -6,24 +6,24 @@ MODULE POINT_TO
 CONTAINS
         SUBROUTINE POINT_TO_WRAPPER(PTR)
                 USE FIELD_MODULE
+                USE FIELD_FACTORY_MODULE
                 USE PARKIND1
                 IMPLICIT NONE
                 CLASS(FIELD_2RB), POINTER, INTENT(INOUT) :: PTR
-                TYPE(FIELD_2RB_WRAPPER), POINTER :: W
-                REAL(KIND=JPRB), POINTER :: DATA(:,:)
-                ALLOCATE(DATA(10,10))
-                ALLOCATE(W)
-                CALL W%INIT(DATA)
+                CLASS(FIELD_2RB), POINTER :: W => NULL()
+                REAL(KIND=JPRB), POINTER :: D(:,:)
+                ALLOCATE(D(10,10))
+                CALL FIELD_NEW(W, DATA=D)
                 PTR => W                                        
         END SUBROUTINE
         SUBROUTINE POINT_TO_OWNER(PTR)
                 USE FIELD_MODULE
+                USE FIELD_FACTORY_MODULE
                 USE PARKIND1
                 IMPLICIT NONE
                 CLASS(FIELD_2RB), POINTER, INTENT(INOUT) :: PTR
-                TYPE(FIELD_2RB_OWNER), POINTER :: O
-                ALLOCATE(O)
-                CALL O%INIT(LBOUNDS=[1,1],UBOUNDS=[10,10])
+                CLASS(FIELD_2RB), POINTER :: O => NULL()
+                CALL FIELD_NEW(O, LBOUNDS=[1,1],UBOUNDS=[10,10])
                 PTR => O                                        
         END SUBROUTINE
 END MODULE POINT_TO
