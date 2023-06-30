@@ -6,6 +6,8 @@ set (LIBNAME field_api)
 set (CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/modules)
 set (CMAKE_BUILD_TYPE "Debug")
 
+option(FYPP_PATH "Path to the fypp preprocessor")
+
 get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
 
 option(USE_OPENACC "Necessary to use field api on GPU" OFF)
@@ -37,10 +39,14 @@ elseif (fiat_HAVE_SINGLE_PRECISION)
   set (CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -I${fiat_BASE_DIR}/module/parkind_sp")
 endif ()
 
-find_program (FYPP fypp)
-if (NOT FYPP)
-  message (FATAL_ERROR "Could not find fypp.")
+if (NOT FYPP_PATH)
+	find_program (FYPP fypp)
+	if (NOT FYPP)
+		message (FATAL_ERROR "Could not find fypp.")
+	endif()
+	set(FYPP_PATH ${FYPP})
 endif()
+message (STATUS "fypp is ${FYPP_PATH}")
 
 set (SOURCES
     field_module.F90 field_basic_module.F90 dev_alloc_module.F90 dev_alloc.c 
@@ -52,7 +58,7 @@ foreach (SUFF IN ITEMS IM RM RB RD LM)
   foreach (RANK RANGE 2 5)
     foreach (FUNC IN ITEMS "" _gathscat _access)
       add_custom_command (OUTPUT field_${RANK}${suff}${FUNC}_module.F90
-        COMMAND fypp -DRANK=${RANK} -DSUFF='${SUFF}' -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType 
+	      COMMAND ${FYPP_PATH} -DRANK=${RANK} -DSUFF='${SUFF}' -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType 
         ${CMAKE_CURRENT_SOURCE_DIR}/field_RANKSUFF${FUNC}_module.fypp > field_${RANK}${suff}${FUNC}_module.F90
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/field_RANKSUFF${FUNC}_module.fypp
         VERBATIM)
@@ -63,7 +69,7 @@ endforeach ()
 
 foreach (SRC IN ITEMS dev_alloc_module field_factory_module field_access_module field_array_module field_module field_gathscat_module)
   add_custom_command (OUTPUT ${SRC}.F90
-    COMMAND fypp -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/${SRC}.fypp > ${SRC}.F90
+	  COMMAND ${FYPP_PATH} -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/${SRC}.fypp > ${SRC}.F90
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${SRC}.fypp
     VERBATIM)
 endforeach ()
