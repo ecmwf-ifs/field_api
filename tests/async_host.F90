@@ -1,16 +1,17 @@
 PROGRAM SYNC_HOST
         USE FIELD_MODULE
+        USE FIELD_FACTORY_MODULE
         USE PARKIND1
         IMPLICIT NONE
 
-        TYPE(FIELD_2RB_WRAPPER) :: W
+        CLASS(FIELD_2RB), POINTER :: W => NULL()
         REAL(KIND=JPRB), ALLOCATABLE :: D(:,:)
         REAL(KIND=JPRB), POINTER :: D_GPU(:,:)
         INTEGER :: I, J
 
         ALLOCATE(D(10,10))
         D=3
-        CALL W%INIT(D)
+        CALL FIELD_NEW(W, DATA=D)
         CALL W%GET_DEVICE_DATA_RDWR(D_GPU)
 !$ACC KERNELS PRESENT(D_GPU)        
         DO I=1,10
@@ -29,4 +30,5 @@ PROGRAM SYNC_HOST
         ENDIF
         ENDDO
         ENDDO
+        CALL FIELD_DELETE(W)
 END PROGRAM
