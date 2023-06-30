@@ -48,10 +48,7 @@ if (NOT FYPP_PATH)
 endif()
 message (STATUS "fypp is ${FYPP_PATH}")
 
-set (SOURCES
-    field_module.F90 field_basic_module.F90 dev_alloc_module.F90 dev_alloc.c 
-    field_factory_module.F90 field_access_module.F90 field_array_module.F90 
-    field_gathscat_module.F90)
+set (SOURCES field_basic_module.F90 dev_alloc.c)
 
 foreach (SUFF IN ITEMS IM RM RB RD LM)
   string (TOLOWER ${SUFF} suff)
@@ -67,11 +64,13 @@ foreach (SUFF IN ITEMS IM RM RB RD LM)
   endforeach ()
 endforeach ()
 
-foreach (SRC IN ITEMS dev_alloc_module field_factory_module field_access_module field_array_module field_module field_gathscat_module)
+foreach (SRC IN ITEMS dev_alloc_module field_factory_module field_access_module 
+         field_array_module field_module field_gathscat_module field_util_module)
   add_custom_command (OUTPUT ${SRC}.F90
 	  COMMAND ${FYPP_PATH} -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/${SRC}.fypp > ${SRC}.F90
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${SRC}.fypp
     VERBATIM)
+  list (APPEND SOURCES "${SRC}.F90")
 endforeach ()
 
 add_library (${LIBNAME} ${SOURCES})
