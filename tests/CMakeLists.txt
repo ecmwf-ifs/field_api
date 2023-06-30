@@ -21,6 +21,9 @@ set(TEST_FILES
 	wrapper_modify_gpu.F90
 	)
 
+set (CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/tests/modules)
+include_directories(${CMAKE_BINARY_DIR}/modules)
+
 foreach(TEST_FILE ${TEST_FILES})
 	get_filename_component(TEST_NAME ${TEST_FILE} NAME_WE)
 	add_executable(${TEST_NAME}.x ${TEST_FILE})
