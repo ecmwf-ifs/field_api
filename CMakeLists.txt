@@ -53,7 +53,7 @@ set (SOURCES field_basic_module.F90 dev_alloc.c)
 foreach (SUFF IN ITEMS IM RM RB RD LM)
   string (TOLOWER ${SUFF} suff)
   foreach (RANK RANGE 2 5)
-    foreach (FUNC IN ITEMS "" _gathscat _access)
+    foreach (FUNC IN ITEMS "" _gathscat _access _util)
       add_custom_command (OUTPUT field_${RANK}${suff}${FUNC}_module.F90
 	      COMMAND ${FYPP_PATH} -DRANK=${RANK} -DSUFF='${SUFF}' -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType 
         ${CMAKE_CURRENT_SOURCE_DIR}/field_RANKSUFF${FUNC}_module.fypp > field_${RANK}${suff}${FUNC}_module.F90
