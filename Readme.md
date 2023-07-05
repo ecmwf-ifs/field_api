@@ -7,8 +7,6 @@ The API is using fypp heavily to generate the code for several types and
 dimensions. It might look complicated, but if you are just using the API then
 you should not worry about it.
 
-This library should be considered highly experimental.
-
 # Compilation
 
 Field API can be compiled as an external library or just dropped into the
@@ -16,6 +14,7 @@ codebase. To compile it you need:
 - a compiler with OpenMP and OpenACC and GPU support;
 - cmake (>= 3.15);
 - fypp;
+- [fiat](https://github.com/ecmwf-ifs/fiat/)
 
 ```
 mkdir build
@@ -25,8 +24,8 @@ make
 ctest #Optional, will run the tests
 ```
 
-The library has been tested with the nvfortran compiler (former PGI) 22.11 and
-23.1
+The library has been tested with the nvhpc toolkit from Nvidia, version 23.3
+and is continually tested with newer releases.
 
 # Field API types
 
@@ -43,18 +42,20 @@ only a single dimension of the array through a view.
 
 ```
 SUBROUTINE SUB()
-TYPE(FIELD_2D_OWNER) :: FW
+USE FIELD_MODULE
+USE FIELD_FACTORY_MODULE
+CLASS(FIELD_2RB), POINTER :: FO => NULL()
 TYPE(FIELD_2D_VIEW_PTR) :: V
 
 !Will create a field with the first dimension going from 1 to 10 and second from 1 to OMP_NUM_THREADS
-CALL FW%INIT(/1,1/, /10,1/)
+CALL FIELD_NEW(FO, LBOUNDS=/1,1/, UBOUNDS=/10,1/)
 
 DO IBLK=1,NBLKS
-  V => FW%GET_VIEW(IBLK)
+  V => FO%GET_VIEW(IBLK)
   !do stuff with v
 ENDDO
   
-CALL FW%FINALIZE()
+CALL FIELD_DELETE(FO)
 ```
 
 Furthermore field API provides two way of encapsulating the data: wrappers
@@ -74,15 +75,17 @@ declare a field api wrapper when needed.
 
 ```
 SUBROUTINE SUB(MYDATA)
+USE FIELD_MODULE
+USE FIELD_FACTORY_MODULE
 INTEGER, INTENT(INOUT) :: MYDATA(:,:)
-TYPE(FIELD_2D_WRAPPER) :: FW
+CLASS(FIELD_2RB), POINTER :: FW => NULL()
 
 !Wrap MYDATA into field wrapper FW
-CALL FW%INIT(MYDATA)
+CALL FIELD_NEW(FW, DATA=MYDATA)
 
 !do stuff
 
-CALL FW%FINALIZE()
+CALL FIELD_DELETE(FW)
 
 !MYDATA is still accessible
 MYDATA(1,2) = 7
@@ -99,16 +102,18 @@ upper bounds of the array that will be created by field api.
 
 ```
 SUBROUTINE SUB()
-TYPE(FIELD_2D_OWNER) :: FW
+USE FIELD_MODULE
+USE FIELD_FACTORY_MODULE
+CLASS(FIELD_2RB), POINTER :: FO => NULL()
 
 !Allocate data with field API 
 !The allocated data will have a first dimension
 !going from 1 to 10 and a second from 0 to 10.
-CALL FW%INIT(/1,0/, /10,10/, PERSISTENT=.FALSE.)
+CALL FIELD_NEW(FO, /1,0/, /10,10/, PERSISTENT=.FALSE.)
 
 !do stuff
 
-CALL FW%FINALIZE()
+CALL FIELD_DELETE(FO)
 !The data has now be freed on CPU and GPU and cannot be accessed anymore
 ```
 
@@ -125,21 +130,25 @@ part of the code.
 ```
 SUBROUTINE SUB(MYTEST)
 LOGICAL, INTENT(IN) :: MYTEST
-TYPE(FIELD_2D_OWNER) :: FW
+USE FIELD_MODULE
+USE FIELD_FACTORY_MODULE
+CLASS(FIELD_2RB), POINTER :: FO => NULL()
 
 !Declare a field owner, no allocation will happen here
-CALL FW%INIT(/1,0/, /10,10/, PERSISTENT=.FALSE., DELAYED=.TRUE.)
+CALL FIELD_NEW(FO, /1,0/, /10,10/, PERSISTENT=.FALSE., DELAYED=.TRUE.)
 
 IF (MYTEST) THEN
-!do stuff with FW
+!do stuff with FO
 !allocation wil happen here
 ENDIF
 
-CALL FW%FINALIZE()
+CALL FIELD_DELETE(FO)
 !The data will be freed if MYTEST was true, otherwise there are no data to deallocate
 ```
 
 ## Asynchronism
+
+This functionnality is still being tested.
 
 By default all data transfers are synchronous. So every call to the subroutines
 GET\_HOST\_DATA, GET\_DEVICE\_DATA, SYNC\_HOST, SYNC\_DEVICE will stop the
@@ -154,21 +163,23 @@ WAIT\_FOR\_ASYNC\_QUEUE subroutine.
 
 ```
 SUBROUTINE SUB(MYTEST)
+USE FIELD_MODULE
+USE FIELD_FACTORY_MODULE
+CLASS(FIELD_2RB), POINTER :: FO => NULL()
+CLASS(FIELD_2RB), POINTER :: FO2 => NULL()
 LOGICAL, INTENT(IN) :: MYTEST
-TYPE(FIELD_2D_OWNER) :: FW
-TYPE(FIELD_2D_OWNER) :: FW2
 
-CALL FW%INIT(/1,0/, /10,10/)
-CALL FW2%INIT(/1,0/, /10,10/)
+CALL FIELD_NEW(FO, /1,0/, /10,10/)
+CALL FIELD_NEW(FO2, /1,0/, /10,10/)
 
-!Do stuff with FW on GPUs
+!Do stuff with FO on GPUs
 !Then transfer data to CPU
-CALL FW%SYNC_HOST_RDONLY(QUEUE=2)
+CALL FO%SYNC_HOST_RDONLY(QUEUE=2)
 
-!Do stuff with FW2 on GPUs
-!We didn't have to wait for the data transfer of FW to finish
+!Do stuff with FO2 on GPUs
+!We didn't have to wait for the data transfer of FO to finish
 
-!Make sure the data transfer for FW is finished
+!Make sure the data transfer for FO is finished
 CALL WAIT_FOR_ASYNC_QUEUE(QUEUE=2)
 
 ...
@@ -195,8 +206,8 @@ write(*,*)"Total/Avg Time spend on transfer CPU->GPU", NUM_CPU_GPU_TR, "/" AVG,
 
 For field api type:
 ```
-SUBROUTINE INIT(SELF)
-SUBROUTINE FINAL(SELF)
+SUBROUTINE FIELD_NEW(SELF, ...)
+SUBROUTINE FIELD_DELETE(SELF)
 SUBROUTINE DELETE_DEVICE
 FUNCTION GET_VIEW(SELF, BLOCK_INDEX, ZERO) RESULT(VIEW_PTR)
 SUBROUTINE GET_DEVICE_DATA_RDONLY (SELF, PPTR, QUEUE)
