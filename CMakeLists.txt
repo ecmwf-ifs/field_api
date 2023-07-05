@@ -4,7 +4,6 @@ project (field_api)
 enable_language (Fortran)
 set (LIBNAME field_api)
 set (CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/modules)
-set (CMAKE_BUILD_TYPE "Debug")
 
 option(FYPP_PATH "Path to the fypp preprocessor")
 option(INIT_DEBUG_VALUE "Option to initialise fields without user specified value with a debug value")
