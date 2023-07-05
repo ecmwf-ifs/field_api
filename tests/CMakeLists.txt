@@ -28,6 +28,7 @@ set(TEST_FILES
 	sync_device.F90
 	sync_host.F90
 	wrapper_modify_gpu.F90
+	no_transfer.F90
 	)
 
 set (CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/tests/modules)
