@@ -10,17 +10,20 @@ set(TEST_FILES
 	init_delayed_owner.F90
 	init_owner.F90
 	init_owner2.F90
+	init_owner_delayed_init_value.F90
 	init_owner_gpu.F90
+	init_owner_init_value.F90
 	init_owner_openmp.F90
 	init_wrapper.F90
 	init_wrapper_gpu.F90
+	init_wrapper_init_value.F90
 	init_wrapper_lbounds.F90
 	init_wrapper_non_contiguous.F90
+	no_transfer.F90
 	pointer_to_owner_wrapper.F90
 	sync_device.F90
 	sync_host.F90
 	wrapper_modify_gpu.F90
-	no_transfer.F90
 	)
 
 set (CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/tests/modules)

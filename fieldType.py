@@ -9,9 +9,11 @@ class fieldType (object):
 
     th = {'R': 'REAL', 'I': 'INTEGER', 'L': 'LOGICAL'}
     td = {'R':  '0.0', 'I':       '0', 'L': '.FALSE.'}
+    default_debugs = {'R': '-123456789', 'I': '-123456789', 'L': '.FALSE.'}
 
     self.type = th[tt] + '(KIND=' + self.kind + ')'
     self.default = td[tt] + '_' + self.kind
+    self.default_debug = default_debugs[tt] + '_' + self.kind
     self.alias = self.suffix == 'RB'
 
     self.name = 'FIELD_%s%s' % (self.rank, self.suffix);
