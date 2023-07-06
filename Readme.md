@@ -146,6 +146,16 @@ CALL FIELD_DELETE(FO)
 !The data will be freed if MYTEST was true, otherwise there are no data to deallocate
 ```
 
+### Initialisation
+
+Either for owner and wrapper, delayed or not, you can ask the field to be
+initialised to a specific value with the optional INIT_VALUE argument of
+field_new.
+
+It is also possible to compile with the INIT_DEBUG_VALUE which will set the
+fields created without the INIT_VALUE option to a specific and easy to
+recognise value (-123456789 for integer and double, false for logical).
+
 ## Asynchronism
 
 This functionnality is still being tested.

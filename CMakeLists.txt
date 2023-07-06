@@ -7,6 +7,13 @@ set (CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/modules)
 set (CMAKE_BUILD_TYPE "Debug")
 
 option(FYPP_PATH "Path to the fypp preprocessor")
+option(INIT_DEBUG_VALUE "Option to initialise fields without user specified value with a debug value")
+
+if(INIT_DEBUG_VALUE)
+	add_compile_definitions("MACRO_INIT_DEBUG_VALUE=.TRUE.")
+else()
+	add_compile_definitions("MACRO_INIT_DEBUG_VALUE=.FALSE.")
+endif()
 
 get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
 
