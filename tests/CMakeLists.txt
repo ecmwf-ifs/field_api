@@ -13,6 +13,7 @@ set(TEST_FILES
 	final_owner.F90
 	final_wrapper.F90
 	final_wrapper_gpu.F90
+	gather_scatter.F90
 	get_stats.F90
 	get_view.F90
 	init_delayed_owner.F90
