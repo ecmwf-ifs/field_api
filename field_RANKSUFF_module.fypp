@@ -27,8 +27,6 @@ LOGICAL, PARAMETER :: INIT_DEBUG_VALUE = MACRO_INIT_DEBUG_VALUE
 TYPE, ABSTRACT, EXTENDS (FIELD_BASIC) :: ${ftn}$
   ${ft.type}$, POINTER :: PTR(${ft.shape}$) => NULL()
   ${ft.type}$, POINTER, CONTIGUOUS :: DEVPTR(${ft.shape}$) => NULL()
-  ${ft.type}$ :: INIT_VALUE = ${ft.default_debug}$
-  LOGICAL :: HAS_INIT_VALUE = INIT_DEBUG_VALUE
 CONTAINS
 
   PROCEDURE :: FINAL => ${ftn}$_FINAL
@@ -65,6 +63,8 @@ PUBLIC :: ${ftn}$_WRAPPER
 
 TYPE, EXTENDS(${ftn}$) :: ${ftn}$_OWNER
   INTEGER(KIND=JPIM) :: LBOUNDS(${ft.rank}$), UBOUNDS(${ft.rank}$)
+  LOGICAL :: HAS_INIT_VALUE = INIT_DEBUG_VALUE
+  ${ft.type}$ :: INIT_VALUE = ${ft.default_debug}$
 CONTAINS
   PROCEDURE :: INIT => ${ftn}$_OWNER_INIT
   PROCEDURE :: FINAL => ${ftn}$_OWNER_FINAL
@@ -119,11 +119,7 @@ CONTAINS
     ENDIF
 
     IF (PRESENT(INIT_VALUE)) THEN
-      SELF%HAS_INIT_VALUE=.TRUE.
-      SELF%INIT_VALUE=INIT_VALUE
-    ENDIF
-    IF (SELF%HAS_INIT_VALUE) THEN
-      SELF%PTR=SELF%INIT_VALUE
+      SELF%PTR=INIT_VALUE
     ENDIF
 
   END SUBROUTINE ${ftn}$_WRAP
