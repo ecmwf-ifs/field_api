@@ -10,9 +10,16 @@ PROGRAM INIT_OWNER_INIT_VALUE
 
         CALL FIELD_NEW(O, LBOUNDS=[1,1], UBOUNDS=[10,10], INIT_VALUE=7_JPIM)
         CALL O%GET_HOST_DATA_RDWR(PTR)
+
+#ifdef INIT_DEBUG_VALUE
+        IF (.NOT. ALL(O%PTR == -123456789)) THEN
+                ERROR STOP
+        END IF
+#else
         IF (.NOT. ALL(O%PTR == 7)) THEN
                 ERROR STOP
-        END IF 
+        END IF
+#endif
 
         CALL FIELD_DELETE(O)
 END PROGRAM INIT_OWNER_INIT_VALUE
