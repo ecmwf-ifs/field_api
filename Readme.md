@@ -152,10 +152,18 @@ Either for owner and wrapper, delayed or not, you can ask the field to be
 initialised to a specific value with the optional INIT_VALUE argument of
 field_new.
 
-It is also possible to compile with the INIT_DEBUG_VALUE which will set the
-field owner (but not field wrapper) created without the INIT_VALUE option to a
-specific and easy to recognise value (-123456789 for integer and double, false
-for logical).
+It is also possible to activate a debug value to initialise all non-initialised
+owner. To do so it is necessary to import the module *field_init_debug_module*
+and set *use_init_debug_value* to true. Then one can *set
+init_debug_value_jpim* to a custom value.
+
+```
+   USE FIELD_INIT_DEBUG_VALUE_MODULE
+   USE_INIT_DEBUG_VALUE = .TRUE.
+   INIT_DEBUG_VALUE_JPIM = -7
+   !This field owner will be initialised to -7
+   CALL FIELD_NEW(O, LBOUNDS=[1,1], UBOUNDS=[10,10])
+```
 
 ## Asynchronism
 
