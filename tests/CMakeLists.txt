@@ -29,7 +29,8 @@ set(TEST_FILES
 	init_wrapper_init_value.F90
 	init_wrapper_lbounds.F90
 	init_wrapper_non_contiguous.F90
-	no_transfer.F90
+	no_transfer_get_device.F90
+	no_transfer_get_host.F90
 	pointer_to_owner_wrapper.F90
 	sync_device.F90
 	sync_host.F90
