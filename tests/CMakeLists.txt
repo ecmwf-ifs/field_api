@@ -9,6 +9,9 @@
 
 set(TEST_FILES
 	async_host.F90
+	cpu_to_gpu.F90
+	cpu_to_gpu_delayed_init_value.F90
+	cpu_to_gpu_init_value.F90
 	delete_device_wrapper.F90
 	final_owner.F90
 	final_wrapper.F90
