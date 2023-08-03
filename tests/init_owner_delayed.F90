@@ -7,7 +7,7 @@
 ! granted to it by virtue of its status as an intergovernmental organisation
 ! nor does it submit to any jurisdiction.
 
-PROGRAM INIT_OWNER
+PROGRAM INIT_OWNER_DELAYED
         ! TEST IF OWNER IS REALLY ALLOCATING THE DATA
         ! WHEN PERSITENT IS SET TO FALSE OR IS NOT GIVEN IN ARGUMENT,
         ! THEN THE LAST DIM OF THE FIELD IS THE NUMBER OF OPENMP THREADS
@@ -35,4 +35,4 @@ PROGRAM INIT_OWNER
                 ERROR STOP
         END IF 
         CALL FIELD_DELETE(O)
-END PROGRAM INIT_OWNER
+END PROGRAM INIT_OWNER_DELAYED
