@@ -8,7 +8,7 @@ PROGRAM INIT_OWNER_GPU
         CLASS(FIELD_2RB), POINTER :: O => NULL()
         REAL(KIND=JPRB), POINTER :: PTR_CPU(:,:)
         REAL(KIND=JPRB), POINTER :: PTR_GPU(:,:)
-        LOGICAL :: RES
+        LOGICAL :: OKAY
         INTEGER :: I,J
 
         CALL FIELD_NEW(O, LBOUNDS=[10,1], UBOUNDS=[21,11], PERSISTENT=.TRUE.)
@@ -16,18 +16,18 @@ PROGRAM INIT_OWNER_GPU
         PTR_CPU=42
 
         CALL O%GET_DEVICE_DATA_RDONLY(PTR_GPU)
-        !$ACC SERIAL PRESENT(PTR_GPU) COPY(RES)
-        RES=.TRUE.
+        OKAY=.TRUE.
+        !$ACC SERIAL PRESENT(PTR_GPU) COPY(OKAY)
         DO I=10,21
         DO J=1,11
         IF(PTR_GPU(I,J) /= 42) THEN
-                RES = .FALSE.
+                OKAY = .FALSE.
         END IF
         END DO
         END DO
         !$ACC END SERIAL
 
-        IF (.NOT. RES) THEN
+        IF (.NOT. OKAY) THEN
                 ERROR STOP
         END IF
         CALL FIELD_DELETE(O)
