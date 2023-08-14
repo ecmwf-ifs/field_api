@@ -23,7 +23,21 @@ set (CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/modules)
 ## find required packages
 ecbuild_find_package(OpenMP COMPONENTS Fortran REQUIRED)
 
-option(FYPP_PATH "Path to the fypp preprocessor")
+## find fypp
+find_program(FYPP fypp HINTS ${fypp_ROOT})
+if( NOT FYPP)
+include(FetchContent)
+
+FetchContent_Declare(
+   fypp
+   GIT_REPOSITORY https://github.com/aradi/fypp
+   GIT_TAG 3.1
+)
+FetchContent_MakeAvailable(fypp)
+
+set(FYPP ${fypp_SOURCE_DIR}/bin/fypp)
+ecbuild_info("fypp downloaded to: ${FYPP}")
+endif()
 
 get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
 
@@ -50,15 +64,6 @@ elseif (fiat_HAVE_SINGLE_PRECISION)
   set (CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -I${fiat_BASE_DIR}/module/parkind_sp")
 endif ()
 
-if (NOT FYPP_PATH)
-	find_program (FYPP fypp)
-	if (NOT FYPP)
-		message (FATAL_ERROR "Could not find fypp.")
-	endif()
-	set(FYPP_PATH ${FYPP})
-endif()
-message (STATUS "fypp is ${FYPP_PATH}")
-
 set (SOURCES field_basic_module.F90 field_init_debug_value_module.F90 dev_alloc.c)
 
 foreach (SUFF IN ITEMS IM RM RB RD LM)
@@ -66,7 +71,7 @@ foreach (SUFF IN ITEMS IM RM RB RD LM)
   foreach (RANK RANGE 2 5)
     foreach (FUNC IN ITEMS "" _gathscat _access _util _array_util)
       add_custom_command (OUTPUT field_${RANK}${suff}${FUNC}_module.F90
-	      COMMAND ${FYPP_PATH} -DRANK=${RANK} -DSUFF='${SUFF}' -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType 
+	      COMMAND ${FYPP} -DRANK=${RANK} -DSUFF='${SUFF}' -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType 
         ${CMAKE_CURRENT_SOURCE_DIR}/field_RANKSUFF${FUNC}_module.fypp > field_${RANK}${suff}${FUNC}_module.F90
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/field_RANKSUFF${FUNC}_module.fypp
         VERBATIM)
@@ -78,7 +83,7 @@ endforeach ()
 foreach (SRC IN ITEMS dev_alloc_module field_factory_module field_access_module 
          field_array_module field_module field_gathscat_module field_util_module field_array_util_module)
   add_custom_command (OUTPUT ${SRC}.F90
-	  COMMAND ${FYPP_PATH} -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/${SRC}.fypp > ${SRC}.F90
+	  COMMAND ${FYPP} -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/${SRC}.fypp > ${SRC}.F90
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${SRC}.fypp
     VERBATIM)
   list (APPEND SOURCES "${SRC}.F90")
