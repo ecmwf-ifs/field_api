@@ -15,9 +15,9 @@ if( NOT ecbuild_FOUND )
   include(cmake/field_api_fetchcontent_ecbuild.cmake)
 endif()
 
-project (field_api)
-enable_language (Fortran)
-set (LIBNAME field_api)
+## define project and field_api target
+project(field_api VERSION 1.0 LANGUAGES Fortran)
+set(LIBNAME field_api)
 set (CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/modules)
 
 option(FYPP_PATH "Path to the fypp preprocessor")
