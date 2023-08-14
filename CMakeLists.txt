@@ -39,18 +39,18 @@ set(FYPP ${fypp_SOURCE_DIR}/bin/fypp)
 ecbuild_info("fypp downloaded to: ${FYPP}")
 endif()
 
-get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
+## find OpenACC
+# Workaround for FindOpenACC not setting OpenACC_FOUND
+find_package(OpenACC COMPONENTS Fortran)
+if(OpenACC_Fortran_FOUND)
+  set(OpenACC_FOUND ON)
+endif()
+ecbuild_add_option( FEATURE ACC
+    DESCRIPTION "OpenACC" DEFAULT ON
+    CONDITION OpenACC_FOUND )
 
-option(USE_OPENACC "Necessary to use field api on GPU" OFF)
-
-if (USE_OPENACC)
-
-  if (CMAKE_Fortran_COMPILER_ID STREQUAL "PGI" 
-   OR CMAKE_Fortran_COMPILER_ID STREQUAL "NVIDIA" 
-   OR CMAKE_Fortran_COMPILER_ID STREQUAL "NVHPC")
-    set (CMAKE_Fortran_FLAGS "-acc=gpu -Mlarge_arrays -gopt -gpu=cc70 -Minfo=accel,all,ccff")
-  endif ()
-
+if(ACC AND CMAKE_Fortran_COMPILER_ID MATCHES PGI|NVIDIA|NVHPC)
+  set(CMAKE_Fortran_FLAGS "-acc=gpu -Mlarge_arrays -gopt -gpu=cc70 -Minfo=accel,all,ccff")
 endif ()
 
 
