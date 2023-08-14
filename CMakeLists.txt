@@ -9,6 +9,12 @@
 
 cmake_minimum_required (VERSION 3.25)
 
+## find ecbuild
+find_package( ecbuild 3.8 QUIET HINTS ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../ecbuild )
+if( NOT ecbuild_FOUND )
+  include(cmake/field_api_fetchcontent_ecbuild.cmake)
+endif()
+
 project (field_api)
 enable_language (Fortran)
 set (LIBNAME field_api)
