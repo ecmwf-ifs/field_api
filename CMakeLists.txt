@@ -26,17 +26,9 @@ ecbuild_find_package(OpenMP COMPONENTS Fortran REQUIRED)
 ## find fypp
 find_program(FYPP fypp HINTS ${fypp_ROOT})
 if( NOT FYPP)
-include(FetchContent)
-
-FetchContent_Declare(
-   fypp
-   GIT_REPOSITORY https://github.com/aradi/fypp
-   GIT_TAG 3.1
-)
-FetchContent_MakeAvailable(fypp)
-
-set(FYPP ${fypp_SOURCE_DIR}/bin/fypp)
-ecbuild_info("fypp downloaded to: ${FYPP}")
+  include(cmake/field_api_fetchcontent_fypp.cmake)
+  set(FYPP ${fypp_SOURCE_DIR}/bin/fypp)
+  ecbuild_info("fypp downloaded to: ${FYPP}")
 endif()
 
 ## find OpenACC
