@@ -16,7 +16,7 @@ if( NOT ecbuild_FOUND )
 endif()
 
 ## define project and field_api target name
-project(field_api VERSION 1.0 LANGUAGES Fortran)
+project(field_api VERSION 0.2.0 LANGUAGES Fortran)
 set(LIBNAME field_api)
 set (CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/modules)
 
