@@ -36,18 +36,13 @@ if( NOT FYPP)
 endif()
 
 ## find OpenACC
-# Workaround for FindOpenACC not setting OpenACC_FOUND
 find_package(OpenACC COMPONENTS Fortran)
-if(OpenACC_Fortran_FOUND)
-  set(OpenACC_FOUND ON)
-endif()
 ecbuild_add_option( FEATURE ACC
     DESCRIPTION "OpenACC" DEFAULT ON
     CONDITION OpenACC_FOUND )
 
-if(ACC AND CMAKE_Fortran_COMPILER_ID MATCHES PGI|NVIDIA|NVHPC)
-  set(CMAKE_Fortran_FLAGS "-acc=gpu -Mlarge_arrays -gopt -gpu=cc70 -Minfo=accel,all,ccff")
-endif ()
+## set general compiler flags
+include(cmake/field_api_compile_options.cmake)
 
 ## find fiat
 ecbuild_add_option(
