@@ -2,49 +2,70 @@ name: FieldAPI_Tests
 
 on: [push, pull_request]
 
-env:
-  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
-  BUILD_TYPE: RelWithDebInfo
-
 jobs:
-  build:
+  CI:
+    name: CI
     # The CMake configure and build commands are platform agnostic and should work equally well on Windows or Mac.
     # You can convert this to a matrix build if you need cross-platform coverage.
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false # try to complete all jobs
+
+      matrix:
+        # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+        build_type: [RelWithDebInfo]
 
     steps:
     - uses: actions/checkout@v3
-    - uses: actions/setup-python@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
       with:
         python-version: '3.x' # Version range or exact version of a Python version to use, using SemVer's version range syntax
         architecture: 'x64' # optional x64 or x86. Defaults to x64 if not specified
-    - run: pip install fypp
 
-    - name: Install fiat
-      run: |
-       git clone https://github.com/ecmwf/ecbuild.git
-       export PATH=${{github.workspace}}/ecbuild/bin:$PATH
-       git clone https://github.com/ecmwf-ifs/fiat.git
-       cd fiat
-       mkdir build
-       cd build
-       cmake .. -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/fiat/install
-       make -j
-       make install
-       cp ${{github.workspace}}/fiat/install/module/parkind_dp/* ${{github.workspace}}/fiat/install/module/fiat/
+    - name: Install up-to-date CMake
+      run: pip install cmake
 
-    - name: Build field api
-      run: |
-       export fiat_DIR=${{github.workspace}}/fiat/install
-       mkdir build
-       cd build
-       cmake ..
-       make -j
+    - name: Clone ecbuild
+      uses: actions/checkout@v3
+      with:
+        repository: ecmwf/ecbuild
+        path: ecbuild
+        ref: develop
 
-    - name: Test
+    - name: Clone fiat
+      uses: actions/checkout@v3
+      with:
+        repository: ecmwf-ifs/fiat
+        path: fiat
+        ref: develop
+
+    - name: Build fiat
+      env:
+         ecbuild_ROOT: ${{github.workspace}}/ecbuild/bin
+      working-directory: ${{github.workspace}}/fiat
       run: |
-       cd build
-       export DEV_ALLOC_SIZE=1000000
-       ctest
-      
+        cmake -B ${{github.workspace}}/fiat/build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DENABLE_TESTS=OFF
+        cmake --build ${{github.workspace}}/fiat/build -- -j
+        
+    - name: Configure field_api
+      env:
+         ecbuild_ROOT: ${{github.workspace}}/ecbuild/bin
+         fiat_ROOT: ${{github.workspace}}/fiat/build
+      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
+      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DENABLE_ACC=OFF
+  
+    - name: Build field_api
+      # Build your program
+      run: cmake --build ${{github.workspace}}/build -- -j
+  
+    - name: Test field_api
+      env:
+         DEV_ALLOC_SIZE: 1000000
+      working-directory: ${{github.workspace}}/build
+      # Execute tests defined by the CMake configuration.  
+      run: ctest --output-on-failure
+    
