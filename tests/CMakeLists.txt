@@ -66,6 +66,7 @@ foreach(TEST_FILE ${TEST_FILES})
         LIBS
            ${LIBNAME}_dp
            parkind_dp
+           fiat
     )
 
     set_target_properties(${TEST_NAME}.x

@@ -136,6 +136,7 @@ if( HAVE_FIELD_API_TESTS )
       LIBS
          ${LIBNAME}_dp
          parkind_dp
+         fiat
   )
   include(CTest)
   add_subdirectory(tests)
