@@ -63,7 +63,7 @@ foreach(TEST_FILE ${TEST_FILES})
     ecbuild_add_test(
         TARGET ${TEST_NAME}.x
         SOURCES ${TEST_FILE}
-        PUBLIC_LIBS
+        LIBS
            ${LIBNAME}_dp
            parkind_dp
     )

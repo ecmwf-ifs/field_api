@@ -51,7 +51,7 @@ ecbuild_add_option(
     DESCRIPTION "Import oml_mod, parkind and abor1 from fiat"
     REQUIRED_PACKAGES "fiat"
 )
-if( NOT FIELD_API_FIAT_BUILD )
+if( NOT HAVE_FIELD_API_FIAT_BUILD )
   if(NOT FIELD_API_UTIL_MODULE_PATH)
     ecbuild_critical("If not building with fiat, then the path for utility modules must be specified")
   endif()
@@ -127,13 +127,13 @@ ecbuild_add_option(
     FEATURE FIELD_API_TESTS
     DEFAULT ON
     DESCRIPTION "Enable field_api testing"
-    CONDITION FIELD_API_FIAT_BUILD
+    CONDITION HAVE_FIELD_API_FIAT_BUILD
 )
-if( ${HAVE_FIELD_API_TESTS} )
+if( HAVE_FIELD_API_TESTS )
   ecbuild_add_executable(
       TARGET main.x
       SOURCES main.F90
-      PUBLIC_LIBS
+      LIBS
          ${LIBNAME}_dp
          parkind_dp
   )
