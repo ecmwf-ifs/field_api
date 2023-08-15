@@ -104,6 +104,7 @@ endforeach ()
 ## add field_api target
 foreach(prec dp sp)
   ecbuild_add_library(
+      TYPE STATIC
       TARGET ${LIBNAME}_${prec}
       SOURCES ${srcs}
       PRIVATE_LIBS
