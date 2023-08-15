@@ -85,12 +85,7 @@ else()
   list(APPEND srcs ${ABOR1_PATH} ${OML_PATH} ${PARKIND1_PATH})
 endif()
 
-set(prec dp)
-if(fiat_HAVE_SINGLE_PRECISION)
-  set(prec sp)
-endif ()
-
-set (SOURCES field_basic_module.F90 field_init_debug_value_module.F90 dev_alloc.c)
+list(APPEND srcs field_basic_module.F90 field_init_debug_value_module.F90 dev_alloc.c)
 
 foreach (SUFF IN ITEMS IM RM RB RD LM)
   string (TOLOWER ${SUFF} suff)
@@ -116,23 +111,27 @@ foreach (SRC IN ITEMS dev_alloc_module field_factory_module field_access_module
 endforeach ()
 
 ## add field_api target
-ecbuild_add_library(
-    TARGET ${LIBNAME}
-    SOURCES ${srcs}
-    PRIVATE_LIBS
-       $<${HAVE_FIELD_API_FIAT_BUILD}:fiat>
-       $<${HAVE_FIELD_API_FIAT_BUILD}:parkind_${prec}>
-    PUBLIC_LIBS
-       OpenMP::OpenMP_Fortran
-       $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
-    )
-set_property(TARGET ${LIBNAME} PROPERTY C_STANDARD 99)
-target_include_directories(${LIBNAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+foreach(prec dp sp)
+  ecbuild_add_library(
+      TARGET ${LIBNAME}_${prec}
+      SOURCES ${srcs}
+      PRIVATE_LIBS
+         $<${HAVE_FIELD_API_FIAT_BUILD}:fiat>
+         $<${HAVE_FIELD_API_FIAT_BUILD}:parkind_${prec}>
+      PUBLIC_LIBS
+         OpenMP::OpenMP_Fortran
+         $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
+      )
+  set_property(TARGET ${LIBNAME}_${prec} PROPERTY C_STANDARD 99)
+  target_include_directories(${LIBNAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+  
+  install(TARGETS ${LIBNAME}_${prec} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
+  install(DIRECTORY ${CMAKE_Fortran_MODULE_DIRECTORY} DESTINATION ${CMAKE_INSTALL_PREFIX})
+endforeach()
 
 add_executable (main.x main.F90)
 target_link_libraries (main.x PUBLIC ${LIBNAME} -L${fiat_BASE_DIR}/lib64 -L${fiat_BASE_DIR}/lib -lfiat -Wl,-rpath,${fiat_BASE_DIR}/lib64 -Wl,-rpath,${fiat_BASE_DIR}/lib)
 enable_testing ()
 add_subdirectory (tests)
 
-install(TARGETS ${LIBNAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
-install(DIRECTORY ${CMAKE_Fortran_MODULE_DIRECTORY} DESTINATION ${CMAKE_INSTALL_PREFIX})
+
