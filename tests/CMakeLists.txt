@@ -48,6 +48,7 @@ set(TEST_FILES
 	wrapper_modify_gpu.F90
 	)
 
+#Place-holder for failing tests
 set(FAILING_TEST_FILES
 	)
 
@@ -57,15 +58,19 @@ set(ABOR1_TEST_FILES
 	get_view_when_unallocated.F90
 	)
 
-set (CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/tests/modules)
-include_directories(${CMAKE_BINARY_DIR}/modules)
-set(LNK_FLAGS -L${fiat_BASE_DIR}/lib64 -L${fiat_BASE_DIR}/lib -lfiat -Wl,-rpath,${fiat_BASE_DIR}/lib64 -Wl,-rpath,${fiat_BASE_DIR}/lib)
-
 foreach(TEST_FILE ${TEST_FILES})
 	get_filename_component(TEST_NAME ${TEST_FILE} NAME_WE)
-	add_executable(${TEST_NAME}.x ${TEST_FILE})
-	target_link_libraries(${TEST_NAME}.x ${LIBNAME} ${LNK_FLAGS})
-	add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME}.x)
+    ecbuild_add_test(
+        TARGET ${TEST_NAME}.x
+        SOURCES ${TEST_FILE}
+        PUBLIC_LIBS
+           ${LIBNAME}_dp
+           parkind_dp
+    )
+
+    set_target_properties(${TEST_NAME}.x
+        PROPERTIES Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/module/tests
+    )
 endforeach()
 
 foreach(FAILING_TEST_FILE ${FAILING_TEST_FILES})

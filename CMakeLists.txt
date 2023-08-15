@@ -77,6 +77,7 @@ endif()
 
 list(APPEND srcs field_basic_module.F90 field_init_debug_value_module.F90 dev_alloc.c)
 
+## preprocess fypp files
 foreach (SUFF IN ITEMS IM RM RB RD LM)
   string (TOLOWER ${SUFF} suff)
   foreach (RANK RANGE 2 5)
@@ -121,9 +122,22 @@ foreach(prec dp sp)
   install(DIRECTORY ${CMAKE_BINARY_DIR}/module/${LIBNAME}_${prec} DESTINATION ${CMAKE_INSTALL_PREFIX})
 endforeach()
 
-add_executable (main.x main.F90)
-target_link_libraries (main.x PUBLIC ${LIBNAME} -L${fiat_BASE_DIR}/lib64 -L${fiat_BASE_DIR}/lib -lfiat -Wl,-rpath,${fiat_BASE_DIR}/lib64 -Wl,-rpath,${fiat_BASE_DIR}/lib)
-enable_testing ()
-add_subdirectory (tests)
-
+## build tests
+ecbuild_add_option(
+    FEATURE FIELD_API_TESTS
+    DEFAULT ON
+    DESCRIPTION "Enable field_api testing"
+    CONDITION FIELD_API_FIAT_BUILD
+)
+if( ${HAVE_FIELD_API_TESTS} )
+  ecbuild_add_executable(
+      TARGET main.x
+      SOURCES main.F90
+      PUBLIC_LIBS
+         ${LIBNAME}_dp
+         parkind_dp
+  )
+  include(CTest)
+  add_subdirectory(tests)
+endif()
 
