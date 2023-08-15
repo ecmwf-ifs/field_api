@@ -15,6 +15,11 @@ if( NOT ecbuild_FOUND )
   include(cmake/field_api_fetchcontent_ecbuild.cmake)
 endif()
 
+## find ecbuild toolchain
+if( DEFINED ENV{ECBUILD_TOOLCHAIN} AND NOT CMAKE_TOOLCHAIN_FILE)
+  set(CMAKE_TOOLCHAIN_FILE ${CMAKE_CURRENT_SOURCE_DIR}/$ENV{ECBUILD_TOOLCHAIN})
+endif()
+
 ## define project and field_api target name
 project(field_api VERSION 0.2.0 LANGUAGES Fortran)
 set(LIBNAME field_api)
