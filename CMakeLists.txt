@@ -50,10 +50,9 @@ ecbuild_add_option(
     FEATURE FIELD_API_FIAT_BUILD
     DEFAULT ON
     DESCRIPTION "Import oml_mod, parkind and abor1 from fiat"
+    REQUIRED_PACKAGES "fiat"
 )
-if( ${HAVE_FIELD_API_FIAT_BUILD} )
-  ecbuild_find_package(fiat REQUIRED) 
-else()
+if( NOT FIELD_API_FIAT_BUILD )
   if(NOT FIELD_API_UTIL_MODULE_PATH)
     ecbuild_critical("If not building with fiat, then the path for utility modules must be specified")
   endif()
