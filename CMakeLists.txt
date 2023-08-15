@@ -18,7 +18,6 @@ endif()
 ## define project and field_api target name
 project(field_api VERSION 0.2.0 LANGUAGES Fortran)
 set(LIBNAME field_api)
-set (CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/modules)
 
 ## find required packages
 ecbuild_find_package(OpenMP COMPONENTS Fortran REQUIRED)
@@ -114,10 +113,12 @@ foreach(prec dp sp)
          $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
       )
   set_property(TARGET ${LIBNAME}_${prec} PROPERTY C_STANDARD 99)
-  target_include_directories(${LIBNAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+  set_target_properties( ${LIBNAME}_${prec} PROPERTIES Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/module/${LIBNAME}_${prec} )
+  target_include_directories( ${LIBNAME}_${prec} INTERFACE $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/module/${LIBNAME}_${prec}> )
+  target_include_directories( ${LIBNAME}_${prec} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
   
   install(TARGETS ${LIBNAME}_${prec} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
-  install(DIRECTORY ${CMAKE_Fortran_MODULE_DIRECTORY} DESTINATION ${CMAKE_INSTALL_PREFIX})
+  install(DIRECTORY ${CMAKE_BINARY_DIR}/module/${LIBNAME}_${prec} DESTINATION ${CMAKE_INSTALL_PREFIX})
 endforeach()
 
 add_executable (main.x main.F90)
