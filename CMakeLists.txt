@@ -110,7 +110,6 @@ foreach(prec dp sp)
       PRIVATE_LIBS
          $<${HAVE_FIELD_API_FIAT_BUILD}:fiat>
          $<${HAVE_FIELD_API_FIAT_BUILD}:parkind_${prec}>
-      PUBLIC_LIBS
          OpenMP::OpenMP_Fortran
          $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
       )
@@ -138,6 +137,8 @@ if( HAVE_FIELD_API_TESTS )
          ${LIBNAME}_dp
          parkind_dp
          fiat
+         OpenMP::OpenMP_Fortran
+         $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
   )
   include(CTest)
   add_subdirectory(tests)

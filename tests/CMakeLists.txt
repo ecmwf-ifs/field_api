@@ -67,6 +67,8 @@ foreach(TEST_FILE ${TEST_FILES})
            ${LIBNAME}_dp
            parkind_dp
            fiat
+           OpenMP::OpenMP_Fortran
+           $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
     )
 
     set_target_properties(${TEST_NAME}.x
