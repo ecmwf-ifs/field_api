@@ -85,7 +85,7 @@ foreach(TEST_FILE ${TEST_FILES})
     )
 
     set_target_properties(${TEST_NAME}.x
-        PROPERTIES Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/module/tests
+        PROPERTIES Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/include/tests
     )
 endforeach()
 

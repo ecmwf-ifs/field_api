@@ -101,8 +101,8 @@ foreach (SRC IN ITEMS dev_alloc_module field_factory_module field_access_module
   list(APPEND srcs "${SRC}.F90")
 endforeach ()
 
-## add field_api target
 foreach(prec dp sp)
+  ## add field_api target
   ecbuild_add_library(
       TYPE STATIC
       TARGET ${LIBNAME}_${prec}
@@ -113,13 +113,18 @@ foreach(prec dp sp)
          OpenMP::OpenMP_Fortran
          $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
       )
-  set_property(TARGET ${LIBNAME}_${prec} PROPERTY C_STANDARD 99)
-  set_target_properties( ${LIBNAME}_${prec} PROPERTIES Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/module/${LIBNAME}_${prec} )
-  target_include_directories( ${LIBNAME}_${prec} INTERFACE $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/module/${LIBNAME}_${prec}> )
   target_include_directories( ${LIBNAME}_${prec} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+  set_property(TARGET ${LIBNAME}_${prec} PROPERTY C_STANDARD 99)
+  set_target_properties( ${LIBNAME}_${prec} PROPERTIES Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/include/${LIBNAME}_${prec} )
+
+  # export target usage interface
+  target_include_directories( ${LIBNAME}_${prec}
+                              INTERFACE $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include/${LIBNAME}_${prec}> 
+                              INTERFACE $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${LIBNAME}_${prec}> 
+                            )
   
-  install(TARGETS ${LIBNAME}_${prec} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
-  install(DIRECTORY ${CMAKE_BINARY_DIR}/module/${LIBNAME}_${prec} DESTINATION ${CMAKE_INSTALL_PREFIX})
+  # set install location for .mod files
+  install(DIRECTORY ${CMAKE_BINARY_DIR}/include/${LIBNAME}_${prec} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 endforeach()
 
 ## build tests
@@ -134,3 +139,5 @@ if( HAVE_FIELD_API_TESTS )
   add_subdirectory(tests)
 endif()
 
+## export the project
+ecbuild_install_project(NAME ${PROJECT_NAME})
