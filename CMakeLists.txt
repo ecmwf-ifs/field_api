@@ -130,16 +130,6 @@ ecbuild_add_option(
     CONDITION HAVE_FIELD_API_FIAT_BUILD
 )
 if( HAVE_FIELD_API_TESTS )
-  ecbuild_add_executable(
-      TARGET main.x
-      SOURCES main.F90
-      LIBS
-         ${LIBNAME}_dp
-         parkind_dp
-         fiat
-         OpenMP::OpenMP_Fortran
-         $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
-  )
   include(CTest)
   add_subdirectory(tests)
 endif()

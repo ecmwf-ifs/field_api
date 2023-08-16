@@ -7,7 +7,20 @@
 # granted to it by virtue of its status as an intergovernmental organisation
 # nor does it submit to any jurisdiction.
 
-set(TEST_FILES
+## Host-device ping-pong runner
+ecbuild_add_test(
+    TARGET main.x
+    SOURCES main.F90
+    LIBS
+       ${LIBNAME}_dp
+       parkind_dp
+       fiat
+       OpenMP::OpenMP_Fortran
+       $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
+)
+
+## Unit tests
+list(APPEND TEST_FILES
 	async_host.F90
 	cpu_to_gpu.F90
 	cpu_to_gpu_delayed_init_value.F90
