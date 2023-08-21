@@ -16,6 +16,8 @@ USE FIELD_ACCESS_MODULE
 
 IMPLICIT NONE
 
+PRIVATE
+
 #:for method in ['LOAD', 'SAVE', 'DIFF', 'COPY', 'WIPE', 'HOST']
 INTERFACE ${method}$
 #:for ft in fieldTypeList
@@ -27,7 +29,10 @@ INTERFACE ${method}$
 #:endfor
 END INTERFACE
 
+PUBLIC :: ${method}$
+
 #:endfor
+
 
 #include "abor1.intfb.h"
 
