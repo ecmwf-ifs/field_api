@@ -1,3 +1,4 @@
+#COPYRIGHT Météo-France 2023
 cmake_minimum_required (VERSION 3.15)
 
 project (field_api)
