@@ -19,6 +19,7 @@ set(TEST_FILES
 	gather_scatter.F90
 	get_stats.F90
 	get_view.F90
+	get_view_get_device_data.F90
 	init_owner.F90
 	init_owner2.F90
 	init_owner_delayed.F90
