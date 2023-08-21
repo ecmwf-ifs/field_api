@@ -146,11 +146,17 @@ CALL FIELD_DELETE(FO)
 !The data will be freed if MYTEST was true, otherwise there are no data to deallocate
 ```
 
-### Initialisation
+## Initialisation
 
 Either for owner and wrapper, delayed or not, you can ask the field to be
-initialised to a specific value with the optional INIT_VALUE argument of
+initialised to a specific value with the optional argument INIT_VALUE of
 field_new.
+
+```
+   CLASS(FIELD_2IM), POINTER :: O => NULL()
+   !This field owner will be initialised to 3
+   CALL FIELD_NEW(O, LBOUNDS=[1,1], UBOUNDS=[10,10], INIT_VALUE=3_JPIM)
+```
 
 It is also possible to activate a debug value to initialise all non-initialised
 owner. To do so it is necessary to import the module *field_init_debug_module*
