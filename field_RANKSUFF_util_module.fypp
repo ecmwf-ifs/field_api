@@ -8,8 +8,6 @@ USE FIELD_ACCESS_MODULE
 
 IMPLICIT NONE
 
-PRIVATE
-
 #:for method in ['LOAD', 'SAVE', 'DIFF', 'COPY', 'WIPE', 'HOST']
 INTERFACE ${method}$
 #:for ft in fieldTypeList
@@ -20,8 +18,6 @@ INTERFACE ${method}$
 #:endif
 #:endfor
 END INTERFACE
-
-PUBLIC :: ${method}$
 
 #:endfor
 
