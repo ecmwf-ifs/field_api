@@ -11,12 +11,18 @@ MODULE FIELD_UTIL_MODULE
 
 #:set fieldTypeList = fieldType.getFieldTypeList ()
 
+#ifdef __GFORTRAN__
 #:for ft in fieldTypeList
 USE ${ft.name}$_UTIL_MODULE, ONLY : HOST, LOAD, SAVE, WIPE, COPY, DIFF, &
                                   & HOST_${ft.name}$, LOAD_${ft.name}$, SAVE_${ft.name}$, WIPE_${ft.name}$, COPY_${ft.name}$, &
                                   & HOST_${ft.name}$_PTR, LOAD_${ft.name}$_PTR, SAVE_${ft.name}$_PTR, WIPE_${ft.name}$_PTR, COPY_${ft.name}$_PTR, &
                                   & HOST_${ft.name}$_VIEW, LOAD_${ft.name}$_VIEW, SAVE_${ft.name}$_VIEW, WIPE_${ft.name}$_VIEW, COPY_${ft.name}$_VIEW
 #:endfor
+#else
+#:for ft in fieldTypeList
+USE ${ft.name}$_UTIL_MODULE
+#:endfor
+#endif
 
 IMPLICIT NONE
 
