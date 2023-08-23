@@ -1,4 +1,4 @@
-#COPYRIGHT Météo-France 2023
+#COPYRIGHT Meteo-France 2023
 set(TEST_FILES
 	async_host.F90
 	cpu_to_gpu.F90

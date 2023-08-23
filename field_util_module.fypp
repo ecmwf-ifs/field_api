@@ -1,4 +1,4 @@
-!COPYRIGHT Météo-France 2023
+!COPYRIGHT Meteo-France 2023
 MODULE FIELD_UTIL_MODULE
 
 #:set fieldTypeList = fieldType.getFieldTypeList ()
