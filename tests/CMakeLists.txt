@@ -55,7 +55,7 @@ include_directories(${CMAKE_BINARY_DIR}/modules)
 foreach(TEST_FILE ${TEST_FILES})
 	get_filename_component(TEST_NAME ${TEST_FILE} NAME_WE)
 	add_executable(${TEST_NAME}.x ${TEST_FILE})
-	target_link_libraries(${TEST_NAME}.x ${LIBNAME})
+	target_link_libraries(${TEST_NAME}.x ${LIBNAME} -L${fiat_BASE_DIR}/lib64 -L${fiat_BASE_DIR}/lib -lfiat -Wl,-rpath,${fiat_BASE_DIR}/lib64 -Wl,-rpath,${fiat_BASE_DIR}/lib)
 	add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME}.x)
 endforeach()
 
