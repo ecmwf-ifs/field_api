@@ -103,3 +103,15 @@ foreach(ABOR1_TEST_FILE ${ABOR1_TEST_FILES})
 	target_link_libraries(${ABOR1_TEST_NAME}.x ${LIBNAME} ${LNK_FLAGS})
 	add_test(NAME ${ABOR1_TEST_NAME} COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/abor1catcher.sh ${ABOR1_TEST_NAME}.x)
 endforeach()
+
+## Mixed precision unit-test
+ecbuild_add_test(
+    TARGET  init_wrapper_mixed_precision.x
+    SOURCES init_wrapper_mixed_precision.F90
+    LIBS
+      ${LIBNAME}_sp
+      fiat
+      parkind_sp
+      OpenMP::OpenMP_Fortran
+)
+
