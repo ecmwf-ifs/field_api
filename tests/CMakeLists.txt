@@ -35,7 +35,6 @@ set(TEST_FILES
 	init_owner_openmp.F90
 	init_wrapper.F90
 	init_wrapper_gpu.F90
-	init_wrapper_init_value.F90
 	init_wrapper_lbounds.F90
 	init_wrapper_non_contiguous.F90
 	no_transfer_get_device.F90
