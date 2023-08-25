@@ -37,6 +37,10 @@ set(TEST_FILES
 	wrapper_modify_gpu.F90
 	)
 
+set(FAILING_TEST_FILES
+	get_device_data_get_view.F90
+	)
+
 set (CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/tests/modules)
 include_directories(${CMAKE_BINARY_DIR}/modules)
 
@@ -45,4 +49,12 @@ foreach(TEST_FILE ${TEST_FILES})
 	add_executable(${TEST_NAME}.x ${TEST_FILE})
 	target_link_libraries(${TEST_NAME}.x ${LIBNAME})
 	add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME}.x)
+endforeach()
+
+foreach(FAILING_TEST_FILE ${FAILING_TEST_FILES})
+	get_filename_component(FAILING_TEST_NAME ${FAILING_TEST_FILE} NAME_WE)
+	add_executable(${FAILING_TEST_NAME}.x ${FAILING_TEST_FILE})
+	target_link_libraries(${FAILING_TEST_NAME}.x ${LIBNAME})
+	add_test(NAME ${FAILING_TEST_NAME} COMMAND ${FAILING_TEST_NAME}.x)
+	set_property(TEST ${FAILING_TEST_NAME} PROPERTY WILL_FAIL TRUE)
 endforeach()
