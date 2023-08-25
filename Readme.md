@@ -146,11 +146,10 @@ CALL FIELD_DELETE(FO)
 !The data will be freed if MYTEST was true, otherwise there are no data to deallocate
 ```
 
-## Initialisation
+### Initialisation
 
-Either for owner and wrapper, delayed or not, you can ask the field to be
-initialised to a specific value with the optional argument INIT_VALUE of
-field_new.
+In the case of field owner it is possible to initiliase it with a specific
+value at creation time by adding the INIT\_VALUE optional argument.
 
 ```
    CLASS(FIELD_2IM), POINTER :: O => NULL()
