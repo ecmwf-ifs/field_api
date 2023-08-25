@@ -46,31 +46,26 @@ ecbuild_add_option( FEATURE ACC
 include(cmake/field_api_compile_options.cmake)
 
 ## find fiat
-ecbuild_add_option(
-    FEATURE FIELD_API_FIAT_BUILD
-    DEFAULT ON
-    DESCRIPTION "Import oml_mod, parkind and abor1 from fiat"
-    REQUIRED_PACKAGES "fiat"
-)
-if( NOT HAVE_FIELD_API_FIAT_BUILD )
-  if(NOT FIELD_API_UTIL_MODULE_PATH)
+ecbuild_find_package(NAME fiat)
+if( NOT fiat_FOUND )
+  if(NOT UTIL_MODULE_PATH)
     ecbuild_critical("If not building with fiat, then the path for utility modules must be specified")
   endif()
 
-  ecbuild_info( "Checking for FIAT components in ${FIELD_API_UTIL_MODULE_PATH}" )
+  ecbuild_info( "Checking for FIAT components in ${UTIL_MODULE_PATH}" )
 
   find_file( ABOR1_PATH abor1.F90 REQUIRED
-      HINTS ${FIELD_API_UTIL_MODULE_PATH} ${FIELD_API_UTIL_MODULE_PATH}/src/fiat/util
+      HINTS ${UTIL_MODULE_PATH} ${UTIL_MODULE_PATH}/src/fiat/util
   )
   ecbuild_info( "Found ABOR1: ${ABOR1_PATH}" )
 
   find_file( OML_PATH oml_mod.F90 REQUIRED
-      HINTS ${FIELD_API_UTIL_MODULE_PATH} ${FIELD_API_UTIL_MODULE_PATH}/src/fiat/oml
+      HINTS ${UTIL_MODULE_PATH} ${UTIL_MODULE_PATH}/src/fiat/oml
   )
   ecbuild_info( "Found OML: ${OML_PATH}" )
 
   find_file( PARKIND1_PATH parkind1.F90 REQUIRED
-      HINTS ${FIELD_API_UTIL_MODULE_PATH} ${FIELD_API_UTIL_MODULE_PATH}/src/parkind
+      HINTS ${UTIL_MODULE_PATH} ${UTIL_MODULE_PATH}/src/parkind
   )
   ecbuild_info( "Found PARKIND1: ${PARKIND1_PATH}" )
   list(APPEND srcs ${ABOR1_PATH} ${OML_PATH} ${PARKIND1_PATH})
@@ -109,8 +104,8 @@ foreach(prec dp sp)
       TARGET ${LIBNAME}_${prec}
       SOURCES ${srcs}
       PRIVATE_LIBS
-         $<${HAVE_FIELD_API_FIAT_BUILD}:fiat>
-         $<${HAVE_FIELD_API_FIAT_BUILD}:parkind_${prec}>
+         $<${fiat_FOUND}:fiat>
+         $<${fiat_FOUND}:parkind_${prec}>
          OpenMP::OpenMP_Fortran
          $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
       )
@@ -130,12 +125,12 @@ endforeach()
 
 ## build tests
 ecbuild_add_option(
-    FEATURE FIELD_API_TESTS
+    FEATURE TESTS
     DEFAULT ON
     DESCRIPTION "Enable field_api testing"
-    CONDITION HAVE_FIELD_API_FIAT_BUILD
+    CONDITION fiat_FOUND
 )
-if( HAVE_FIELD_API_TESTS )
+if( HAVE_TESTS )
   include(CTest)
   add_subdirectory(tests)
 endif()

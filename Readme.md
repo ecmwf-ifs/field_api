@@ -19,6 +19,8 @@ Building FIELD_API requires:
 - [fypp](https://github.com/aradi/fypp) (cloned if not found)
 - [fiat](https://github.com/ecmwf-ifs/fiat/) (optional)
 
+To build FIELD_API without fiat, the path to the directory containing the utility modules `oml_mod.F90`, `abor1.F90` and `parkind1.F90` must be specified using the CMake variable `UTIL_MODULE_PATH`.
+
 ## Build and test
 ```
 mkdir build
@@ -40,8 +42,7 @@ Features of FIELD_API can be toggled by passing the following argument to the CM
 
 | Feature | Default | Description |
 |:--- |:--- |:--- |
-| FIELD_API_TESTS | ON | Build the testing suite. |
-| FIELD_API_FIAT_BUILD | ON | Import Fortran utility modules (oml_mod, parkind1 and abor1) from fiat. If this option is disabled, then the path to the directory containing `oml_mod.F90`, `abor1.F90` and `parkind1.F90` must be specified using the CMake variable `FIELD_API_UTIL_MODULE_PATH`. |
+| TESTS | ON | Build the testing suite. |
 | ACC | ON | Enable the use of OpenACC for GPU offload. |
 
 ## Supported compilers
