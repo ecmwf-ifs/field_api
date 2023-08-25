@@ -32,6 +32,7 @@ find_program(FYPP fypp HINTS ${fypp_ROOT})
 if( NOT FYPP)
   include(cmake/field_api_fetchcontent_fypp.cmake)
   set(FYPP ${fypp_SOURCE_DIR}/bin/fypp)
+  set(fypp_ROOT ${fypp_SOURCE_DIR}/bin PARENT_SCOPE)
   ecbuild_info("fypp downloaded to: ${FYPP}")
 endif()
 
