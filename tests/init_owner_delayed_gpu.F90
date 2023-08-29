@@ -24,7 +24,7 @@ PROGRAM INIT_OWNER_DELAYED_GPU
         ENDIF
         !$ACC END SERIAL
 
-        IF(OKAY==.FALSE.)THEN
+        IF(OKAY .EQV. .FALSE.)THEN
                 ERROR STOP
         ENDIF
         CALL FIELD_DELETE(O)

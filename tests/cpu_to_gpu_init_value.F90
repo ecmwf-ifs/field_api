@@ -46,7 +46,7 @@ PROGRAM CPU_TO_GPU_INIT_VALUE
         ENDDO
         ENDDO
         !$ACC END PARALLEL
-        IF(OKAY==.FALSE.)THEN
+        IF(OKAY .EQV. .FALSE.)THEN
                 ERROR STOP
         ENDIF
 
