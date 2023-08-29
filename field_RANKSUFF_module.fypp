@@ -73,7 +73,7 @@ PUBLIC :: ${ftn}$_WRAPPER
 
 TYPE, EXTENDS(${ftn}$) :: ${ftn}$_OWNER
   INTEGER(KIND=JPIM) :: LBOUNDS(${ft.rank}$), UBOUNDS(${ft.rank}$)
-  LOGICAL :: HAS_INIT_VALUE
+  LOGICAL :: HAS_INIT_VALUE = .FALSE.
   ${ft.type}$ :: INIT_VALUE
 CONTAINS
   PROCEDURE :: INIT => ${ftn}$_OWNER_INIT
