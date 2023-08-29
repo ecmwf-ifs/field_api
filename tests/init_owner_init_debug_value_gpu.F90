@@ -23,7 +23,7 @@ PROGRAM INIT_OWNER_INIT_DEBUG_VALUE_GPU
         ENDIF
         !$ACC END SERIAL
 
-        IF(OKAY==.FALSE.)THEN
+        IF(OKAY .EQV. .FALSE.)THEN
                 ERROR STOP
         ENDIF
 

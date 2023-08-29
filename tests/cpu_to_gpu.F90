@@ -31,7 +31,7 @@ PROGRAM CPU_TO_GPU
         ENDDO
         ENDDO
         !$ACC END PARALLEL
-        IF(OKAY==.FALSE.)THEN
+        IF(OKAY .EQV. .FALSE.)THEN
                 ERROR STOP
         ENDIF
         CALL FIELD_DELETE(O)

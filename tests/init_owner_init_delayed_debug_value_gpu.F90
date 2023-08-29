@@ -28,7 +28,7 @@ PROGRAM INIT_OWNER_INIT_DELAYED_DEBUG_VALUE_GPU
         END DO
         !$ACC END PARALLEL
 
-        IF(OKAY==.FALSE.)THEN
+        IF(OKAY .EQV. .FALSE.)THEN
                 ERROR STOP
         ENDIF
 

@@ -35,7 +35,7 @@ PROGRAM GET_VIEW_GET_DEVICE_DATA
         ENDIF
         !$ACC END SERIAL
 
-        IF(OKAY==.FALSE.)THEN
+        IF(OKAY .EQV. .FALSE.)THEN
                 ERROR STOP
         ENDIF
 
