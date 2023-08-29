@@ -226,6 +226,13 @@ write(*,*)"Total/Avg Time spend on transfer CPU->GPU", NUM_CPU_GPU_TR, "/" AVG,
 ...
 ```
 
+## Note on GET\_VIEW
+
+GET\_VIEW must only be called in sections of code running on the host. The
+field's data must be present on the host. It will not work if the data are on
+the device or if the field has not been allocated yet (when using the DELAY
+option).
+
 # Public API
 
 For field api type:
