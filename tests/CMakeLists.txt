@@ -20,6 +20,8 @@ set(TEST_FILES
 	get_stats.F90
 	get_view.F90
 	get_view_get_device_data.F90
+	get_view_when_nhstfresh.F90
+	get_view_when_uninitialized.F90
 	init_owner.F90
 	init_owner2.F90
 	init_owner_delayed.F90
@@ -46,7 +48,8 @@ set(TEST_FILES
 	)
 
 set(FAILING_TEST_FILES
-	get_device_data_get_view.F90
+	get_view_when_ndevfresh.F90
+	get_view_when_unallocated.F90
 	)
 
 set (CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/tests/modules)
