@@ -1,3 +1,4 @@
+!COPYRIGHT Meteo-France 2023
 MODULE FIELD_${RANK}$${SUFF}$_ACCESS_MODULE
 
 #:set fieldTypeList = fieldType.getFieldTypeList (ranks=[RANK], kinds=['JP' + SUFF])

@@ -146,6 +146,30 @@ CALL FIELD_DELETE(FO)
 !The data will be freed if MYTEST was true, otherwise there are no data to deallocate
 ```
 
+### Initialisation
+
+In the case of field owner it is possible to initiliase it with a specific
+value at creation time by adding the INIT\_VALUE optional argument.
+
+```
+   CLASS(FIELD_2IM), POINTER :: O => NULL()
+   !This field owner will be initialised to 3
+   CALL FIELD_NEW(O, LBOUNDS=[1,1], UBOUNDS=[10,10], INIT_VALUE=3_JPIM)
+```
+
+It is also possible to activate a debug value to initialise all non-initialised
+owner. To do so it is necessary to import the module *field_init_debug_module*
+and set *use_init_debug_value* to true. Then one can *set
+init_debug_value_jpim* to a custom value.
+
+```
+   USE FIELD_INIT_DEBUG_VALUE_MODULE
+   USE_INIT_DEBUG_VALUE = .TRUE.
+   INIT_DEBUG_VALUE_JPIM = -7
+   !This field owner will be initialised to -7
+   CALL FIELD_NEW(O, LBOUNDS=[1,1], UBOUNDS=[10,10])
+```
+
 ## Asynchronism
 
 This functionnality is still being tested.
@@ -201,6 +225,13 @@ write(*,*)"Num transfer CPU->GPU", NUM_CPU_GPU_TR
 write(*,*)"Total/Avg Time spend on transfer CPU->GPU", NUM_CPU_GPU_TR, "/" AVG, 
 ...
 ```
+
+## Note on GET\_VIEW
+
+GET\_VIEW must only be called in sections of code running on the host. The
+field's data must be present on the host. It will not work if the data are on
+the device or if the field has not been allocated yet (when using the DELAY
+option).
 
 # Public API
 
