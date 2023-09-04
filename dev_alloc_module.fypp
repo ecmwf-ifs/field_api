@@ -11,13 +11,11 @@ MODULE DEV_ALLOC_MODULE
 
 #:set fieldTypeList = list (filter (lambda ft: not ft.alias, fieldType.getFieldTypeList ([1,2,3,4,5])))
 
-#define USE_DEV_MALLOC
-
 ${fieldType.useParkind1 ()}$
 
-#ifdef USE_DEV_MALLOC
+#:if defined('USE_DEV_MALLOC')
 USE ISO_C_BINDING
-#endif
+#:endif
 
 IMPLICIT NONE
 
@@ -27,11 +25,13 @@ INTERFACE DEV_ALLOCATE_HST
 #:endfor
 END INTERFACE
 
+#:if defined('USE_DEV_MALLOC')
 INTERFACE DEV_ALLOCATE_DIM
 #:for ft in fieldTypeList
   MODULE PROCEDURE ${ft.name}$_DEV_ALLOCATE_DIM
 #:endfor
 END INTERFACE
+#:endif
 
 INTERFACE DEV_DEALLOCATE
 #:for ft in fieldTypeList
@@ -39,7 +39,7 @@ INTERFACE DEV_DEALLOCATE
 #:endfor
 END INTERFACE
 
-#ifdef USE_DEV_MALLOC
+#:if defined('USE_DEV_MALLOC')
 INTERFACE
   SUBROUTINE DEV_MALLOC (SIZ, PTR) BIND (C, NAME='dev_malloc')
     IMPORT :: C_PTR, C_SIZE_T
@@ -51,14 +51,14 @@ INTERFACE
     TYPE (C_PTR), VALUE, INTENT(IN) :: PTR
   END SUBROUTINE
 END INTERFACE
-#endif
+#:endif
 
 CONTAINS
 
 
 #:for ft in fieldTypeList
 
-#ifndef USE_DEV_MALLOC
+#:if not defined('USE_DEV_MALLOC')
 
 SUBROUTINE ${ft.name}$_DEV_ALLOCATE_HST (DEV, HST)
 
@@ -76,38 +76,19 @@ ALLOCATE (DEV, MOLD=HST)
 
 END SUBROUTINE ${ft.name}$_DEV_ALLOCATE_HST
 
-SUBROUTINE ${ft.name}$_DEV_ALLOCATE_DIM (DEV, UBOUNDS, LBOUNDS)
-
-${ft.type}$, POINTER :: DEV(${ft.shape}$)
-INTEGER (KIND=JPIM), INTENT (IN) :: UBOUNDS (${ft.rank}$)
-INTEGER (KIND=JPIM), INTENT (IN), OPTIONAL :: LBOUNDS (${ft.rank}$)
-INTEGER (KIND=JPIM) :: ILBOUNDS (${ft.rank}$)
-
-ILBOUNDS = 1
-IF (PRESENT (LBOUNDS)) ILBOUNDS = LBOUNDS
-
-ALLOCATE (DEV (${ ', '.join (map (lambda i: 'ILBOUNDS (' + str (i) + '):UBOUNDS (' + str (i) + ')', range (1, ft.rank+1))) }$))
-
-!$acc enter data create (DEV)
-
-END SUBROUTINE ${ft.name}$_DEV_ALLOCATE_DIM
-
 SUBROUTINE ${ft.name}$_DEV_DEALLOCATE (DEV)
 
 ${ft.type}$, POINTER :: DEV(${ft.shape}$)
-TYPE (C_PTR) :: PTR
 
 IF (ASSOCIATED (DEV)) THEN
   !$acc exit data delete (DEV)
   DEALLOCATE (DEV)
-  PTR = C_LOC (DEV (${ ', '.join (map (lambda i: 'LBOUND (DEV, ' + str (i) + ')', range (1, ft.rank+1))) }$))
-  CALL DEV_FREE (PTR)
   NULLIFY (DEV)
 ENDIF
 
 END SUBROUTINE ${ft.name}$_DEV_DEALLOCATE
 
-#else
+#:else
 
 SUBROUTINE ${ft.name}$_DEV_ALLOCATE_HST (DEV, HST)
 
@@ -165,7 +146,7 @@ ENDIF
 
 END SUBROUTINE ${ft.name}$_DEV_DEALLOCATE
 
-#endif
+#:endif
 
 #:endfor
 

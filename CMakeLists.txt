@@ -92,6 +92,12 @@ endif()
 
 list(APPEND srcs field_basic_module.F90 field_init_debug_value_module.F90 dev_alloc.c)
 
+## device allocation options
+ecbuild_add_option( FEATURE BUDDY_MALLOC
+    DESCRIPTION "Use buddy allocator for shadow host allocation"
+    DEFAULT ON
+)
+
 ## preprocess fypp files
 foreach (SUFF IN ITEMS IM RM RB RD LM)
   string (TOLOWER ${SUFF} suff)
@@ -107,10 +113,16 @@ foreach (SUFF IN ITEMS IM RM RB RD LM)
   endforeach ()
 endforeach ()
 
+## preprocess dev_alloc_module
+set(dev_malloc_defines "")
+if(HAVE_BUDDY_MALLOC)
+  set(dev_malloc_defines "-DUSE_DEV_MALLOC")
+endif()
+
 foreach (SRC IN ITEMS dev_alloc_module field_factory_module field_access_module 
          field_array_module field_module field_gathscat_module field_util_module field_array_util_module)
   add_custom_command (OUTPUT ${SRC}.F90
-	  COMMAND ${FYPP} -n -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/${SRC}.fypp > ${SRC}.F90
+	  COMMAND ${FYPP} -n -m os ${dev_malloc_defines} -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/${SRC}.fypp > ${SRC}.F90
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${SRC}.fypp
     VERBATIM)
   list(APPEND srcs "${SRC}.F90")
