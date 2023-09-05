@@ -40,7 +40,11 @@ PROGRAM TEST_CRC64
 
         D => GET_DEVICE_DATA_RDWR (W)
 
+#ifdef _CUDA
+!$acc kernels deviceptr (D)
+#else
 !$acc kernels present (D)
+#endif
 
         D = 2.78
 

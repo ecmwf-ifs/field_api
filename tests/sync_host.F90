@@ -22,7 +22,11 @@ PROGRAM SYNC_HOST
         D=3
         CALL FIELD_NEW(W, DATA=D)
         CALL W%GET_DEVICE_DATA_RDWR(D_GPU)
-!$ACC KERNELS PRESENT(D_GPU)        
+#ifdef _CUDA
+!$ACC KERNELS DEVICEPTR(D_GPU)
+#else
+!$ACC KERNELS PRESENT(D_GPU)
+#endif
         DO I=1,10
         DO J=1,10
         D_GPU(I,J) = 7

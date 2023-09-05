@@ -21,7 +21,11 @@ PROGRAM SYNC_HOST
         D=3
         CALL FIELD_NEW(W, DATA=D)
         CALL W%SYNC_DEVICE_RDWR()
+#ifdef _CUDA
+        !$ACC KERNELS COPYIN(W) DEVICEPTR(W%DEVPTR)
+#else
         !$ACC KERNELS COPYIN(W) PRESENT(W%DEVPTR)
+#endif
         DO I=1,10
         DO J=1,10
         W%DEVPTR(I,J) = 7

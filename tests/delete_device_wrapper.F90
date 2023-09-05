@@ -24,13 +24,21 @@ PROGRAM FINAL_WRAPPER_GPU
         CALL FIELD_NEW(W, DATA=D)
         CALL W%GET_DEVICE_DATA_RDONLY(D_GPU)
 
+#ifdef _CUDA
+        IF (.NOT. ALLOCATED(W%DEVPTR)) THEN
+#else
         IF (.NOT. ASSOCIATED(W%DEVPTR)) THEN
+#endif
                 ERROR STOP
         END IF
 
         CALL W%DELETE_DEVICE()
 
+#ifdef _CUDA
+        IF (ALLOCATED(W%DEVPTR)) THEN
+#else
         IF (ASSOCIATED(W%DEVPTR)) THEN
+#endif
                 ERROR STOP
         END IF
         CALL FIELD_DELETE(W)

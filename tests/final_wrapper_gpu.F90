@@ -24,7 +24,11 @@ PROGRAM FINAL_WRAPPER_GPU
         CALL FIELD_NEW(W, DATA=D)
         CALL W%GET_DEVICE_DATA_RDWR(D_GPU)
 
-        !$ACC SERIAL PRESENT(D_GPU)
+#ifdef _CUDA
+        !$ACC SERIAL DEVICEPTR (D_GPU)
+#else
+        !$ACC SERIAL PRESENT (D_GPU)
+#endif
         DO I=1,10
         DO J=1,10
         D_GPU(J,I)=I*J

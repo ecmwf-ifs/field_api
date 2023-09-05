@@ -29,7 +29,11 @@ PROGRAM GET_VIEW_GET_DEVICE_DATA
 
         CALL O%GET_DEVICE_DATA_RDWR(PTR)
         OKAY=.TRUE.
+#ifdef _CUDA
+        !$ACC SERIAL DEVICEPTR(PTR) COPY(OKAY)
+#else
         !$ACC SERIAL PRESENT(PTR) COPY(OKAY)
+#endif
         IF(.NOT. ALL(PTR == 7))THEN
                 OKAY=.FALSE.
         ENDIF

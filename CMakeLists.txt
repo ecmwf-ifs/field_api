@@ -92,11 +92,27 @@ endif()
 
 list(APPEND srcs field_basic_module.F90 field_init_debug_value_module.F90 dev_alloc.c)
 
-## device allocation options
+## check for CUDA
+include(CheckLanguage)
+check_language(CUDA)
+ecbuild_add_option( FEATURE CUDA
+    DESCRIPTION "CUDA" DEFAULT OFF
+    CONDITION CMAKE_CUDA_COMPILER AND HAVE_ACC )
+
+## buddy allocator option
 ecbuild_add_option( FEATURE BUDDY_MALLOC
     DESCRIPTION "Use buddy allocator for shadow host allocation"
     DEFAULT ON
+    CONDITION NOT HAVE_CUDA
 )
+
+## fypp preprocessor flags
+set(fypp_defines "")
+if(HAVE_BUDDY_MALLOC)
+  set(fypp_defines "-DUSE_BUDDY_MALLOC")
+elseif(HAVE_CUDA)
+  set(fypp_defines "-DCUDA")
+endif()
 
 ## preprocess fypp files
 foreach (SUFF IN ITEMS IM RM RB RD LM)
@@ -104,29 +120,25 @@ foreach (SUFF IN ITEMS IM RM RB RD LM)
   foreach (RANK RANGE 2 5)
     foreach (FUNC IN ITEMS "" _gathscat _access _util _array_util)
       add_custom_command (OUTPUT field_${RANK}${suff}${FUNC}_module.F90
-	      COMMAND ${FYPP} -n -DRANK=${RANK} -DSUFF='${SUFF}' -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType 
+	      COMMAND ${FYPP} -n -DRANK=${RANK} -DSUFF='${SUFF}' ${fypp_defines} -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType 
         ${CMAKE_CURRENT_SOURCE_DIR}/field_RANKSUFF${FUNC}_module.fypp > field_${RANK}${suff}${FUNC}_module.F90
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/field_RANKSUFF${FUNC}_module.fypp
         VERBATIM)
       list(APPEND srcs "field_${RANK}${suff}${FUNC}_module.F90")
+      set_source_files_properties( "field_${RANK}${suff}${FUNC}_module.F90" PROPERTIES COMPILE_OPTIONS $<${HAVE_CUDA}:-cuda>)
     endforeach ()
   endforeach ()
 endforeach ()
 
-## preprocess dev_alloc_module
-set(dev_malloc_defines "")
-if(HAVE_BUDDY_MALLOC)
-  set(dev_malloc_defines "-DUSE_DEV_MALLOC")
-endif()
-
 foreach (SRC IN ITEMS dev_alloc_module field_factory_module field_access_module 
          field_array_module field_module field_gathscat_module field_util_module field_array_util_module)
   add_custom_command (OUTPUT ${SRC}.F90
-	  COMMAND ${FYPP} -n -m os ${dev_malloc_defines} -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/${SRC}.fypp > ${SRC}.F90
+	  COMMAND ${FYPP} -n -m os ${fypp_defines} -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/${SRC}.fypp > ${SRC}.F90
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${SRC}.fypp
     VERBATIM)
   list(APPEND srcs "${SRC}.F90")
 endforeach ()
+set_source_files_properties("dev_alloc_module.F90" PROPERTIES COMPILE_OPTIONS $<${HAVE_CUDA}:-cuda>)
 
 foreach(prec ${precisions})
   ## add field_api target
@@ -145,6 +157,7 @@ foreach(prec ${precisions})
   target_include_directories( ${LIBNAME}_${prec} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
   set_property(TARGET ${LIBNAME}_${prec} PROPERTY C_STANDARD 99)
   set_target_properties( ${LIBNAME}_${prec} PROPERTIES Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/include/${LIBNAME}_${prec} )
+  target_link_options( ${LIBNAME}_${prec} PRIVATE $<${HAVE_CUDA}:-cuda> )
 
   # export target usage interface
   target_include_directories( ${LIBNAME}_${prec}

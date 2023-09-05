@@ -20,6 +20,8 @@ ecbuild_add_test(
        OpenMP::OpenMP_Fortran
     LINKER_LANGUAGE Fortran
 )
+target_link_options( main.x PRIVATE $<${HAVE_CUDA}:-cuda> )
+target_compile_definitions( main.x PRIVATE $<${HAVE_CUDA}:_CUDA> )
 
 ## Unit tests
 list(APPEND TEST_FILES
@@ -93,6 +95,9 @@ foreach(TEST_FILE ${TEST_FILES})
     set_target_properties(${TEST_NAME}.x
         PROPERTIES Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/include/tests
     )
+
+    target_link_options( ${TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:-cuda> )
+    target_compile_definitions( ${TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:_CUDA> )
 endforeach()
 
 foreach(FAILING_TEST_FILE ${FAILING_TEST_FILES})
@@ -102,6 +107,8 @@ foreach(FAILING_TEST_FILE ${FAILING_TEST_FILES})
 	set_target_properties(${FAILING_TEST_NAME}.x PROPERTIES LINKER_LANGUAGE Fortran)
 	add_test(NAME ${FAILING_TEST_NAME} COMMAND ${FAILING_TEST_NAME}.x)
 	set_property(TEST ${FAILING_TEST_NAME} PROPERTY WILL_FAIL TRUE)
+    target_link_options( ${FAILING_TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:-cuda;-gpu=pinned> )
+    target_compile_definitions( ${FAILING_TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:_CUDA> )
 endforeach()
 
 foreach(ABOR1_TEST_FILE ${ABOR1_TEST_FILES})
@@ -110,6 +117,8 @@ foreach(ABOR1_TEST_FILE ${ABOR1_TEST_FILES})
 	target_link_libraries(${ABOR1_TEST_NAME}.x ${LIBNAME_PREC} parkind_${DEFAULT_PRECISION} fiat OpenMP::OpenMP_Fortran)
 	set_target_properties(${ABOR1_TEST_NAME}.x PROPERTIES LINKER_LANGUAGE Fortran)
 	add_test(NAME ${ABOR1_TEST_NAME} COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/abor1catcher.sh ${ABOR1_TEST_NAME}.x)
+    target_link_options( ${ABOR1_TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:-cuda;-gpu=pinned> )
+    target_compile_definitions( ${ABOR1_TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:_CUDA> )
 endforeach()
 
 ## Mixed precision unit-test
@@ -124,6 +133,7 @@ ecbuild_add_test(
     LINKER_LANGUAGE Fortran
     CONDITION ${HAVE_SINGLE_PRECISION}
 )
+target_link_options( init_wrapper_mixed_precision.x PRIVATE $<${HAVE_CUDA}:-cuda> )
 
 ## Test presence of GPUs
 add_executable(check_gpu_num.x check_gpu_num.F90)

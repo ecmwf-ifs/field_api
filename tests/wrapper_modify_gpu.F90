@@ -25,7 +25,11 @@ PROGRAM WRAPPER_MODIFY_GPU
         CALL FIELD_NEW(W, DATA=D)
         CALL W%GET_DEVICE_DATA_RDWR(D_GPU)
 
+#ifdef _CUDA 
+        !$ACC SERIAL DEVICEPTR(D_GPU) COPY(RES)
+#else
         !$ACC SERIAL PRESENT(D_GPU) COPY(RES)
+#endif
         RES=.TRUE.
         DO I=1,10
         DO J=1,10

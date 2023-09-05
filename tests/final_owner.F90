@@ -25,7 +25,11 @@ PROGRAM FINAL_OWNER
         IF (ASSOCIATED(O%PTR)) THEN
                 ERROR STOP
         END IF
+#ifdef _CUDA
+        IF (ALLOCATED(O%DEVPTR)) THEN
+#else
         IF (ASSOCIATED(O%DEVPTR)) THEN
+#endif
                 ERROR STOP
         END IF
         CALL FIELD_DELETE(O)

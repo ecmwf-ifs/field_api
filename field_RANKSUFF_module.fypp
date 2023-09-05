@@ -11,11 +11,23 @@ MODULE FIELD_${RANK}$${SUFF}$_MODULE
 
 #:set fieldTypeList = fieldType.getFieldTypeList (ranks=[RANK], kinds=['JP' + str (SUFF)])
 
-USE OML_MOD, ONLY: OML_MAX_THREADS , OML_MY_THREAD
+#:mute
+#:set check_devptr_status = 'ASSOCIATED'
+#:if defined('CUDA')
+#:set check_devptr_status = 'ALLOCATED'
+#:endif
+#:endmute
+USE OML_MOD, ONLY: OML_MAX_THREADS , OML_MY_THREAD 
 USE IEEE_ARITHMETIC, ONLY: IEEE_SIGNALING_NAN
 USE DEV_ALLOC_MODULE
 USE FIELD_BASIC_MODULE
 USE FIELD_INIT_DEBUG_VALUE_MODULE
+#:if defined('CUDA')
+USE CUDAFOR
+#:endif
+#ifdef _OPENACC
+USE OPENACC
+#endif
 ${fieldType.useParkind1 ()}$
 
 IMPLICIT NONE
@@ -35,7 +47,11 @@ INTEGER (KIND=JPIM), PARAMETER :: NWR = INT(B'00000010', KIND=JPIM)
 #:set ftn = ft.name
 TYPE, ABSTRACT, EXTENDS (FIELD_BASIC) :: ${ftn}$
   ${ft.type}$, POINTER :: PTR(${ft.shape}$) => NULL()
+#:if defined('CUDA')
+  ${ft.type}$, DEVICE, ALLOCATABLE :: DEVPTR(${ft.shape}$)
+#:else
   ${ft.type}$, POINTER, CONTIGUOUS :: DEVPTR(${ft.shape}$) => NULL()
+#:endif
 CONTAINS
 
   PROCEDURE :: FINAL => ${ftn}$_FINAL
@@ -247,7 +263,7 @@ CONTAINS
     ! Delete the copy of this field on GPU device
     CLASS(${ftn}$) :: SELF
 
-    IF (ASSOCIATED (SELF%DEVPTR)) THEN
+    IF (${check_devptr_status}$ (SELF%DEVPTR)) THEN
       CALL DEV_DEALLOCATE (SELF%DEVPTR)
     ENDIF
   END SUBROUTINE ${ftn}$_DELETE_DEVICE
@@ -289,7 +305,7 @@ CONTAINS
   IF (.NOT. SELF%LOBJECT_COPIED) THEN
     SELF%LOBJECT_COPIED = .TRUE.
 #ifdef _OPENACC
-    IF (ASSOCIATED (SELF%DEVPTR)) THEN
+    IF (${check_devptr_status}$ (SELF%DEVPTR)) THEN
       !$acc enter data attach (SELF%DEVPTR)
     ENDIF
 #endif
@@ -310,7 +326,7 @@ CONTAINS
   IF (SELF%LOBJECT_COPIED) THEN
     SELF%LOBJECT_COPIED = .FALSE.
 #ifdef _OPENACC
-    IF (ASSOCIATED (SELF%DEVPTR)) THEN
+    IF (${check_devptr_status}$ (SELF%DEVPTR)) THEN
       !$acc exit data detach (SELF%DEVPTR)
     ENDIF
 #endif
@@ -318,10 +334,15 @@ CONTAINS
 
   END SUBROUTINE ${ftn}$_WIPE_OBJECT
 
-  SUBROUTINE ${ftn}$_COPY_DATA (SELF, KDIR, QUEUE)
+  SUBROUTINE ${ftn}$_COPY_DATA (SELF, DEVPTR, KDIR, QUEUE)
   CLASS(${ftn}$) :: SELF
   INTEGER (KIND=JPIM),           INTENT(IN) :: KDIR
   INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN) :: QUEUE
+#:if defined('CUDA')
+    ${ft.type}$, DEVICE, INTENT(INOUT) :: DEVPTR(${ft.shape}$)
+#:else
+    ${ft.type}$, POINTER, CONTIGUOUS, INTENT(INOUT) :: DEVPTR(${ft.shape}$)
+#:endif
   REAL :: START, FINISH
 
   SELF%LAST_CONTIGUOUS_DIMENSION = ${ftn}$_GET_LAST_CONTIGUOUS_DIMENSION (SELF%PTR)
@@ -330,7 +351,7 @@ CONTAINS
   SELECT CASE (SELF%LAST_CONTIGUOUS_DIMENSION)
 #:for d in range (ft.rank + 1)
     CASE (${d}$)
-      CALL COPY_DIM${d}$_CONTIGUOUS (SELF%PTR, SELF%DEVPTR, KDIR, QUEUE)
+      CALL COPY_DIM${d}$_CONTIGUOUS (SELF%PTR, DEVPTR, KDIR, QUEUE)
 #:endfor
   END SELECT
   CALL CPU_TIME(FINISH)
@@ -344,10 +365,12 @@ CONTAINS
 
 #:for d in range (0, ft.rank+1)
     SUBROUTINE COPY_DIM${d}$_CONTIGUOUS (HST, DEV, KDIR, QUEUE)
-#ifdef _OPENACC
-    USE OPENACC
-#endif
-    ${ft.type}$, POINTER :: HST (${ft.shape}$), DEV (${ft.shape}$)
+    ${ft.type}$, POINTER :: HST (${ft.shape}$)
+#:if defined('CUDA')
+    ${ft.type}$, DEVICE :: DEV (${ft.shape}$)
+#:else
+    ${ft.type}$, POINTER :: DEV (${ft.shape}$)
+#:endif
     INTEGER (KIND=JPIM),           INTENT (IN) :: KDIR
     INTEGER (KIND=JPIM), OPTIONAL, INTENT (IN) :: QUEUE
     INTEGER (KIND=JPIM) :: ISIZE
@@ -365,25 +388,33 @@ CONTAINS
     #:endif
     ${indent}$  IF (KDIR == NH2D) THEN
 #ifdef _OPENACC
+#:if not defined('CUDA')
     ${indent}$    !$acc host_data use_device (DEV)
+#:endif    
     ${indent}$    IF(PRESENT(QUEUE))THEN
     ${indent}$      CALL ACC_MEMCPY_TO_DEVICE_ASYNC (DEV (${ar}$), HST (${ar}$), ISIZE, QUEUE)
     ${indent}$    ELSE
     ${indent}$      CALL ACC_MEMCPY_TO_DEVICE (DEV (${ar}$), HST (${ar}$), ISIZE)
     ${indent}$    ENDIF
+#:if not defined('CUDA')
     ${indent}$    !$acc end host_data
+#:endif    
 #else
     ${indent}$    DEV (${ar}$) = HST (${ar}$)
 #endif
     ${indent}$  ELSEIF (KDIR == ND2H) THEN
 #ifdef _OPENACC
+#:if not defined('CUDA')
     ${indent}$    !$acc host_data use_device (DEV)
+#:endif
     ${indent}$    IF(PRESENT(QUEUE))THEN
     ${indent}$      CALL ACC_MEMCPY_FROM_DEVICE_ASYNC (HST (${ar}$), DEV (${ar}$), ISIZE, QUEUE)
     ${indent}$    ELSE
     ${indent}$      CALL ACC_MEMCPY_FROM_DEVICE (HST (${ar}$), DEV (${ar}$), ISIZE)
     ${indent}$    ENDIF
+#:if not defined('CUDA')
     ${indent}$    !$acc end host_data
+#:endif
 #else
     ${indent}$    HST (${ar}$) = DEV (${ar}$)
 #endif
@@ -409,7 +440,7 @@ CONTAINS
 
     LBOUNDS=LBOUND(SELF%PTR)
     IF (IAND (SELF%ISTATUS, NHSTFRESH) == 0) THEN
-      CALL SELF%COPY_DATA (ND2H, QUEUE)
+      CALL SELF%COPY_DATA (SELF%DEVPTR, ND2H, QUEUE)
       SELF%ISTATUS = IOR (SELF%ISTATUS, NHSTFRESH)
     ENDIF
     PTR (${ft.lbptr}$) => SELF%PTR (${','.join(':' for _ in range(ft.rank))}$)
@@ -472,15 +503,25 @@ CONTAINS
 
   END SUBROUTINE ${ftn}$_SYNC_HOST_RDWR
 
-  SUBROUTINE ${ftn}$_CREATE_DEVICE_DATA (SELF)
+  SUBROUTINE ${ftn}$_CREATE_DEVICE_DATA (SELF, DEVPTR)
     CLASS(${ftn}$), INTENT (INOUT) :: SELF
-    CALL DEV_ALLOCATE_HST (DEV=SELF%DEVPTR, HST=SELF%PTR)
+#:if defined('CUDA')
+    ${ft.type}$, DEVICE, ALLOCATABLE, INTENT(INOUT) :: DEVPTR(${ft.shape}$)
+#:else
+    ${ft.type}$, POINTER, CONTIGUOUS, INTENT(INOUT) :: DEVPTR(${ft.shape}$)
+#:endif
+    CALL DEV_ALLOCATE_HST (DEV=DEVPTR, HST=SELF%PTR)
   END SUBROUTINE
 
-  SUBROUTINE ${ftn}$_GET_DEVICE_DATA (SELF, MODE, PTR, QUEUE)
+  SUBROUTINE ${ftn}$_GET_DEVICE_DATA (SELF, MODE, PTR, DEVPTR, QUEUE)
     CLASS(${ftn}$),                INTENT(INOUT) :: SELF
     INTEGER (KIND=JPIM),           INTENT(IN)    :: MODE
     ${ft.type}$, POINTER,          INTENT(INOUT) :: PTR(${ft.shape}$)
+#:if defined('CUDA')
+    ${ft.type}$, DEVICE, ALLOCATABLE, TARGET, INTENT(INOUT) :: DEVPTR(${ft.shape}$)
+#:else
+    ${ft.type}$, POINTER, CONTIGUOUS, INTENT(INOUT) :: DEVPTR(${ft.shape}$)
+#:endif
     INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
     INTEGER(KIND=JPIM)                           :: LBOUNDS(${ft.rank}$)
 
@@ -489,10 +530,10 @@ CONTAINS
       CALL SELF%CREATE_DEVICE_DATA
     ENDIF
     IF (IAND (SELF%ISTATUS, NDEVFRESH) == 0) THEN
-      CALL SELF%COPY_DATA (NH2D, QUEUE)
+      CALL SELF%COPY_DATA (DEVPTR, NH2D, QUEUE)
       SELF%ISTATUS = IOR (SELF%ISTATUS, NDEVFRESH)
     ENDIF
-    PTR (${ft.lbptr}$) => SELF%DEVPTR (${','.join(':' for _ in range(ft.rank))}$)
+    PTR (${ft.lbptr}$) => DEVPTR (${','.join(':' for _ in range(ft.rank))}$)
     IF (IAND (MODE, NWR) /= 0) THEN
       SELF%ISTATUS = IAND (SELF%ISTATUS, NOT (NHSTFRESH))
     ENDIF
@@ -510,7 +551,7 @@ CONTAINS
       IF (SELF%HAS_INIT_VALUE) THEN
         CALL SELF%CREATE_DEVICE_DATA
         SELF%PTR=SELF%INIT_VALUE
-	SELF%ISTATUS=NHSTFRESH
+        SELF%ISTATUS=NHSTFRESH
       ENDIF
     ENDIF
     CALL SELF%${ftn}$_GET_DEVICE_DATA(MODE, PTR, QUEUE)
@@ -522,7 +563,7 @@ CONTAINS
     ${ft.type}$, POINTER,         INTENT(INOUT) :: PPTR(${ft.shape}$)
     INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
 
-    CALL SELF%GET_DEVICE_DATA (NRD, PPTR, QUEUE)
+    CALL SELF%GET_DEVICE_DATA (NRD, PPTR, SELF%DEVPTR, QUEUE)
 
   END SUBROUTINE ${ftn}$_GET_DEVICE_DATA_RDONLY
 
@@ -540,7 +581,7 @@ CONTAINS
     ${ft.type}$, POINTER,         INTENT(INOUT) :: PPTR(${ft.shape}$)
     INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
 
-    CALL SELF%GET_DEVICE_DATA (IOR (NRD, NWR), PPTR, QUEUE)
+    CALL SELF%GET_DEVICE_DATA (IOR (NRD, NWR), PPTR, SELF%DEVPTR, QUEUE)
 
   END SUBROUTINE ${ftn}$_GET_DEVICE_DATA_RDWR
 
