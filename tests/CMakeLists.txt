@@ -20,7 +20,7 @@ ecbuild_add_test(
        OpenMP::OpenMP_Fortran
     LINKER_LANGUAGE Fortran
 )
-target_link_options( main.x PRIVATE $<${HAVE_CUDA}:-cuda> )
+target_link_options( main.x PRIVATE $<${HAVE_CUDA}:-cuda;-gpu=pinned> )
 target_compile_definitions( main.x PRIVATE $<${HAVE_CUDA}:_CUDA> )
 
 ## Unit tests
@@ -96,7 +96,7 @@ foreach(TEST_FILE ${TEST_FILES})
         PROPERTIES Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/include/tests
     )
 
-    target_link_options( ${TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:-cuda> )
+    target_link_options( ${TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:-cuda;-gpu=pinned> )
     target_compile_definitions( ${TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:_CUDA> )
 endforeach()
 
@@ -133,6 +133,7 @@ ecbuild_add_test(
     LINKER_LANGUAGE Fortran
     CONDITION ${HAVE_SINGLE_PRECISION}
 )
+# don't need gpu=pinned link flag because this test only has wrapper fields
 target_link_options( init_wrapper_mixed_precision.x PRIVATE $<${HAVE_CUDA}:-cuda> )
 
 ## Test presence of GPUs
@@ -145,5 +146,11 @@ if(HAVE_ACC)
 else()
    add_test(NAME confirm_gpu_does_not_exist COMMAND check_gpu_num.x)
    set_property(TEST confirm_gpu_does_not_exist PROPERTY WILL_FAIL TRUE)
+endif()
+
+## host pinning test
+if( HAVE_CUDA )
+   add_test(NAME cuda_host_pinning_test COMMAND ${CMAKE_COMMAND} -P "${CMAKE_CURRENT_SOURCE_DIR}/test_host_pinning.cmake"
+            WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests )
 endif()
 

@@ -113,6 +113,9 @@ TYPE, EXTENDS(${ftn}$) :: ${ftn}$_OWNER
   INTEGER(KIND=JPIM) :: LBOUNDS(${ft.rank}$), UBOUNDS(${ft.rank}$)
   LOGICAL :: HAS_INIT_VALUE = .FALSE.
   ${ft.type}$ :: INIT_VALUE
+#:if defined('CUDA')
+  ${ft.type}$, PINNED, ALLOCATABLE, PRIVATE :: DATA(${ft.shape}$)
+#:endif
 CONTAINS
   PROCEDURE :: INIT => ${ftn}$_OWNER_INIT
   PROCEDURE :: FINAL => ${ftn}$_OWNER_FINAL
@@ -214,19 +217,40 @@ CONTAINS
       SELF%INIT_VALUE=INIT_DEBUG_VALUE_${ft.kind}$
     ENDIF
     IF(.NOT. IS_DELAYED) THEN
+    #:if defined('CUDA')
+      CALL SELF%ALLOCATE(SELF%DATA)
+    #:else
       CALL SELF%ALLOCATE()
+    #:endif
       IF (SELF%HAS_INIT_VALUE) THEN
         SELF%PTR=SELF%INIT_VALUE
-	SELF%ISTATUS=NHSTFRESH
+        SELF%ISTATUS=NHSTFRESH
       ENDIF
     ENDIF
   END SUBROUTINE ${ftn}$_OWNER_INIT
 
+#:if defined('CUDA')
+  SUBROUTINE ${ftn}$_ALLOCATE (SELF, DATA)
+#:else
   SUBROUTINE ${ftn}$_ALLOCATE (SELF)
+#:endif
     ! Create FIELD object by explicitly allocating new data
     CLASS(${ftn}$_OWNER) :: SELF
+#:if defined('CUDA')
+    ${ft.type}$, PINNED, ALLOCATABLE, TARGET :: DATA(${ft.shape}$)
+    INTEGER :: ISTAT
+    LOGICAL :: PLOG
+
+    ALLOCATE(DATA(${', '.join(map(lambda r: 'SELF%LBOUNDS('+str(r+1)+'):SELF%UBOUNDS('+str(r+1)+')', range(0, ft.rank)))}$), STAT=ISTAT, PINNED=PLOG)
+    SELF%PTR(${', '.join(map(lambda r: 'SELF%LBOUNDS('+str(r+1)+'):', range(0, ft.rank)))}$) => DATA
+
+    IF(.NOT. PLOG)THEN
+       PRINT *, "Failed to allocate page-locked memory for ${ftn}$_OWNER"
+    ENDIF
+#:else
 
     ALLOCATE(SELF%PTR(${', '.join(map(lambda r: 'SELF%LBOUNDS('+str(r+1)+'):SELF%UBOUNDS('+str(r+1)+')', range(0, ft.rank)))}$))
+#:endif
     SELF%ISTATUS = UNINITIALIZED
   END SUBROUTINE ${ftn}$_ALLOCATE
 
@@ -287,7 +311,12 @@ CONTAINS
     ! Finalizes field and deallocates owned data
     CLASS(${ftn}$_OWNER) :: SELF
     IF (ASSOCIATED(SELF%PTR)) THEN
+    #:if defined('CUDA')
+      DEALLOCATE(SELF%DATA)
+      NULLIFY(SELF%PTR)
+    #:else
       DEALLOCATE(SELF%PTR)
+    #:endif
     END IF
     CALL SELF%${ftn}$_FINAL
   END SUBROUTINE ${ftn}$_OWNER_FINAL
@@ -390,7 +419,7 @@ CONTAINS
 #ifdef _OPENACC
 #:if not defined('CUDA')
     ${indent}$    !$acc host_data use_device (DEV)
-#:endif    
+#:endif
     ${indent}$    IF(PRESENT(QUEUE))THEN
     ${indent}$      CALL ACC_MEMCPY_TO_DEVICE_ASYNC (DEV (${ar}$), HST (${ar}$), ISIZE, QUEUE)
     ${indent}$    ELSE
@@ -398,7 +427,7 @@ CONTAINS
     ${indent}$    ENDIF
 #:if not defined('CUDA')
     ${indent}$    !$acc end host_data
-#:endif    
+#:endif
 #else
     ${indent}$    DEV (${ar}$) = HST (${ar}$)
 #endif
@@ -457,10 +486,14 @@ CONTAINS
     INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
 
     IF(SELF%ISTATUS==UNALLOCATED)THEN
+    #:if defined('CUDA')
+      CALL SELF%ALLOCATE(SELF%DATA)
+    #:else
       CALL SELF%ALLOCATE()
+    #:endif
       IF (SELF%HAS_INIT_VALUE) THEN
         SELF%PTR=SELF%INIT_VALUE
-	SELF%ISTATUS=NHSTFRESH
+        SELF%ISTATUS=NHSTFRESH
       ENDIF
     ENDIF
     CALL SELF%${ftn}$_GET_HOST_DATA(MODE, PTR, QUEUE)
@@ -547,7 +580,11 @@ CONTAINS
     INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
 
     IF(SELF%ISTATUS==UNALLOCATED)THEN
+    #:if defined('CUDA')
+      CALL SELF%ALLOCATE(SELF%DATA)
+    #:else
       CALL SELF%ALLOCATE()
+    #:endif
       IF (SELF%HAS_INIT_VALUE) THEN
         CALL SELF%CREATE_DEVICE_DATA
         SELF%PTR=SELF%INIT_VALUE

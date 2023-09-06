@@ -20,6 +20,10 @@ PROGRAM INIT_OWNER
         CLASS(FIELD_2RB), POINTER :: O => NULL()
         REAL(KIND=JPRB), POINTER :: PTR(:,:)
 
+#ifdef _CUDA
+        PRINT *, "Initialize stdout for CUDA host pinning test"
+#endif
+
         CALL FIELD_NEW(O, LBOUNDS=[10,1], UBOUNDS=[21,11])
         CALL O%GET_HOST_DATA_RDWR(PTR)
         PTR=42

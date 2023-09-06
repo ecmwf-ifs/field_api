@@ -47,7 +47,7 @@ Features of FIELD_API can be toggled by passing the following argument to the CM
 | ACC | ON | Enable the use of OpenACC for GPU offload. |
 | SINGLE_PRECISION | ON | Enable the compilation of field_api in single precision |
 | DOUBLE_PRECISION | ON | Enable the compilation of field_api in double precision |
-| CUDA | OFF | Enable the use of CUDA for GPU offload. Disables the use of the buddy memory allocator and removes the shadow host allocation for `FIELD%DEVPTR`.|
+| CUDA | OFF | Enable the use of CUDA for GPU offload. Disables the use of the buddy memory allocator, removes the shadow host allocation for `FIELD%DEVPTR` and allocates owned fields (see below) in pinned (page-locked) host memory.|
 
 ## Supported compilers
 The library has been tested with the nvhpc toolkit from Nvidia, version 23.9
