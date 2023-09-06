@@ -103,6 +103,7 @@ foreach(prec dp sp)
       TYPE STATIC
       TARGET ${LIBNAME}_${prec}
       SOURCES ${srcs}
+      DEFINITIONS $<$<NOT:${fiat_FOUND}>:${FIELD_API_DEFINITIONS}>
       PRIVATE_LIBS
          $<${fiat_FOUND}:fiat>
          $<${fiat_FOUND}:parkind_${prec}>
