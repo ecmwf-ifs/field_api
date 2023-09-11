@@ -7,7 +7,7 @@
 # granted to it by virtue of its status as an intergovernmental organisation
 # nor does it submit to any jurisdiction.
 
-cmake_minimum_required (VERSION 3.25)
+cmake_minimum_required (VERSION 3.24)
 
 ## find ecbuild
 find_package( ecbuild 3.7 QUIET HINTS ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../ecbuild )
@@ -37,7 +37,11 @@ if( NOT FYPP)
 endif()
 
 ## find OpenACC
+### Workaround for CMake bug (fixed in CMake 3.25)
 find_package(OpenACC COMPONENTS Fortran)
+if( OpenACC_Fortran_FOUND )
+   set( OpenACC_FOUND ON )
+endif()
 ecbuild_add_option( FEATURE ACC
     DESCRIPTION "OpenACC" DEFAULT ON
     CONDITION OpenACC_FOUND )
