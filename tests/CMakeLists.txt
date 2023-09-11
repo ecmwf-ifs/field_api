@@ -35,6 +35,7 @@ list(APPEND TEST_FILES
 	get_dims.F90
 	get_stats.F90
 	get_view.F90
+	get_view_field_buffer.F90
 	get_view_get_device_data.F90
 	get_view_when_nhstfresh.F90
 	get_view_when_uninitialized.F90
@@ -44,6 +45,9 @@ list(APPEND TEST_FILES
 	init_owner_delayed_gpu.F90
 	init_owner_delayed_init_debug_value.F90
 	init_owner_delayed_init_value.F90
+	init_owner_field_buffer_gpu.F90
+    init_final_owner_field_buffer.F90
+    init_final_wrapper_field_buffer.F90
 	init_owner_gpu.F90
 	init_owner_init_debug_value.F90
 	init_owner_init_debug_value_gpu.F90
