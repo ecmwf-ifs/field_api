@@ -26,11 +26,8 @@ PROGRAM FINAL_WRAPPER
         IF (ASSOCIATED(W%PTR)) THEN
                 ERROR STOP
         END IF
-#ifdef _CUDA
-        IF (ALLOCATED(W%DEVPTR)) THEN
-#else
+
         IF (ASSOCIATED(W%DEVPTR)) THEN
-#endif
                 ERROR STOP
         END IF
 
