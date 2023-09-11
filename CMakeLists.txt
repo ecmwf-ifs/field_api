@@ -108,11 +108,12 @@ foreach(prec dp sp)
       TARGET ${LIBNAME}_${prec}
       SOURCES ${srcs}
       DEFINITIONS $<$<NOT:${fiat_FOUND}>:${FIELD_API_DEFINITIONS}>
+      PUBLIC_LIBS
+         $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
       PRIVATE_LIBS
          $<${fiat_FOUND}:fiat>
          $<${fiat_FOUND}:parkind_${prec}>
          OpenMP::OpenMP_Fortran
-         $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
       )
   target_include_directories( ${LIBNAME}_${prec} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
   set_property(TARGET ${LIBNAME}_${prec} PROPERTY C_STANDARD 99)
