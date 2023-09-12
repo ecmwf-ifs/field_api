@@ -1,0 +1,12 @@
+!COPYRIGHT Meteo-France 2023
+MODULE FIELD_ARRAY_UTIL_MODULE
+
+#:set fieldTypeList = fieldType.getFieldTypeList ()
+
+#:for ft in fieldTypeList
+USE ${ft.name}$_ARRAY_UTIL_MODULE
+#:endfor
+
+IMPLICIT NONE
+
+END MODULE
