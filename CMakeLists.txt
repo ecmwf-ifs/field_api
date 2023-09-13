@@ -96,13 +96,15 @@ list(APPEND srcs field_basic_module.F90 field_init_debug_value_module.F90 dev_al
 foreach (SUFF IN ITEMS IM RM RB RD LM)
   string (TOLOWER ${SUFF} suff)
   foreach (RANK RANGE 2 5)
-    foreach (FUNC IN ITEMS "" _gathscat _access _util _array_util)
-      add_custom_command (OUTPUT field_${RANK}${suff}${FUNC}_module.F90
-	      COMMAND ${FYPP} -n -DRANK=${RANK} -DSUFF='${SUFF}' -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType 
-        ${CMAKE_CURRENT_SOURCE_DIR}/field_RANKSUFF${FUNC}_module.fypp > field_${RANK}${suff}${FUNC}_module.F90
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/field_RANKSUFF${FUNC}_module.fypp
-        VERBATIM)
-      list(APPEND srcs "field_${RANK}${suff}${FUNC}_module.F90")
+    foreach (FUNC IN ITEMS "" _gathscat _access _util _array_util _buffer)
+      if( NOT ((${FUNC} STREQUAL "_buffer") AND (${RANK} EQUAL 2)) )
+         add_custom_command (OUTPUT field_${RANK}${suff}${FUNC}_module.F90
+   	      COMMAND ${FYPP} -n -DRANK=${RANK} -DSUFF='${SUFF}' -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType 
+           ${CMAKE_CURRENT_SOURCE_DIR}/field_RANKSUFF${FUNC}_module.fypp > field_${RANK}${suff}${FUNC}_module.F90
+           DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/field_RANKSUFF${FUNC}_module.fypp
+           VERBATIM)
+         list(APPEND srcs "field_${RANK}${suff}${FUNC}_module.F90")
+      endif()
     endforeach ()
   endforeach ()
 endforeach ()
