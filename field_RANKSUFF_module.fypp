@@ -17,6 +17,7 @@ USE DEV_ALLOC_MODULE
 USE FIELD_BASIC_MODULE
 USE FIELD_INIT_DEBUG_VALUE_MODULE
 ${fieldType.useParkind1 ()}$
+USE ISO_FORTRAN_ENV, ONLY: INT64
 
 IMPLICIT NONE
 
@@ -350,7 +351,7 @@ CONTAINS
     ${ft.type}$, POINTER :: HST (${ft.shape}$), DEV (${ft.shape}$)
     INTEGER (KIND=JPIM),           INTENT (IN) :: KDIR
     INTEGER (KIND=JPIM), OPTIONAL, INTENT (IN) :: QUEUE
-    INTEGER (KIND=JPIM) :: ISIZE
+    INTEGER (KIND=INT64) :: ISIZE
     INTEGER :: ${', '.join (['J'] + list (map (lambda i: 'J' + str (i+1), range (d, ft.rank))))}$
 
   #:for e in range (ft.rank, d, -1)
@@ -361,7 +362,7 @@ CONTAINS
     #:if d == 0
     ${indent}$  ISIZE = KIND (HST)
     #:else
-    ${indent}$  ISIZE = KIND (HST) * SIZE (HST (${ar}$))
+    ${indent}$  ISIZE = SIZEOF(HST (${ar}$))
     #:endif
     ${indent}$  IF (KDIR == NH2D) THEN
 #ifdef _OPENACC
