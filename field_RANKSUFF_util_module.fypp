@@ -16,11 +16,11 @@ USE FIELD_ACCESS_MODULE
 
 IMPLICIT NONE
 
-#:for method in ['LOAD', 'SAVE', 'DIFF', 'COPY', 'WIPE', 'HOST']
+#:for method in ['LOAD', 'SAVE', 'DIFF', 'COPY', 'WIPE', 'HOST', 'CRC64']
 INTERFACE ${method}$
 #:for ft in fieldTypeList
   MODULE PROCEDURE ${method}$_${ft.name}$
-#:if method not in ['DIFF']
+#:if method not in ['DIFF', 'CRC64']
   MODULE PROCEDURE ${method}$_${ft.name}$_PTR
   MODULE PROCEDURE ${method}$_${ft.name}$_VIEW
 #:endif
@@ -29,10 +29,30 @@ END INTERFACE
 
 #:endfor
 
-
 CONTAINS
 
 #:for ft in fieldTypeList
+INTEGER*8 FUNCTION CRC64_${ft.name}$ (YD)
+CLASS (${ft.name}$), POINTER :: YD
+
+INTEGER*8 :: ICRC, ILEN
+${ft.type}$, POINTER :: PTR(${ft.shape}$)
+EXTERNAL :: CRC64
+
+ICRC = 0
+
+IF (ASSOCIATED (YD)) THEN
+
+  PTR => GET_HOST_DATA_RDONLY (YD)
+  ILEN = SIZE (PTR)
+  CALL CRC64 (PTR, ILEN, ICRC)
+
+ENDIF
+
+CRC64_${ft.name}$ = ICRC
+
+END FUNCTION
+
 SUBROUTINE LOAD_${ft.name}$ (KLUN, YD)
 INTEGER (KIND=JPIM), INTENT (IN) :: KLUN
 CLASS (${ft.name}$), POINTER :: YD

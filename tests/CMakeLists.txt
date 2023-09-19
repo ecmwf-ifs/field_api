@@ -8,6 +8,7 @@
 # nor does it submit to any jurisdiction.
 
 set(TEST_FILES
+        test_crc64.F90
 	async_host.F90
 	cpu_to_gpu.F90
 	cpu_to_gpu_delayed_init_value.F90
