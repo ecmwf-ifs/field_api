@@ -206,7 +206,7 @@ CONTAINS
     END IF
 
 ! Mark data dirty on the device: the pointer returned by GET_VIEW may be rw
-    IF (IAND (SELF%ISTATUS, NDEVFRESH)) THEN
+    IF (IAND (SELF%ISTATUS, NDEVFRESH)==NDEVFRESH) THEN
       SELF%ISTATUS = IAND(SELF%ISTATUS, NOT(NDEVFRESH))
     ENDIF
   END FUNCTION ${ftn}$_GET_VIEW
