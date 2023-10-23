@@ -268,5 +268,9 @@ REAL :: TOTAL_TIME_TRANSFER_CPU_TO_GPU
 REAL :: TOTAL_TIME_TRANSFER_GPU_TO_CPU
 ```
 
+# License
 
+The field API library is licenced under the Apache licence, version 2.0.
+
+[buddy_alloc](https://github.com/spaskalev/buddy_alloc) is property of Stanislav Paskalev and licensed under the BSD Zero Clause License
 
