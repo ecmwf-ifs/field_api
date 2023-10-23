@@ -19,13 +19,14 @@ codebase. To compile it you need:
 ```
 mkdir build
 cd build
-cmake ..
+cmake .. -Dfiat_HAVE_DOUBLE_PRECISION=1 -DUSE_OPENACC=1
 make
 ctest #Optional, will run the tests
 ```
 
-The library has been tested with the nvhpc toolkit from Nvidia, version 23.3
-and is continually tested with newer releases.
+The library has been tested with the nvhpc toolkit from Nvidia, version 23.9
+and is continually tested with newer releases. It has also been tested on CPU
+(-DUSE_OPENACC=0) with GCC 12 and Intel 2018.
 
 # Field API types
 
@@ -268,5 +269,9 @@ REAL :: TOTAL_TIME_TRANSFER_CPU_TO_GPU
 REAL :: TOTAL_TIME_TRANSFER_GPU_TO_CPU
 ```
 
+# License
 
+The field API library is licenced under the Apache licence, version 2.0.
+
+[buddy_alloc](https://github.com/spaskalev/buddy_alloc) is property of Stanislav Paskalev and licensed under the BSD Zero Clause License
 
