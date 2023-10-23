@@ -25,7 +25,7 @@ if (USE_OPENACC)
   if (CMAKE_Fortran_COMPILER_ID STREQUAL "PGI" 
    OR CMAKE_Fortran_COMPILER_ID STREQUAL "NVIDIA" 
    OR CMAKE_Fortran_COMPILER_ID STREQUAL "NVHPC")
-    set (CMAKE_Fortran_FLAGS "-acc=gpu -Mlarge_arrays -gopt -gpu=cc70 -Minfo=accel,all,intensity,ccff")
+    set (CMAKE_Fortran_FLAGS "-acc=gpu -Mlarge_arrays -gopt -gpu=cc70 -Minfo=accel,all,ccff")
   endif ()
 
 endif ()
