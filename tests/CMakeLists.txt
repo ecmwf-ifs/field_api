@@ -16,6 +16,7 @@ ecbuild_add_test(
        parkind_dp
        fiat
        OpenMP::OpenMP_Fortran
+    LINKER_LANGUAGE Fortran
 )
 
 ## Unit tests
@@ -80,6 +81,7 @@ foreach(TEST_FILE ${TEST_FILES})
            parkind_dp
            fiat
            OpenMP::OpenMP_Fortran
+        LINKER_LANGUAGE Fortran
     )
 
     set_target_properties(${TEST_NAME}.x
@@ -111,5 +113,6 @@ ecbuild_add_test(
       fiat
       parkind_sp
       OpenMP::OpenMP_Fortran
+    LINKER_LANGUAGE Fortran
 )
 
