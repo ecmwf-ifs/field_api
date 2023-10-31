@@ -64,6 +64,7 @@ list(APPEND TEST_FILES
 	sync_host.F90
 	test_crc64.F90
 	wrapper_modify_gpu.F90
+	field_openmp_firstprivate.F90
 	)
 
 #Place-holder for failing tests
