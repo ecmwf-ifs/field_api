@@ -25,7 +25,7 @@ if (USE_OPENACC)
   if (CMAKE_Fortran_COMPILER_ID STREQUAL "PGI" 
    OR CMAKE_Fortran_COMPILER_ID STREQUAL "NVIDIA" 
    OR CMAKE_Fortran_COMPILER_ID STREQUAL "NVHPC")
-    set (CMAKE_Fortran_FLAGS "-acc=gpu -Mlarge_arrays -gopt -gpu=cc70 -Minfo=accel,all,intensity,ccff")
+    set (CMAKE_Fortran_FLAGS "-acc=gpu -Mlarge_arrays -gopt -gpu=cc70 -Minfo=accel,all,ccff")
   endif ()
 
 endif ()
@@ -39,7 +39,6 @@ endif ()
 find_package (fiat REQUIRED) 
 
 set (CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -I${fiat_BASE_DIR}/module/fiat -I${fiat_BASE_DIR}/include/fiat")
-set (CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -L${fiat_BASE_DIR}/lib64 -lfiat -Wl,-rpath,${fiat_BASE_DIR}/lib64")
 
 if (fiat_HAVE_DOUBLE_PRECISION)
   set (CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -I${fiat_BASE_DIR}/module/parkind_dp")
@@ -56,12 +55,12 @@ if (NOT FYPP_PATH)
 endif()
 message (STATUS "fypp is ${FYPP_PATH}")
 
-set (SOURCES field_basic_module.F90 dev_alloc.c)
+set (SOURCES field_basic_module.F90 field_init_debug_value_module.F90 dev_alloc.c)
 
 foreach (SUFF IN ITEMS IM RM RB RD LM)
   string (TOLOWER ${SUFF} suff)
   foreach (RANK RANGE 2 5)
-    foreach (FUNC IN ITEMS "" _gathscat _access _util)
+    foreach (FUNC IN ITEMS "" _gathscat _access _util _array_util)
       add_custom_command (OUTPUT field_${RANK}${suff}${FUNC}_module.F90
 	      COMMAND ${FYPP_PATH} -DRANK=${RANK} -DSUFF='${SUFF}' -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType 
         ${CMAKE_CURRENT_SOURCE_DIR}/field_RANKSUFF${FUNC}_module.fypp > field_${RANK}${suff}${FUNC}_module.F90
@@ -73,7 +72,7 @@ foreach (SUFF IN ITEMS IM RM RB RD LM)
 endforeach ()
 
 foreach (SRC IN ITEMS dev_alloc_module field_factory_module field_access_module 
-         field_array_module field_module field_gathscat_module field_util_module)
+         field_array_module field_module field_gathscat_module field_util_module field_array_util_module)
   add_custom_command (OUTPUT ${SRC}.F90
 	  COMMAND ${FYPP_PATH} -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/${SRC}.fypp > ${SRC}.F90
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${SRC}.fypp
@@ -93,10 +92,9 @@ if (OpenACC_Fortran_FOUND AND USE_OPENACC)
 endif ()
 
 add_executable (main.x main.F90)
-target_link_libraries (main.x PUBLIC ${LIBNAME})
+target_link_libraries (main.x PUBLIC ${LIBNAME} -L${fiat_BASE_DIR}/lib64 -L${fiat_BASE_DIR}/lib -lfiat -Wl,-rpath,${fiat_BASE_DIR}/lib64 -Wl,-rpath,${fiat_BASE_DIR}/lib)
 enable_testing ()
 add_subdirectory (tests)
 
 install(TARGETS ${LIBNAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
 install(DIRECTORY ${CMAKE_Fortran_MODULE_DIRECTORY} DESTINATION ${CMAKE_INSTALL_PREFIX})
-

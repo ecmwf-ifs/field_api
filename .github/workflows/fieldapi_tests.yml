@@ -1,10 +1,10 @@
-name: CMake
+name: FieldAPI_Tests
 
 on: [push, pull_request]
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
-  BUILD_TYPE: Release
+  BUILD_TYPE: RelWithDebInfo
 
 jobs:
   build:
@@ -21,18 +21,30 @@ jobs:
         architecture: 'x64' # optional x64 or x86. Defaults to x64 if not specified
     - run: pip install fypp
 
-    - name: Configure CMake
-      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
-      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+    - name: Install fiat
+      run: |
+       git clone https://github.com/ecmwf/ecbuild.git
+       export PATH=${{github.workspace}}/ecbuild/bin:$PATH
+       git clone https://github.com/ecmwf-ifs/fiat.git
+       cd fiat
+       mkdir build
+       cd build
+       cmake .. -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/fiat/install
+       make -j
+       make install
+       cp ${{github.workspace}}/fiat/install/module/parkind_dp/* ${{github.workspace}}/fiat/install/module/fiat/
 
-    - name: Build
-      # Build your program with the given configuration
-      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+    - name: Build field api
+      run: |
+       export fiat_DIR=${{github.workspace}}/fiat/install
+       mkdir build
+       cd build
+       cmake ..
+       make -j
 
     - name: Test
-      working-directory: ${{github.workspace}}/build
-      # Execute tests defined by the CMake configuration.  
-      # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-      run: ctest -C ${{env.BUILD_TYPE}}
+      run: |
+       cd build
+       export DEV_ALLOC_SIZE=1000000
+       ctest
       

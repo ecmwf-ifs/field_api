@@ -16,11 +16,11 @@ USE FIELD_ACCESS_MODULE
 
 IMPLICIT NONE
 
-#:for method in ['LOAD', 'SAVE', 'DIFF', 'COPY', 'WIPE', 'HOST']
+#:for method in ['LOAD', 'SAVE', 'DIFF', 'COPY', 'WIPE', 'HOST', 'CRC64']
 INTERFACE ${method}$
 #:for ft in fieldTypeList
   MODULE PROCEDURE ${method}$_${ft.name}$
-#:if method not in ['DIFF']
+#:if method not in ['DIFF', 'CRC64']
   MODULE PROCEDURE ${method}$_${ft.name}$_PTR
   MODULE PROCEDURE ${method}$_${ft.name}$_VIEW
 #:endif
@@ -29,38 +29,62 @@ END INTERFACE
 
 #:endfor
 
-#include "abor1.intfb.h"
-
 CONTAINS
 
 #:for ft in fieldTypeList
+INTEGER*8 FUNCTION CRC64_${ft.name}$ (YD)
+CLASS (${ft.name}$), POINTER :: YD
+
+INTEGER*8 :: ICRC, ILEN
+${ft.type}$, POINTER :: PTR(${ft.shape}$)
+EXTERNAL :: CRC64
+
+ICRC = 0
+
+IF (ASSOCIATED (YD)) THEN
+
+  PTR => GET_HOST_DATA_RDONLY (YD)
+  ILEN = SIZE (PTR)
+  CALL CRC64 (PTR, ILEN, ICRC)
+
+ENDIF
+
+CRC64_${ft.name}$ = ICRC
+
+END FUNCTION
+
 SUBROUTINE LOAD_${ft.name}$ (KLUN, YD)
 INTEGER (KIND=JPIM), INTENT (IN) :: KLUN
 CLASS (${ft.name}$), POINTER :: YD
+#include "abor1.intfb.h"
 CALL ABOR1 ('NOT IMPLEMENTED')
 END SUBROUTINE
 
 SUBROUTINE SAVE_${ft.name}$ (KLUN, YD)
 INTEGER (KIND=JPIM), INTENT (IN) :: KLUN
 CLASS (${ft.name}$), POINTER :: YD
+#include "abor1.intfb.h"
 CALL ABOR1 ('NOT IMPLEMENTED')
 END SUBROUTINE
 
 SUBROUTINE DIFF_${ft.name}$ (CDMESS, YD, YO)
 CHARACTER (LEN=*), INTENT(IN) :: CDMESS
 CLASS (${ft.name}$), POINTER :: YD, YO
+#include "abor1.intfb.h"
 CALL ABOR1 ('NOT IMPLEMENTED')
 END SUBROUTINE
 
 SUBROUTINE COPY_${ft.name}$ (SELF, LDCREATED)
 CLASS (${ft.name}$), POINTER :: SELF
 LOGICAL, INTENT (IN), OPTIONAL :: LDCREATED
+#include "abor1.intfb.h"
 CALL ABOR1 ('NOT IMPLEMENTED')
 END SUBROUTINE 
 
 SUBROUTINE WIPE_${ft.name}$ (SELF, LDDELETED)
 CLASS (${ft.name}$) :: SELF
 LOGICAL, INTENT (IN), OPTIONAL :: LDDELETED
+#include "abor1.intfb.h"
 CALL ABOR1 ('NOT IMPLEMENTED')
 END SUBROUTINE 
 
@@ -103,24 +127,28 @@ END SUBROUTINE
 SUBROUTINE LOAD_${ft.name}$_PTR (KLUN, YD)
 INTEGER (KIND=JPIM), INTENT (IN) :: KLUN
 CLASS (${ft.name}$_PTR) :: YD
+#include "abor1.intfb.h"
 CALL ABOR1 ('NOT IMPLEMENTED')
 END SUBROUTINE
 
 SUBROUTINE SAVE_${ft.name}$_PTR (KLUN, YD)
 INTEGER (KIND=JPIM), INTENT (IN) :: KLUN
 CLASS (${ft.name}$_PTR) :: YD
+#include "abor1.intfb.h"
 CALL ABOR1 ('NOT IMPLEMENTED')
 END SUBROUTINE
 
 SUBROUTINE COPY_${ft.name}$_PTR (SELF, LDCREATED)
 CLASS (${ft.name}$_PTR) :: SELF
 LOGICAL, INTENT (IN), OPTIONAL :: LDCREATED
+#include "abor1.intfb.h"
 CALL ABOR1 ('NOT IMPLEMENTED')
 END SUBROUTINE 
 
 SUBROUTINE WIPE_${ft.name}$_PTR (SELF, LDDELETED)
 CLASS (${ft.name}$_PTR) :: SELF
 LOGICAL, INTENT (IN), OPTIONAL :: LDDELETED
+#include "abor1.intfb.h"
 CALL ABOR1 ('NOT IMPLEMENTED')
 END SUBROUTINE 
 
