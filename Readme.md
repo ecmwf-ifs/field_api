@@ -14,7 +14,7 @@ Building FIELD_API requires:
 - A Fortran 2008 compliant compiler with support for:
   - OpenMP for CPU multi-threading
   - OpenACC for GPU offload (optional)
-- CMake (>= 3.25)
+- CMake (>= 3.24)
 - [ecbuild](https://github.com/ecmwf/ecbuild) (cloned if not found)
 - [fypp](https://github.com/aradi/fypp) (cloned if not found)
 - [fiat](https://github.com/ecmwf-ifs/fiat/) (optional)
