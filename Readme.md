@@ -9,24 +9,46 @@ you should not worry about it.
 
 # Compilation
 
-Field API can be compiled as an external library or just dropped into the
-codebase. To compile it you need:
-- a compiler with OpenMP and OpenACC and GPU support;
-- cmake (>= 3.15);
-- fypp;
-- [fiat](https://github.com/ecmwf-ifs/fiat/)
+## Requirements
+Building FIELD_API requires:
+- A Fortran 2008 compliant compiler with support for:
+  - OpenMP for CPU multi-threading
+  - OpenACC for GPU offload (optional)
+- CMake (>= 3.24)
+- [ecbuild](https://github.com/ecmwf/ecbuild) (cloned if not found)
+- [fypp](https://github.com/aradi/fypp) (cloned if not found)
+- [fiat](https://github.com/ecmwf-ifs/fiat/) (optional)
 
+To build FIELD_API without fiat, the path to the directory containing the utility modules `oml_mod.F90`, `abor1.F90` and `parkind1.F90` must be specified using the CMake variable `UTIL_MODULE_PATH`.
+
+## Build and test
 ```
 mkdir build
 cd build
-cmake .. -Dfiat_HAVE_DOUBLE_PRECISION=1 -DUSE_OPENACC=1
-make
+cmake .. # configure FIELD_API build
+make # build FIELD_API
+make install #optional, install FIELD_API
 ctest #Optional, will run the tests
 ```
 
+## Using FIELD_API
+FIELD_API can be compiled as an external library and used in any CMake project simply by setting the environment variable `field_api_ROOT` to the FIELD_API builddir. Alternatively, FIELD_API can also be installed to a location on the `PATH`.
+
+## Arch files
+Architecture specific environment variables and compiler flags can be set by sourcing one of the `env.sh` files provided in the `arch` directory.
+
+## Features
+Features of FIELD_API can be toggled by passing the following argument to the CMake configure step: `-DENABLE_<FEATURE>=ON/OFF`. The table below lists all the available features:
+
+| Feature | Default | Description |
+|:--- |:--- |:--- |
+| TESTS | ON | Build the testing suite. |
+| ACC | ON | Enable the use of OpenACC for GPU offload. |
+
+## Supported compilers
 The library has been tested with the nvhpc toolkit from Nvidia, version 23.9
 and is continually tested with newer releases. It has also been tested on CPU
-(-DUSE_OPENACC=0) with GCC 12 and Intel 2018.
+(-DENABLE_ACC=OFF) with GCC 12 and Intel 2021. The CI testing (CPU-only for now) uses GNU 11.4.
 
 # Field API types
 

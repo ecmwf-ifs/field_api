@@ -4,3 +4,4 @@
 *.a
 field_module.F90
 *.swp
+build
