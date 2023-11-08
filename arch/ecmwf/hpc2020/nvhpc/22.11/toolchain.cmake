@@ -11,4 +11,4 @@
 # OpenAcc FLAGS
 ####################################################################
 
-set( OpenACC_Fortran_FLAGS "-acc -gpu=cc80" CACHE STRING "" )
+set( OpenACC_Fortran_FLAGS "-acc=gpu -gpu=cc80" CACHE STRING "" )
