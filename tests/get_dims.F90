@@ -39,7 +39,7 @@ PROGRAM GET_DIMS
                 WRITE(*,*)"OWNER BAD LOWER BOUNDS WHEN PERSISTENT"
                 ERROR STOP
         END IF
-        IF(U(1)/= 21 .AND. U(2) /= OML_MAX_THREADS)THEN
+        IF(U(1)/= 21 .AND. U(2) /= OML_MAX_THREADS())THEN
                 WRITE(*,*)"OWNER BAD UPPER BOUNDS WHEN PERSISTENT"
                 ERROR STOP
         END IF
