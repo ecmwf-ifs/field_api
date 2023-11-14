@@ -1,0 +1,78 @@
+! (C) Copyright 2022- ECMWF.
+! (C) Copyright 2022- Meteo-France.
+!
+! This software is licensed under the terms of the Apache Licence Version 2.0
+! which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
+! In applying this licence, ECMWF does not waive the privileges and immunities
+! granted to it by virtue of its status as an intergovernmental organisation
+! nor does it submit to any jurisdiction.
+
+PROGRAM INIT_WRAPPER_NON_CONTIGUOUS_MULTI
+  ! TEST IF WRAPPER WORKS WITH NON CONTIGUOUS ARRAY
+  USE FIELD_MODULE
+  USE PARKIND1
+  USE FIELD_FACTORY_MODULE
+  use iso_c_binding
+
+  IMPLICIT NONE
+  REAL(KIND=JPRB), ALLOCATABLE, TARGET :: D1(:,:,:,:), D2(:,:,:,:)
+  CLASS(FIELD_2RB), POINTER :: W2 => NULL()
+  REAL(KIND=JPRB), POINTER :: W2PTR(:,:)
+  CLASS(FIELD_3RB), POINTER :: W3 => NULL()
+  REAL(KIND=JPRB), POINTER :: W3PTR(:,:,:)
+  CLASS(FIELD_4RB), POINTER :: W4 => NULL()
+  REAL(KIND=JPRB), POINTER :: W4PTR(:,:,:,:)
+  integer(kind=8) :: ptr
+
+  ALLOCATE(D1(18, 32, 19, 27))
+  ALLOCATE(D2(18, 32, 19, 27))
+  D1 = 0
+  D2 = 0
+
+  CALL FIELD_NEW(W4, DATA=D1(1:1,:,:,:))
+  CALL W4%GET_HOST_DATA_RDWR(W4PTR)
+  W4PTR=42
+  CALL W4%GET_DEVICE_DATA_RDWR(W4PTR)
+  !$ACC KERNELS DEFAULT(PRESENT)
+  W4PTR=92
+  !$ACC END KERNELS
+  CALL W4%GET_HOST_DATA_RDONLY(W4PTR)
+  D2(1:1,:,:,:)=92
+  CALL FIELD_DELETE(W4)
+  IF (ANY(D1/=D2)) ERROR STOP
+
+  CALL FIELD_NEW(W3, DATA=D1(:,2,:,:))
+  CALL W3%GET_HOST_DATA_RDWR(W3PTR)
+  W3PTR=51
+  CALL W3%GET_DEVICE_DATA_RDWR(W3PTR)
+  !$ACC KERNELS DEFAULT(PRESENT)
+  W3PTR=61
+  !$ACC END KERNELS
+  D2(:,2,:,:)=61
+  CALL FIELD_DELETE(W3)
+  IF (ANY(D1/=D2)) ERROR STOP
+
+  CALL FIELD_NEW(W3, DATA=D1(:,2,4:8,:))
+  CALL W3%GET_HOST_DATA_RDWR(W3PTR)
+  W3PTR=91
+  D2(:,2,4:8,:)=91
+  CALL FIELD_DELETE(W3)
+  IF (ANY(D1/=D2)) ERROR STOP
+
+  CALL FIELD_NEW(W3, DATA=D1(:,2,4:8,3:5))
+  CALL W3%GET_DEVICE_DATA_RDWR(W3PTR)
+  !$ACC KERNELS DEFAULT(PRESENT)
+  W3PTR=91
+  !$ACC END KERNELS
+  D2(:,2,4:8,:)=91
+  CALL FIELD_DELETE(W3)
+  IF (ANY(D1/=D2)) ERROR STOP
+
+  CALL FIELD_NEW(W2, DATA=D1(:,2,4:8,8))
+  CALL W2%GET_HOST_DATA_RDWR(W2PTR)
+  W2PTR=12.1
+  D2(:,2,4:8,8)=12.1
+  CALL FIELD_DELETE(W2)
+  IF (ANY(D1/=D2)) ERROR STOP
+
+END PROGRAM INIT_WRAPPER_NON_CONTIGUOUS_MULTI

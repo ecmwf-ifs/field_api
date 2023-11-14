@@ -328,10 +328,12 @@ CONTAINS
 
   CALL CPU_TIME(START)
   SELECT CASE (SELF%LAST_CONTIGUOUS_DIMENSION)
-#:for d in range (ft.rank + 1)
+#:for d in range (ft.rank)
     CASE (${d}$)
-      CALL COPY_DIM${d}$_CONTIGUOUS (SELF%PTR, SELF%DEVPTR, KDIR, QUEUE)
+      CALL COPY_2D_DIM${d}$_${d+1}$_CONTIGUOUS (SELF%PTR, SELF%DEVPTR, KDIR, QUEUE)
 #:endfor
+    CASE (${ft.rank}$)
+      CALL COPY_DIM${ft.rank}$_CONTIGUOUS (SELF%PTR, SELF%DEVPTR, KDIR, QUEUE)
   END SELECT
   CALL CPU_TIME(FINISH)
   IF (KDIR == NH2D) THEN
@@ -342,6 +344,85 @@ CONTAINS
 
   CONTAINS
 
+#:for d1 in range (0, ft.rank)
+#:for d2 in range (d1+1, ft.rank+1)
+    SUBROUTINE COPY_2D_DIM${d1}$_${d2}$_CONTIGUOUS (HST, DEV, KDIR, QUEUE)
+#ifdef _OPENACC
+    USE OPENACC
+    USE CUDAFOR
+#endif
+    ${ft.type}$, POINTER :: HST (${ft.shape}$), DEV (${ft.shape}$)
+    INTEGER (KIND=JPIM),           INTENT (IN) :: KDIR
+    INTEGER (KIND=JPIM), OPTIONAL, INTENT (IN) :: QUEUE
+    INTEGER (KIND=JPIM) :: IHST_PITCH, IDEV_PITCH, IRET
+    INTEGER (KIND=JPIM) :: IWIDTH, IHEIGHT, ISHP(${ft.rank+1}$)
+  #:if d2 < ft.rank
+    INTEGER :: ${', '.join (list (map (lambda i: 'J' + str (i+1), range (d2, ft.rank))))}$
+  #:endif
+    INTEGER(KIND=CUDA_STREAM_KIND) :: STREAM
+
+#ifdef _OPENACC
+    ISHP(1) = 1
+    ISHP(2:) = SHAPE(HST)
+    IWIDTH = PRODUCT(ISHP(1:${d1+1}$))
+    IHEIGHT = PRODUCT(ISHP(${d1+2}$:${d2+1}$))
+
+#:set lb = lambda arr, i: f'LBOUND({arr}, {i+1})'
+#:set lbnds = lambda arr, start, end: [lb(arr, i) for i in range(start, end)]
+#:set this_slice = lambda arr: ', '.join(lbnds(arr, 0, ft.rank))
+#:set next_slice = lambda arr: ', '.join(lbnds(arr, 0, d1) + [lb(arr, d1)+'+1'] + lbnds(arr, d1+1, ft.rank))
+    IHST_PITCH = (LOC (HST(${next_slice('HST')}$)) - LOC (HST (${this_slice('HST')}$)))/KIND(HST)
+    IDEV_PITCH = (LOC (DEV(${next_slice('DEV')}$)) - LOC (DEV (${this_slice('DEV')}$)))/KIND(DEV)
+
+  #:for e in range (ft.rank, d2, -1)
+    ${'  ' * (ft.rank - e)}$DO J${e}$ = LBOUND (HST, ${e}$), UBOUND (HST, ${e}$)
+  #:endfor
+  #:set indent = '  ' * (ft.rank - d2 - 1)
+  #:set ar = lambda arr: ', '.join(lbnds(arr, 0, d2) + [f'J{i+1}' for i in range(d2, ft.rank)])
+    ${indent}$  IF (KDIR == NH2D) THEN
+    ${indent}$    !$acc host_data use_device (DEV)
+    ${indent}$    IF(PRESENT(QUEUE)) THEN
+    ${indent}$      CALL ACC_SET_CUDA_STREAM(QUEUE, STREAM)
+    ${indent}$      IRET = CUDAMEMCPY2DASYNC (DEV (${ar('DEV')}$), IDEV_PITCH, &
+    ${indent}$                              & HST (${ar('HST')}$), IHST_PITCH, &
+    ${indent}$                              & IWIDTH, IHEIGHT, CUDAMEMCPYHOSTTODEVICE, &
+    ${indent}$                              & STREAM)
+    ${indent}$    ELSE
+    ${indent}$      IRET = CUDAMEMCPY2D (DEV (${ar('DEV')}$), IDEV_PITCH, &
+    ${indent}$                         & HST (${ar('HST')}$), IHST_PITCH, &
+    ${indent}$                         & IWIDTH, IHEIGHT)
+    ${indent}$    ENDIF
+    ${indent}$    !$acc end host_data
+    ${indent}$  ELSEIF (KDIR == ND2H) THEN
+    ${indent}$    !$acc host_data use_device (DEV)
+    ${indent}$    IF(PRESENT(QUEUE)) THEN
+    ${indent}$      CALL ACC_SET_CUDA_STREAM(QUEUE, STREAM)
+    ${indent}$      IRET = CUDAMEMCPY2DASYNC (HST (${ar('HST')}$), IHST_PITCH, &
+    ${indent}$                              & DEV (${ar('DEV')}$), IDEV_PITCH, &
+    ${indent}$                              & IWIDTH, IHEIGHT, CUDAMEMCPYDEVICETOHOST, &
+    ${indent}$                              & STREAM)
+    ${indent}$    ELSE
+    ${indent}$      IRET = CUDAMEMCPY2D (HST (${ar('HST')}$), IHST_PITCH, &
+    ${indent}$                         & DEV (${ar('DEV')}$), IDEV_PITCH, &
+    ${indent}$                         & IWIDTH, IHEIGHT)
+    ${indent}$    ENDIF
+    ${indent}$    !$acc end host_data
+    ${indent}$    IF (IRET /= CUDASUCCESS) STOP 1
+    ${indent}$  ENDIF
+  #:for e in range (d2, ft.rank)
+    ${'  ' * (ft.rank - e - 1)}$ENDDO
+  #:endfor
+#else
+    IF (KDIR == NH2D) THEN
+      HST = DEV
+    ELSE
+      DEV = HST
+    ENDIF
+#endif
+    END SUBROUTINE COPY_2D_DIM${d1}$_${d2}$_CONTIGUOUS
+#:endfor
+#:endfor
+
 #:for d in range (0, ft.rank+1)
     SUBROUTINE COPY_DIM${d}$_CONTIGUOUS (HST, DEV, KDIR, QUEUE)
 #ifdef _OPENACC
@@ -351,13 +432,15 @@ CONTAINS
     INTEGER (KIND=JPIM),           INTENT (IN) :: KDIR
     INTEGER (KIND=JPIM), OPTIONAL, INTENT (IN) :: QUEUE
     INTEGER (KIND=JPIM) :: ISIZE
-    INTEGER :: ${', '.join (['J'] + list (map (lambda i: 'J' + str (i+1), range (d, ft.rank))))}$
+  #:if d != ft.rank
+    INTEGER :: ${', '.join (list (map (lambda i: 'J' + str (i+1), range (d, ft.rank))))}$
+  #:endif
 
   #:for e in range (ft.rank, d, -1)
     ${'  ' * (ft.rank - e)}$DO J${e}$ = LBOUND (HST, ${e}$), UBOUND (HST, ${e}$)
   #:endfor
   #:set ar = ', '.join ([':'] * d  + list (map (lambda i: 'J' + str (i+1), range (d, ft.rank))))
-  #:set indent = '  ' * (ft.rank - e)
+  #:set indent = '  ' * (ft.rank - d)
     #:if d == 0
     ${indent}$  ISIZE = KIND (HST)
     #:else

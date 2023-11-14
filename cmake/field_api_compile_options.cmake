@@ -10,6 +10,7 @@
 if(CMAKE_Fortran_COMPILER_ID MATCHES PGI|NVIDIA|NVHPC)
   ecbuild_add_fortran_flags("-Mlarge_arrays")
   ecbuild_add_fortran_flags("-gopt")
+  ecbuild_add_fortran_flags("-cuda")
 
   ecbuild_add_fortran_flags("-Minfo=accel,all,ccff" BUILD DEBUG)
 
