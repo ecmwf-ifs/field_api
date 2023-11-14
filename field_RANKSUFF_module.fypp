@@ -323,17 +323,28 @@ CONTAINS
   INTEGER (KIND=JPIM),           INTENT(IN) :: KDIR
   INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN) :: QUEUE
   REAL :: START, FINISH
+  INTEGER :: NEXT_LAST_CONTIGUOUS_DIMENSION
 
   SELF%LAST_CONTIGUOUS_DIMENSION = ${ftn}$_GET_LAST_CONTIGUOUS_DIMENSION (SELF%PTR)
+  NEXT_LAST_CONTIGUOUS_DIMENSION = ${ftn}$_GET_LAST_CONTIGUOUS_DIMENSION (SELF%PTR, SELF%LAST_CONTIGUOUS_DIMENSION+1)
 
   CALL CPU_TIME(START)
   SELECT CASE (SELF%LAST_CONTIGUOUS_DIMENSION)
-#:for d in range (ft.rank)
-    CASE (${d}$)
-      CALL COPY_2D_DIM${d}$_${d+1}$_CONTIGUOUS (SELF%PTR, SELF%DEVPTR, KDIR, QUEUE)
+#:for d1 in range (ft.rank)
+    CASE (${d1}$)
+      SELECT CASE (NEXT_LAST_CONTIGUOUS_DIMENSION)
+      #:for d2 in range (d1+1, ft.rank+1)
+      CASE (${d2}$)
+        CALL COPY_2D_DIM${d1}$_${d2}$_CONTIGUOUS (SELF%PTR, SELF%DEVPTR, KDIR, QUEUE)
+      #:endfor
+      CASE DEFAULT
+        ERROR STOP
+      END SELECT
 #:endfor
     CASE (${ft.rank}$)
       CALL COPY_DIM${ft.rank}$_CONTIGUOUS (SELF%PTR, SELF%DEVPTR, KDIR, QUEUE)
+    CASE DEFAULT
+      ERROR STOP
   END SELECT
   CALL CPU_TIME(FINISH)
   IF (KDIR == NH2D) THEN
@@ -423,7 +434,7 @@ CONTAINS
 #:endfor
 #:endfor
 
-#:for d in range (0, ft.rank+1)
+#:for d in range (ft.rank, ft.rank+1)
     SUBROUTINE COPY_DIM${d}$_CONTIGUOUS (HST, DEV, KDIR, QUEUE)
 #ifdef _OPENACC
     USE OPENACC
@@ -688,16 +699,20 @@ CONTAINS
 
 #:for ft in fieldTypeList
 #:set ftn = ft.name
-  INTEGER (KIND=JPIM) FUNCTION ${ftn}$_GET_LAST_CONTIGUOUS_DIMENSION (PTR) RESULT (JDIM)
+  INTEGER (KIND=JPIM) FUNCTION ${ftn}$_GET_LAST_CONTIGUOUS_DIMENSION (PTR, AFTER) RESULT (JDIM)
   ${ft.type}$, POINTER :: PTR (${ft.shape}$)
-  INTEGER*8 :: ISTRIDE (${ft.rank}$)
-  INTEGER (KIND=JPIM) :: J, LB(${ft.rank}$)
+  INTEGER (KIND=JPIM), OPTIONAL :: AFTER
+  INTEGER*8 :: IPREVIOUS_STRIDE, ITHIS_STRIDE, ISIZE
+  INTEGER (KIND=JPIM) :: J, LB(${ft.rank}$), IAFTER
+
+  IF (PRESENT(AFTER)) THEN
+    IAFTER = AFTER
+  ELSE
+    IAFTER = 0
+  ENDIF
 
   LB = LBOUND(PTR)
-  ISTRIDE (1) = KIND (PTR)
-  DO J = 2, ${ft.rank}$
-    ISTRIDE (J) = ISTRIDE (J-1) * SIZE (PTR, J-1)
-  ENDDO
+  IPREVIOUS_STRIDE = KIND (PTR)
 
   JDIM = 0
 #:for d in range (1, ft.rank+1)
@@ -709,9 +724,16 @@ CONTAINS
   #:endfor
   #:set ind0 = ind0[:-2]
   #:set ind1 = ind1[:-2]
-  IF (LOC (PTR (${ind1}$)) - LOC (PTR (${ind0}$)) /= ISTRIDE (${d}$)) THEN
+  ITHIS_STRIDE = LOC (PTR (${ind1}$)) - LOC (PTR (${ind0}$))
+ #:if d == 1
+  ISIZE = 1
+ #:else
+  ISIZE = SIZE(PTR, ${d-1}$)
+ #:endif
+  IF (IAFTER < ${d}$ .AND. IPREVIOUS_STRIDE * ISIZE /= ITHIS_STRIDE) THEN
     RETURN
   ENDIF
+  IPREVIOUS_STRIDE = ITHIS_STRIDE
 
   JDIM = ${d}$
 
