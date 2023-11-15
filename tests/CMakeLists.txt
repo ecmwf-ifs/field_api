@@ -124,3 +124,16 @@ ecbuild_add_test(
     LINKER_LANGUAGE Fortran
     CONDITION ${HAVE_SINGLE_PRECISION}
 )
+
+## Test presence of GPUs
+add_executable(check_gpu_num.x check_gpu_num.F90)
+target_link_libraries(check_gpu_num.x PRIVATE $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>)
+set_target_properties(check_gpu_num.x PROPERTIES LINKER_LANGUAGE Fortran)
+
+if(HAVE_ACC)
+   add_test(NAME confirm_gpu_exists COMMAND check_gpu_num.x)
+else()
+   add_test(NAME confirm_gpu_does_not_exist COMMAND check_gpu_num.x)
+   set_property(TEST confirm_gpu_does_not_exist PROPERTY WILL_FAIL TRUE)
+endif()
+
