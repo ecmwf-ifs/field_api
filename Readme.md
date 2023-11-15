@@ -44,6 +44,8 @@ Features of FIELD_API can be toggled by passing the following argument to the CM
 |:--- |:--- |:--- |
 | TESTS | ON | Build the testing suite. |
 | ACC | ON | Enable the use of OpenACC for GPU offload. |
+| SINGLE_PRECISION | ON | Enable the compilation of field_api in single precision |
+| DOUBLE_PRECISION | ON | Enable the compilation of field_api in double precision |
 
 ## Supported compilers
 The library has been tested with the nvhpc toolkit from Nvidia, version 23.9

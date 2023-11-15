@@ -49,6 +49,21 @@ ecbuild_add_option( FEATURE ACC
 ## set general compiler flags
 include(cmake/field_api_compile_options.cmake)
 
+## choose to build dp or sp or both
+ecbuild_add_option( FEATURE SINGLE_PRECISION
+	DESCRIPTION "Compile field_api in single precision" DEFAULT ON)
+ecbuild_add_option( FEATURE DOUBLE_PRECISION
+	DESCRIPTION "Compile field_api in double precision" DEFAULT ON)
+
+set(DEFAULT_PRECISION sp)
+if(HAVE_SINGLE_PRECISION)
+    list(APPEND precisions sp)
+endif()
+if(HAVE_DOUBLE_PRECISION)
+    set(DEFAULT_PRECISION dp)
+    list(APPEND precisions dp)
+endif()
+
 ## find fiat
 ecbuild_find_package(NAME fiat)
 if( NOT fiat_FOUND )
@@ -101,7 +116,7 @@ foreach (SRC IN ITEMS dev_alloc_module field_factory_module field_access_module
   list(APPEND srcs "${SRC}.F90")
 endforeach ()
 
-foreach(prec dp sp)
+foreach(prec ${precisions})
   ## add field_api target
   ecbuild_add_library(
       TYPE STATIC
