@@ -365,6 +365,7 @@ CONTAINS
     ${ft.type}$, POINTER :: HST (${ft.shape}$), DEV (${ft.shape}$)
     INTEGER (KIND=JPIM),           INTENT (IN) :: KDIR
     INTEGER (KIND=JPIM), OPTIONAL, INTENT (IN) :: QUEUE
+#ifdef _OPENACC
     INTEGER (KIND=JPIM) :: IHST_PITCH, IDEV_PITCH, IRET
     INTEGER (KIND=JPIM) :: IWIDTH, IHEIGHT, ISHP(${ft.rank+1}$)
   #:if d2 < ft.rank
@@ -372,7 +373,6 @@ CONTAINS
   #:endif
     INTEGER(KIND=CUDA_STREAM_KIND) :: STREAM
 
-#ifdef _OPENACC
     ISHP(1) = 1
     ISHP(2:) = SHAPE(HST)
     IWIDTH = PRODUCT(ISHP(1:${d1+1}$))
