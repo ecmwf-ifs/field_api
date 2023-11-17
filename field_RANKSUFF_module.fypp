@@ -379,6 +379,8 @@ CONTAINS
     IWIDTH = PRODUCT(ISHP(1:${d1+1}$))
     IHEIGHT = PRODUCT(ISHP(${d1+2}$:${d2+1}$))
 
+    PRINT *, "CALLED COPY_2D_DIM${d1}$_${d2}$_CONTIGUOUS"
+
 #:set lb = lambda arr, i: f'LBOUND({arr}, {i+1})'
 #:set lbnds = lambda arr, start, end: [lb(arr, i) for i in range(start, end)]
 #:set this_slice = lambda arr: ', '.join(lbnds(arr, 0, ft.rank))
@@ -447,6 +449,8 @@ CONTAINS
   #:if d != ft.rank
     INTEGER :: ${', '.join (list (map (lambda i: 'J' + str (i+1), range (d, ft.rank))))}$
   #:endif
+
+    PRINT *, "CALLED COPY_DIM${d}$_CONTIGUOUS"
 
   #:for e in range (ft.rank, d, -1)
     ${'  ' * (ft.rank - e)}$DO J${e}$ = LBOUND (HST, ${e}$), UBOUND (HST, ${e}$)
@@ -706,6 +710,7 @@ CONTAINS
   INTEGER*8 :: IPREVIOUS_STRIDE, ITHIS_STRIDE, ISIZE
   INTEGER (KIND=JPIM) :: J, LB(${ft.rank}$), IAFTER
 
+  ! assume that dimension all dimensions before IAFTER are contiguous...
   IF (PRESENT(AFTER)) THEN
     IAFTER = AFTER
   ELSE
@@ -713,9 +718,12 @@ CONTAINS
   ENDIF
 
   LB = LBOUND(PTR)
-  IPREVIOUS_STRIDE = KIND (PTR)
+  IF (IAFTER == 0) THEN
+    IPREVIOUS_STRIDE = KIND (PTR)
+  ENDIF
 
-  JDIM = 0
+  PRINT *, "GET_LAST_CONTIGUOUS_DIMENSION"
+
 #:for d in range (1, ft.rank+1)
   #:set ind0 = ""
   #:set ind1 = ""
@@ -726,19 +734,27 @@ CONTAINS
   #:set ind0 = ind0[:-2]
   #:set ind1 = ind1[:-2]
   ITHIS_STRIDE = LOC (PTR (${ind1}$)) - LOC (PTR (${ind0}$))
- #:if d == 1
-  ISIZE = 1
- #:else
-  ISIZE = SIZE(PTR, ${d-1}$)
- #:endif
-  IF (IAFTER < ${d}$ .AND. IPREVIOUS_STRIDE * ISIZE /= ITHIS_STRIDE) THEN
-    RETURN
+  IF (IAFTER < ${d}$) THEN
+   #:if d == 1
+    ISIZE = 1
+   #:else
+    ISIZE = SIZE(PTR, ${d-1}$)
+   #:endif
+    PRINT *, "ITER", ${d}$
+    PRINT *, "SIZE(PTR, ${d}$) /= 1", SIZE(PTR, ${d}$), 1
+    PRINT *, "IPREVIOUS_STRIDE * ISIZE /= ITHIS_STRIDE", IPREVIOUS_STRIDE * ISIZE, ITHIS_STRIDE
+    IF (SIZE(PTR, ${d}$) /= 1 .AND. IPREVIOUS_STRIDE * ISIZE /= ITHIS_STRIDE) THEN
+      JDIM = ${d-1}$
+      RETURN
+    ENDIF
+    IPREVIOUS_STRIDE = IPREVIOUS_STRIDE * ISIZE
+  ELSE IF (IAFTER == ${d}$) THEN
+    IPREVIOUS_STRIDE = ITHIS_STRIDE
   ENDIF
-  IPREVIOUS_STRIDE = ITHIS_STRIDE
-
-  JDIM = ${d}$
 
 #:endfor
+  JDIM = ${ft.rank}$
+  PRINT *, ""
   END FUNCTION ${ftn}$_GET_LAST_CONTIGUOUS_DIMENSION
 #:endfor
 
