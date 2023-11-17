@@ -379,6 +379,8 @@ CONTAINS
     IWIDTH = PRODUCT(ISHP(1:${d1+1}$))
     IHEIGHT = PRODUCT(ISHP(${d1+2}$:${d2+1}$))
 
+    PRINT *, "CALLED COPY_2D_DIM${d1}$_${d2}$_CONTIGUOUS"
+
 #:set lb = lambda arr, i: f'LBOUND({arr}, {i+1})'
 #:set lbnds = lambda arr, start, end: [lb(arr, i) for i in range(start, end)]
 #:set this_slice = lambda arr: ', '.join(lbnds(arr, 0, ft.rank))
@@ -426,9 +428,9 @@ CONTAINS
   #:endfor
 #else
     IF (KDIR == NH2D) THEN
-      HST = DEV
-    ELSE
       DEV = HST
+    ELSE
+      HST = DEV
     ENDIF
 #endif
     END SUBROUTINE COPY_2D_DIM${d1}$_${d2}$_CONTIGUOUS
@@ -447,6 +449,8 @@ CONTAINS
   #:if d != ft.rank
     INTEGER :: ${', '.join (list (map (lambda i: 'J' + str (i+1), range (d, ft.rank))))}$
   #:endif
+
+    PRINT *, "CALLED COPY_DIM${d}$_CONTIGUOUS"
 
   #:for e in range (ft.rank, d, -1)
     ${'  ' * (ft.rank - e)}$DO J${e}$ = LBOUND (HST, ${e}$), UBOUND (HST, ${e}$)
@@ -718,6 +722,8 @@ CONTAINS
     IPREVIOUS_STRIDE = KIND (PTR)
   ENDIF
 
+  PRINT *, "GET_LAST_CONTIGUOUS_DIMENSION"
+
 #:for d in range (1, ft.rank+1)
   #:set ind0 = ""
   #:set ind1 = ""
@@ -734,6 +740,9 @@ CONTAINS
    #:else
     ISIZE = SIZE(PTR, ${d-1}$)
    #:endif
+    PRINT *, "ITER", ${d}$
+    PRINT *, "SIZE(PTR, ${d}$) /= 1", SIZE(PTR, ${d}$), 1
+    PRINT *, "IPREVIOUS_STRIDE * ISIZE /= ITHIS_STRIDE", IPREVIOUS_STRIDE * ISIZE, ITHIS_STRIDE
     IF (SIZE(PTR, ${d}$) /= 1 .AND. IPREVIOUS_STRIDE * ISIZE /= ITHIS_STRIDE) THEN
       JDIM = ${d-1}$
       RETURN
@@ -745,6 +754,7 @@ CONTAINS
 
 #:endfor
   JDIM = ${ft.rank}$
+  PRINT *, ""
   END FUNCTION ${ftn}$_GET_LAST_CONTIGUOUS_DIMENSION
 #:endfor
 
