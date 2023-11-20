@@ -1,5 +1,6 @@
 #! (C) Copyright 2022- ECMWF.
 #! (C) Copyright 2022- Meteo-France.
+#! (C) Copyright 2023- NVIDIA
 #!
 #! This software is licensed under the terms of the Apache Licence Version 2.0
 #! which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
@@ -323,15 +324,28 @@ CONTAINS
   INTEGER (KIND=JPIM),           INTENT(IN) :: KDIR
   INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN) :: QUEUE
   REAL :: START, FINISH
+  INTEGER :: NEXT_LAST_CONTIGUOUS_DIMENSION
 
   SELF%LAST_CONTIGUOUS_DIMENSION = ${ftn}$_GET_LAST_CONTIGUOUS_DIMENSION (SELF%PTR)
+  NEXT_LAST_CONTIGUOUS_DIMENSION = ${ftn}$_GET_LAST_CONTIGUOUS_DIMENSION (SELF%PTR, SELF%LAST_CONTIGUOUS_DIMENSION+1)
 
   CALL CPU_TIME(START)
   SELECT CASE (SELF%LAST_CONTIGUOUS_DIMENSION)
-#:for d in range (ft.rank + 1)
-    CASE (${d}$)
-      CALL COPY_DIM${d}$_CONTIGUOUS (SELF%PTR, SELF%DEVPTR, KDIR, QUEUE)
+#:for d1 in range (ft.rank)
+    CASE (${d1}$)
+      SELECT CASE (NEXT_LAST_CONTIGUOUS_DIMENSION)
+      #:for d2 in range (d1+1, ft.rank+1)
+      CASE (${d2}$)
+        CALL COPY_2D_DIM${d1}$_${d2}$_CONTIGUOUS (SELF%PTR, SELF%DEVPTR, KDIR, QUEUE)
+      #:endfor
+      CASE DEFAULT
+        ERROR STOP
+      END SELECT
 #:endfor
+    CASE (${ft.rank}$)
+      CALL COPY_DIM${ft.rank}$_CONTIGUOUS (SELF%PTR, SELF%DEVPTR, KDIR, QUEUE)
+    CASE DEFAULT
+      ERROR STOP
   END SELECT
   CALL CPU_TIME(FINISH)
   IF (KDIR == NH2D) THEN
@@ -342,7 +356,86 @@ CONTAINS
 
   CONTAINS
 
-#:for d in range (0, ft.rank+1)
+#:for d1 in range (0, ft.rank)
+#:for d2 in range (d1+1, ft.rank+1)
+    SUBROUTINE COPY_2D_DIM${d1}$_${d2}$_CONTIGUOUS (HST, DEV, KDIR, QUEUE)
+#ifdef _OPENACC
+    USE OPENACC
+    USE CUDAFOR
+#endif
+    ${ft.type}$, POINTER :: HST (${ft.shape}$), DEV (${ft.shape}$)
+    INTEGER (KIND=JPIM),           INTENT (IN) :: KDIR
+    INTEGER (KIND=JPIM), OPTIONAL, INTENT (IN) :: QUEUE
+#ifdef _OPENACC
+    INTEGER (KIND=JPIM) :: IHST_PITCH, IDEV_PITCH, IRET
+    INTEGER (KIND=JPIM) :: IWIDTH, IHEIGHT, ISHP(${ft.rank+1}$)
+  #:if d2 < ft.rank
+    INTEGER :: ${', '.join (list (map (lambda i: 'J' + str (i+1), range (d2, ft.rank))))}$
+  #:endif
+    INTEGER(KIND=CUDA_STREAM_KIND) :: STREAM
+
+    ISHP(1) = 1
+    ISHP(2:) = SHAPE(HST)
+    IWIDTH = PRODUCT(ISHP(1:${d1+1}$))
+    IHEIGHT = PRODUCT(ISHP(${d1+2}$:${d2+1}$))
+
+#:set lb = lambda arr, i: f'LBOUND({arr}, {i+1})'
+#:set lbnds = lambda arr, start, end: [lb(arr, i) for i in range(start, end)]
+#:set this_slice = lambda arr: ', '.join(lbnds(arr, 0, ft.rank))
+#:set next_slice = lambda arr: ', '.join(lbnds(arr, 0, d1) + [lb(arr, d1)+'+1'] + lbnds(arr, d1+1, ft.rank))
+    IHST_PITCH = (LOC (HST(${next_slice('HST')}$)) - LOC (HST (${this_slice('HST')}$)))/KIND(HST)
+    IDEV_PITCH = (LOC (DEV(${next_slice('DEV')}$)) - LOC (DEV (${this_slice('DEV')}$)))/KIND(DEV)
+
+  #:for e in range (ft.rank, d2, -1)
+    ${'  ' * (ft.rank - e)}$DO J${e}$ = LBOUND (HST, ${e}$), UBOUND (HST, ${e}$)
+  #:endfor
+  #:set indent = '  ' * (ft.rank - d2 - 1)
+  #:set ar = lambda arr: ', '.join(lbnds(arr, 0, d2) + [f'J{i+1}' for i in range(d2, ft.rank)])
+    ${indent}$  IF (KDIR == NH2D) THEN
+    ${indent}$    !$acc host_data use_device (DEV)
+    ${indent}$    IF(PRESENT(QUEUE)) THEN
+    ${indent}$      CALL ACC_SET_CUDA_STREAM(QUEUE, STREAM)
+    ${indent}$      IRET = CUDAMEMCPY2DASYNC (DEV (${ar('DEV')}$), IDEV_PITCH, &
+    ${indent}$                              & HST (${ar('HST')}$), IHST_PITCH, &
+    ${indent}$                              & IWIDTH, IHEIGHT, CUDAMEMCPYHOSTTODEVICE, &
+    ${indent}$                              & STREAM)
+    ${indent}$    ELSE
+    ${indent}$      IRET = CUDAMEMCPY2D (DEV (${ar('DEV')}$), IDEV_PITCH, &
+    ${indent}$                         & HST (${ar('HST')}$), IHST_PITCH, &
+    ${indent}$                         & IWIDTH, IHEIGHT)
+    ${indent}$    ENDIF
+    ${indent}$    !$acc end host_data
+    ${indent}$  ELSEIF (KDIR == ND2H) THEN
+    ${indent}$    !$acc host_data use_device (DEV)
+    ${indent}$    IF(PRESENT(QUEUE)) THEN
+    ${indent}$      CALL ACC_SET_CUDA_STREAM(QUEUE, STREAM)
+    ${indent}$      IRET = CUDAMEMCPY2DASYNC (HST (${ar('HST')}$), IHST_PITCH, &
+    ${indent}$                              & DEV (${ar('DEV')}$), IDEV_PITCH, &
+    ${indent}$                              & IWIDTH, IHEIGHT, CUDAMEMCPYDEVICETOHOST, &
+    ${indent}$                              & STREAM)
+    ${indent}$    ELSE
+    ${indent}$      IRET = CUDAMEMCPY2D (HST (${ar('HST')}$), IHST_PITCH, &
+    ${indent}$                         & DEV (${ar('DEV')}$), IDEV_PITCH, &
+    ${indent}$                         & IWIDTH, IHEIGHT)
+    ${indent}$    ENDIF
+    ${indent}$    !$acc end host_data
+    ${indent}$    IF (IRET /= CUDASUCCESS) STOP 1
+    ${indent}$  ENDIF
+  #:for e in range (d2, ft.rank)
+    ${'  ' * (ft.rank - e - 1)}$ENDDO
+  #:endfor
+#else
+    IF (KDIR == NH2D) THEN
+      DEV = HST
+    ELSE
+      HST = DEV
+    ENDIF
+#endif
+    END SUBROUTINE COPY_2D_DIM${d1}$_${d2}$_CONTIGUOUS
+#:endfor
+#:endfor
+
+#:for d in range (ft.rank, ft.rank+1)
     SUBROUTINE COPY_DIM${d}$_CONTIGUOUS (HST, DEV, KDIR, QUEUE)
 #ifdef _OPENACC
     USE OPENACC
@@ -351,13 +444,15 @@ CONTAINS
     INTEGER (KIND=JPIM),           INTENT (IN) :: KDIR
     INTEGER (KIND=JPIM), OPTIONAL, INTENT (IN) :: QUEUE
     INTEGER (KIND=JPIM) :: ISIZE
-    INTEGER :: ${', '.join (['J'] + list (map (lambda i: 'J' + str (i+1), range (d, ft.rank))))}$
+  #:if d != ft.rank
+    INTEGER :: ${', '.join (list (map (lambda i: 'J' + str (i+1), range (d, ft.rank))))}$
+  #:endif
 
   #:for e in range (ft.rank, d, -1)
     ${'  ' * (ft.rank - e)}$DO J${e}$ = LBOUND (HST, ${e}$), UBOUND (HST, ${e}$)
   #:endfor
   #:set ar = ', '.join ([':'] * d  + list (map (lambda i: 'J' + str (i+1), range (d, ft.rank))))
-  #:set indent = '  ' * (ft.rank - e)
+  #:set indent = '  ' * (ft.rank - d)
     #:if d == 0
     ${indent}$  ISIZE = KIND (HST)
     #:else
@@ -605,18 +700,24 @@ CONTAINS
 
 #:for ft in fieldTypeList
 #:set ftn = ft.name
-  INTEGER (KIND=JPIM) FUNCTION ${ftn}$_GET_LAST_CONTIGUOUS_DIMENSION (PTR) RESULT (JDIM)
+  INTEGER (KIND=JPIM) FUNCTION ${ftn}$_GET_LAST_CONTIGUOUS_DIMENSION (PTR, AFTER) RESULT (JDIM)
   ${ft.type}$, POINTER :: PTR (${ft.shape}$)
-  INTEGER*8 :: ISTRIDE (${ft.rank}$)
-  INTEGER (KIND=JPIM) :: J, LB(${ft.rank}$)
+  INTEGER (KIND=JPIM), OPTIONAL :: AFTER
+  INTEGER*8 :: IPREVIOUS_STRIDE, ITHIS_STRIDE, ISIZE
+  INTEGER (KIND=JPIM) :: J, LB(${ft.rank}$), IAFTER
+
+  ! assume that dimension all dimensions before IAFTER are contiguous...
+  IF (PRESENT(AFTER)) THEN
+    IAFTER = AFTER
+  ELSE
+    IAFTER = 0
+  ENDIF
 
   LB = LBOUND(PTR)
-  ISTRIDE (1) = KIND (PTR)
-  DO J = 2, ${ft.rank}$
-    ISTRIDE (J) = ISTRIDE (J-1) * SIZE (PTR, J-1)
-  ENDDO
+  IF (IAFTER == 0) THEN
+    IPREVIOUS_STRIDE = KIND (PTR)
+  ENDIF
 
-  JDIM = 0
 #:for d in range (1, ft.rank+1)
   #:set ind0 = ""
   #:set ind1 = ""
@@ -626,13 +727,24 @@ CONTAINS
   #:endfor
   #:set ind0 = ind0[:-2]
   #:set ind1 = ind1[:-2]
-  IF (LOC (PTR (${ind1}$)) - LOC (PTR (${ind0}$)) /= ISTRIDE (${d}$)) THEN
-    RETURN
+  ITHIS_STRIDE = LOC (PTR (${ind1}$)) - LOC (PTR (${ind0}$))
+  IF (IAFTER < ${d}$) THEN
+   #:if d == 1
+    ISIZE = 1
+   #:else
+    ISIZE = SIZE(PTR, ${d-1}$)
+   #:endif
+    IF (SIZE(PTR, ${d}$) /= 1 .AND. IPREVIOUS_STRIDE * ISIZE /= ITHIS_STRIDE) THEN
+      JDIM = ${d-1}$
+      RETURN
+    ENDIF
+    IPREVIOUS_STRIDE = IPREVIOUS_STRIDE * ISIZE
+  ELSE IF (IAFTER == ${d}$) THEN
+    IPREVIOUS_STRIDE = ITHIS_STRIDE
   ENDIF
 
-  JDIM = ${d}$
-
 #:endfor
+  JDIM = ${ft.rank}$
   END FUNCTION ${ftn}$_GET_LAST_CONTIGUOUS_DIMENSION
 #:endfor
 
