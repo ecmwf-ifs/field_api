@@ -1,0 +1,60 @@
+#! (C) Copyright 2022- ECMWF.
+#! (C) Copyright 2022- Meteo-France.
+#!
+#! This software is licensed under the terms of the Apache Licence Version 2.0
+#! which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
+#! In applying this licence, ECMWF does not waive the privileges and immunities
+#! granted to it by virtue of its status as an intergovernmental organisation
+#! nor does it submit to any jurisdiction.
+
+MODULE FIELD_${RANK}$${SUFF}$_LIST_MODULE
+
+#:set fieldTypeList = fieldType.getFieldTypeList (ranks=[RANK], kinds=['JP' + str (SUFF)])
+#:set ft = fieldTypeList[0]
+
+#:if ft.rank > 2
+
+#:set fieldTypeList = fieldType.getFieldTypeList (ranks=[RANK-1], kinds=['JP' + str (SUFF)])
+#:set ft1 = fieldTypeList[0]
+
+USE ${ft.name}$_MODULE
+USE ${ft1.name}$_MODULE
+
+${fieldType.useParkind1 ()}$
+
+IMPLICIT NONE
+
+PRIVATE
+
+#:set ftn = ft.name
+#:set ftn1 = ft1.name
+TYPE, EXTENDS (${ftn}$_WRAPPER) :: ${ftn}$_LIST_WRAPPER
+  TYPE (${ftn1}$_PTR), POINTER :: CHILDREN (:) => NULL ()
+CONTAINS
+  PROCEDURE :: INIT => ${ftn}$_LIST_WRAPPER_INIT
+  PROCEDURE :: FINAL => ${ftn}$_LIST_WRAPPER_FINAL
+  PROCEDURE :: ${ftn}$_LIST_WRAPPER_FINAL
+END TYPE ${ftn}$_LIST_WRAPPER
+
+PUBLIC :: ${ftn}$_LIST_WRAPPER
+
+CONTAINS
+
+  SUBROUTINE ${ftn}$_LIST_WRAPPER_INIT(SELF, DATA, PERSISTENT, LBOUNDS)
+    CLASS(${ftn}$_LIST_WRAPPER), INTENT(INOUT) :: SELF
+    ${ft.type}$, TARGET, INTENT(IN) :: DATA(${ft.shape}$)
+    LOGICAL, INTENT(IN), OPTIONAL :: PERSISTENT
+    INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: LBOUNDS(${ft.rank}$)
+    LOGICAL :: LLPERSISTENT
+    CALL SELF%${ftn}$_WRAPPER%INIT (DATA, PERSISTENT, LBOUNDS)
+  END SUBROUTINE ${ftn}$_LIST_WRAPPER_INIT
+
+  SUBROUTINE ${ftn}$_LIST_WRAPPER_FINAL(SELF)
+    CLASS(${ftn}$_LIST_WRAPPER) :: SELF
+    ${ft.type}$, POINTER :: PTR(${ft.shape}$)
+    CALL SELF%${ftn}$_WRAPPER%FINAL ()
+  END SUBROUTINE ${ftn}$_LIST_WRAPPER_FINAL
+
+#:endif
+
+END MODULE FIELD_${RANK}$${SUFF}$_LIST_MODULE
