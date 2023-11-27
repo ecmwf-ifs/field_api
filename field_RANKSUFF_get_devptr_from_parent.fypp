@@ -1,0 +1,33 @@
+#! (C) Copyright 2022- ECMWF.
+#! (C) Copyright 2022- Meteo-France.
+#!
+#! This software is licensed under the terms of the Apache Licence Version 2.0
+#! which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
+#! In applying this licence, ECMWF does not waive the privileges and immunities
+#! granted to it by virtue of its status as an intergovernmental organisation
+#! nor does it submit to any jurisdiction.
+
+SUBROUTINE FIELD_${RANK}$${SUFF}$_GET_DEVPTR_FROM_PARENT (YDPARENT, YDCHILD, PTR)
+
+#:set fieldTypeList = fieldType.getFieldTypeList (ranks=[RANK], kinds=['JP' + str (SUFF)])
+#:set ft = fieldTypeList[0]
+
+USE FIELD_BASIC_MODULE
+USE FIELD_${RANK}$${SUFF}$_MODULE
+${fieldType.useParkind1 ()}$
+
+CLASS (FIELD_BASIC), POINTER :: YDPARENT, YDCHILD
+${ft.type}$, POINTER :: PTR(${ft.shape}$) 
+
+#include "abor1.intfb.h"
+
+SELECT TYPE (YDPARENT)
+  CLASS IS (FIELD_${RANK}$${SUFF}$)
+    
+  CLASS DEFAULT
+    CALL ABOR1 ('FIELD_${RANK}$${SUFF}$_GET_DEVPTR_FROM_PARENT: UNEXPECTED CLASS')
+END SELECT
+
+
+
+END SUBROUTINE
