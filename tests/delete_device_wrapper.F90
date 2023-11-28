@@ -28,7 +28,7 @@ PROGRAM FINAL_WRAPPER_GPU
                 ERROR STOP
         END IF
 
-        CALL W%DELETE_DEVICE()
+        CALL W%DELETE_DEVICE_DATA()
 
         IF (ASSOCIATED(W%DEVPTR)) THEN
                 ERROR STOP
