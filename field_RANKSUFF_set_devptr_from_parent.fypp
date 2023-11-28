@@ -7,7 +7,7 @@
 #! granted to it by virtue of its status as an intergovernmental organisation
 #! nor does it submit to any jurisdiction.
 
-SUBROUTINE FIELD_${RANK}$${SUFF}$_GET_DEVPTR_FROM_PARENT (YDPARENT, YDCHILD, DEVPTR)
+SUBROUTINE FIELD_${RANK}$${SUFF}$_SET_DEVPTR_FROM_PARENT (YDPARENT, YDCHILD)
 
 #:set fieldTypeList = fieldType.getFieldTypeList (ranks=[RANK], kinds=['JP' + str (SUFF)])
 #:set ft = fieldTypeList[0]
@@ -31,9 +31,9 @@ CLASS (FIELD_${RANK}$${SUFF}$_LIST_WRAPPER), POINTER :: YLFL
 SELECT TYPE (YDPARENT)
   CLASS IS (FIELD_${RANK}$${SUFF}$_LIST_WRAPPER)
     YLFL => YDPARENT
-    CALL YLFL%GET_CHILD_DEVPTR (YDCHILD, DEVPTR)
+    CALL YLFL%SET_CHILD_DEVPTR (YDCHILD)
   CLASS DEFAULT
-    CALL ABOR1 ('FIELD_${RANK}$${SUFF}$_GET_DEVPTR_FROM_PARENT: UNEXPECTED CLASS')
+    CALL ABOR1 ('FIELD_${RANK}$${SUFF}$_SET_DEVPTR_FROM_PARENT: UNEXPECTED CLASS')
 END SELECT
 
 #:endif

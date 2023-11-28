@@ -37,7 +37,7 @@ CONTAINS
   PROCEDURE :: FINAL => ${ftn}$_LIST_WRAPPER_FINAL
   PROCEDURE :: DELETE_DEVICE => ${ftn}$_LIST_WRAPPER_DELETE_DEVICE
   PROCEDURE :: ${ftn}$_LIST_WRAPPER_FINAL
-  PROCEDURE :: GET_CHILD_DEVPTR => ${ftn}$_GET_CHILD_DEVPTR
+  PROCEDURE :: SET_CHILD_DEVPTR => ${ftn}$_SET_CHILD_DEVPTR
 END TYPE ${ftn}$_LIST_WRAPPER
 
 PUBLIC :: ${ftn}$_LIST_WRAPPER
@@ -108,7 +108,7 @@ CONTAINS
       DO JFLD = 1, SIZE (SELF%CHILDREN)
         SELECT TYPE (YY => SELF%CHILDREN (JFLD)%PTR)
           CLASS IS (${ftn1}$)
-            YLC => SELF%CHILDREN (JFLD)%PTR
+            YLC => YY 
             NULLIFY (YLC%DEVPTR)
           CLASS DEFAULT
             CALL ABOR1 ('${ftn}$_LIST_WRAPPER_DELETE_DEVICE: UNEXPECTED CLASS')
@@ -118,28 +118,34 @@ CONTAINS
 
   END SUBROUTINE ${ftn}$_LIST_WRAPPER_DELETE_DEVICE
 
-  SUBROUTINE ${ftn}$_GET_CHILD_DEVPTR (SELF, YDCHILD, DEVPTR)
+  SUBROUTINE ${ftn}$_SET_CHILD_DEVPTR (SELF, YDCHILD)
     CLASS(${ftn}$_LIST_WRAPPER), INTENT (INOUT) :: SELF
     CLASS(FIELD_BASIC), POINTER :: YDCHILD
-    ${ft1.type}$, POINTER :: DEVPTR(${ft1.shape}$)
 
 #include "abor1.intfb.h"
 
     INTEGER (KIND=JPIM) :: JFLD
     INTEGER (KIND=JPIM) :: ICOUNT
+    CLASS (${ftn1}$), POINTER :: YLC
 
     ICOUNT = 0
 
     DO JFLD = 1, SIZE (SELF%CHILDREN)
       IF (ASSOCIATED (YDCHILD, SELF%CHILDREN (JFLD))) THEN
+        SELECT TYPE (YDCHILD)
+          CLASS IS (${ftn1}$)
+            YLC => YDCHILD
 #:set ar = ', '.join ([':'] * (ft.rank-2))
-        DEVPTR (${','.join (list (map (lambda i: "LBOUND(SELF%DEVPTR," + str(i) + "):", range (1, ft1.rank))))}$,1:) => SELF%DEVPTR (${ar}$, JFLD, :)
+            YLC%DEVPTR (${','.join (list (map (lambda i: "LBOUND(SELF%DEVPTR," + str(i) + "):", range (1, ft1.rank))))}$,1:) => SELF%DEVPTR (${ar}$, JFLD, :)
+          CLASS DEFAULT
+            CALL ABOR1 ('${ftn}$_SET_CHILD_DEVPTR: UNEXPECTED CLASS')
+        END SELECT
         ICOUNT = ICOUNT + 1
       ENDIF
     ENDDO
 
     IF (ICOUNT /= 1) THEN
-      CALL ABOR1 ('${ftn}$_GET_CHILD_DEVPTR: CHILD WAS NOT FOUND')
+      CALL ABOR1 ('${ftn}$_SET_CHILD_DEVPTR: CHILD WAS NOT FOUND')
     ENDIF
 
   END SUBROUTINE
