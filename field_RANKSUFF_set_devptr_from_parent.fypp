@@ -7,7 +7,7 @@
 #! granted to it by virtue of its status as an intergovernmental organisation
 #! nor does it submit to any jurisdiction.
 
-SUBROUTINE FIELD_${RANK}$${SUFF}$_SET_DEVPTR_FROM_PARENT (YDPARENT, YDCHILD)
+SUBROUTINE FIELD_${RANK}$${SUFF}$_SET_DEVPTR_FROM_PARENT (YDPARENT, YDCHILD, DEVPTR)
 
 #:set fieldTypeList = fieldType.getFieldTypeList (ranks=[RANK], kinds=['JP' + str (SUFF)])
 #:set ft = fieldTypeList[0]

@@ -16,11 +16,11 @@ IMPLICIT NONE
 INTERFACE SET_DEVPTR_FROM_PARENT
 #:for ft in fieldTypeList
 #:if not ft.alias
-SUBROUTINE ${ft.name}$_SET_DEVPTR_FROM_PARENT (YDPARENT, YDCHILD, PTR)
+SUBROUTINE ${ft.name}$_SET_DEVPTR_FROM_PARENT (YDPARENT, YDCHILD, DEVPTR)
 USE FIELD_BASIC_MODULE
 ${fieldType.useParkind1 ()}$
 CLASS (FIELD_BASIC), POINTER :: YDPARENT, YDCHILD
-${ft.type}$, POINTER :: PTR(${ft.shape}$) 
+${ft.type}$, POINTER :: DEVPTR(${ft.shape}$) 
 END SUBROUTINE
 #:endif
 #:endfor
