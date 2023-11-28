@@ -17,8 +17,10 @@ MODULE FIELD_${RANK}$${SUFF}$_LIST_MODULE
 #:set fieldTypeList = fieldType.getFieldTypeList (ranks=[RANK-1], kinds=['JP' + str (SUFF)])
 #:set ft1 = fieldTypeList[0]
 
+USE FIELD_BASIC_MODULE
 USE ${ft.name}$_MODULE
 USE ${ft1.name}$_MODULE
+USE DEV_ALLOC_MODULE
 
 ${fieldType.useParkind1 ()}$
 
@@ -33,7 +35,9 @@ TYPE, EXTENDS (${ftn}$_WRAPPER) :: ${ftn}$_LIST_WRAPPER
 CONTAINS
   PROCEDURE :: INIT => ${ftn}$_LIST_WRAPPER_INIT
   PROCEDURE :: FINAL => ${ftn}$_LIST_WRAPPER_FINAL
+  PROCEDURE :: DELETE_DEVICE => ${ftn}$_LIST_WRAPPER_DELETE_DEVICE
   PROCEDURE :: ${ftn}$_LIST_WRAPPER_FINAL
+  PROCEDURE :: GET_CHILD_DEVPTR => ${ftn}$_GET_CHILD_DEVPTR
 END TYPE ${ftn}$_LIST_WRAPPER
 
 PUBLIC :: ${ftn}$_LIST_WRAPPER
@@ -89,6 +93,56 @@ CONTAINS
     CALL SELF%${ftn}$_WRAPPER%FINAL ()
 
   END SUBROUTINE ${ftn}$_LIST_WRAPPER_FINAL
+
+  SUBROUTINE ${ftn}$_LIST_WRAPPER_DELETE_DEVICE(SELF)
+    ! Delete the copy of this field on GPU device
+    CLASS(${ftn}$_LIST_WRAPPER), INTENT (INOUT) :: SELF
+
+#include "abor1.intfb.h"
+
+    INTEGER (KIND=JPIM) :: JFLD
+    CLASS (${ftn1}$), POINTER :: YLC
+
+    IF (ASSOCIATED (SELF%DEVPTR)) THEN
+      CALL DEV_DEALLOCATE (SELF%DEVPTR)
+      DO JFLD = 1, SIZE (SELF%CHILDREN)
+        SELECT TYPE (YY => SELF%CHILDREN (JFLD)%PTR)
+          CLASS IS (${ftn1}$)
+            YLC => SELF%CHILDREN (JFLD)%PTR
+            NULLIFY (YLC%DEVPTR)
+          CLASS DEFAULT
+            CALL ABOR1 ('${ftn}$_LIST_WRAPPER_DELETE_DEVICE: UNEXPECTED CLASS')
+        END SELECT
+      ENDDO
+    ENDIF
+
+  END SUBROUTINE ${ftn}$_LIST_WRAPPER_DELETE_DEVICE
+
+  SUBROUTINE ${ftn}$_GET_CHILD_DEVPTR (SELF, YDCHILD, DEVPTR)
+    CLASS(${ftn}$_LIST_WRAPPER), INTENT (INOUT) :: SELF
+    CLASS(FIELD_BASIC), POINTER :: YDCHILD
+    ${ft1.type}$, POINTER :: DEVPTR(${ft1.shape}$)
+
+#include "abor1.intfb.h"
+
+    INTEGER (KIND=JPIM) :: JFLD
+    INTEGER (KIND=JPIM) :: ICOUNT
+
+    ICOUNT = 0
+
+    DO JFLD = 1, SIZE (SELF%CHILDREN)
+      IF (ASSOCIATED (YDCHILD, SELF%CHILDREN (JFLD))) THEN
+#:set ar = ', '.join ([':'] * (ft.rank-2))
+        DEVPTR (${','.join (list (map (lambda i: "LBOUND(SELF%DEVPTR," + str(i) + "):", range (1, ft1.rank))))}$,1:) => SELF%DEVPTR (${ar}$, JFLD, :)
+        ICOUNT = ICOUNT + 1
+      ENDIF
+    ENDDO
+
+    IF (ICOUNT /= 1) THEN
+      CALL ABOR1 ('${ftn}$_GET_CHILD_DEVPTR: CHILD WAS NOT FOUND')
+    ENDIF
+
+  END SUBROUTINE
 
 #:endif
 
