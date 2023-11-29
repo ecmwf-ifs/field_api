@@ -96,7 +96,7 @@ list(APPEND srcs field_basic_module.F90 field_init_debug_value_module.F90 dev_al
 foreach (SUFF IN ITEMS IM RM RB RD LM)
   string (TOLOWER ${SUFF} suff)
   foreach (RANK RANGE 2 5)
-    foreach (FUNC IN ITEMS "_module" _gathscat_module _access_module _util_module _array_util_module _set_devptr_from_parent _list_module)
+    foreach (FUNC IN ITEMS "_module" _gathscat_module _access_module _util_module _array_util_module _list_module)
       add_custom_command (OUTPUT field_${RANK}${suff}${FUNC}.F90
 	      COMMAND ${FYPP} -DRANK=${RANK} -DSUFF='${SUFF}' -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType 
         ${CMAKE_CURRENT_SOURCE_DIR}/field_RANKSUFF${FUNC}.fypp > field_${RANK}${suff}${FUNC}.F90
@@ -108,7 +108,7 @@ foreach (SUFF IN ITEMS IM RM RB RD LM)
 endforeach ()
 
 foreach (SRC IN ITEMS dev_alloc_module field_factory_module field_access_module field_list_module field_array_module 
-         field_module field_gathscat_module field_util_module field_array_util_module field_set_devptr_from_parent_module)
+         field_module field_gathscat_module field_util_module field_array_util_module)
   add_custom_command (OUTPUT ${SRC}.F90
 	  COMMAND ${FYPP} -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/${SRC}.fypp > ${SRC}.F90
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${SRC}.fypp

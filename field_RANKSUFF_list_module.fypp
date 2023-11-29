@@ -37,7 +37,7 @@ CONTAINS
   PROCEDURE :: FINAL => ${ftn}$_LIST_WRAPPER_FINAL
   PROCEDURE :: DELETE_DEVICE_DATA => ${ftn}$_LIST_WRAPPER_DELETE_DEVICE_DATA
   PROCEDURE :: ${ftn}$_LIST_WRAPPER_FINAL
-  PROCEDURE :: SET_CHILD_DEVPTR => ${ftn}$_SET_CHILD_DEVPTR
+  PROCEDURE :: SET_CHILDREN_DEVPTR => ${ftn}$_SET_CHILDREN_DEVPTR
 END TYPE ${ftn}$_LIST_WRAPPER
 
 PUBLIC :: ${ftn}$_LIST_WRAPPER
@@ -118,35 +118,15 @@ CONTAINS
 
   END SUBROUTINE ${ftn}$_LIST_WRAPPER_DELETE_DEVICE_DATA
 
-  SUBROUTINE ${ftn}$_SET_CHILD_DEVPTR (SELF, YDCHILD)
-    CLASS(${ftn}$_LIST_WRAPPER), INTENT (INOUT) :: SELF
-    CLASS(FIELD_BASIC), POINTER :: YDCHILD
-
-#include "abor1.intfb.h"
+  SUBROUTINE ${ftn}$_SET_CHILDREN_DEVPTR (SELF)
+    CLASS(${ftn}$_LIST_WRAPPER) :: SELF
 
     INTEGER (KIND=JPIM) :: JFLD
-    INTEGER (KIND=JPIM) :: ICOUNT
-    CLASS (${ftn1}$), POINTER :: YLC
 
-    ICOUNT = 0
-
-    DO JFLD = 1, SIZE (SELF%CHILDREN)
-      IF (ASSOCIATED (YDCHILD, SELF%CHILDREN (JFLD))) THEN
-        SELECT TYPE (YDCHILD)
-          CLASS IS (${ftn1}$)
-            YLC => YDCHILD
 #:set ar = ', '.join ([':'] * (ft.rank-2))
-            YLC%DEVPTR (${','.join (list (map (lambda i: "LBOUND(SELF%DEVPTR," + str(i) + "):", range (1, ft1.rank))))}$,1:) => SELF%DEVPTR (${ar}$, JFLD, :)
-          CLASS DEFAULT
-            CALL ABOR1 ('${ftn}$_SET_CHILD_DEVPTR: UNEXPECTED CLASS')
-        END SELECT
-        ICOUNT = ICOUNT + 1
-      ENDIF
+    DO JFLD = 1, SIZE (SELF%CHILDREN)
+      SELF%CHILDREN (JFLD)%PTR%DEVPTR (${','.join (list (map (lambda i: "LBOUND(SELF%DEVPTR," + str(i) + "):", range (1, ft1.rank))))}$,1:) => SELF%DEVPTR (${ar}$, JFLD, :)
     ENDDO
-
-    IF (ICOUNT /= 1) THEN
-      CALL ABOR1 ('${ftn}$_SET_CHILD_DEVPTR: CHILD WAS NOT FOUND')
-    ENDIF
 
   END SUBROUTINE
 
