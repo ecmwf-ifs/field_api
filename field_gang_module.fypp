@@ -24,6 +24,7 @@ PRIVATE
 #:for ft in fieldTypeList
 #:if ft.rank > 2
 PUBLIC :: ${ft.name}$_GANG_WRAPPER
+PUBLIC :: ${ft.name}$_GANG_OWNER
 #:endif
 #:endfor
 
