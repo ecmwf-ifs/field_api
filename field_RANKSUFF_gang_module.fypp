@@ -1,0 +1,211 @@
+#! (C) Copyright 2022- ECMWF.
+#! (C) Copyright 2022- Meteo-France.
+#!
+#! This software is licensed under the terms of the Apache Licence Version 2.0
+#! which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
+#! In applying this licence, ECMWF does not waive the privileges and immunities
+#! granted to it by virtue of its status as an intergovernmental organisation
+#! nor does it submit to any jurisdiction.
+
+MODULE FIELD_${RANK}$${SUFF}$_GANG_MODULE
+
+#:set fieldTypeList = fieldType.getFieldTypeList (ranks=[RANK], kinds=['JP' + str (SUFF)])
+#:set ft = fieldTypeList[0]
+
+#:if ft.rank > 2
+
+#:set fieldTypeList = fieldType.getFieldTypeList (ranks=[RANK-1], kinds=['JP' + str (SUFF)])
+#:set ft1 = fieldTypeList[0]
+
+USE FIELD_BASIC_MODULE
+USE ${ft.name}$_MODULE
+USE ${ft1.name}$_MODULE
+USE DEV_ALLOC_MODULE
+
+${fieldType.useParkind1 ()}$
+
+IMPLICIT NONE
+
+PRIVATE
+
+#:set ftn = ft.name
+#:set ftn1 = ft1.name
+
+#:for type in ['WRAPPER', 'OWNER']
+
+TYPE, EXTENDS (${ftn}$_${type}$) :: ${ftn}$_GANG_${type}$
+  TYPE (${ftn1}$_PTR), POINTER :: CHILDREN (:) => NULL ()
+CONTAINS
+  PROCEDURE :: INIT => ${ftn}$_GANG_${type}$_INIT
+  PROCEDURE :: FINAL => ${ftn}$_GANG_${type}$_FINAL
+  PROCEDURE :: CREATE_DEVICE_DATA => ${ftn}$_GANG_${type}$_CREATE_DEVICE_DATA
+  PROCEDURE :: DELETE_DEVICE_DATA => ${ftn}$_GANG_${type}$_DELETE_DEVICE_DATA
+  PROCEDURE :: GET_DEVICE_DATA_RDONLY => ${ftn}$_GANG_${type}$_GET_DEVICE_DATA_RDONLY
+  PROCEDURE :: GET_DEVICE_DATA_RDWR => ${ftn}$_GANG_${type}$_GET_DEVICE_DATA_RDWR
+  PROCEDURE :: GET_HOST_DATA_RDONLY => ${ftn}$_GANG_${type}$_GET_HOST_DATA_RDONLY
+  PROCEDURE :: GET_HOST_DATA_RDWR => ${ftn}$_GANG_${type}$_GET_HOST_DATA_RDWR
+  PROCEDURE :: SYNC_HOST_RDWR => ${ftn}$_GANG_${type}$_SYNC_HOST_RDWR
+  PROCEDURE :: SYNC_HOST_RDONLY => ${ftn}$_GANG_${type}$_SYNC_HOST_RDONLY
+  PROCEDURE :: SYNC_DEVICE_RDWR => ${ftn}$_GANG_${type}$_SYNC_DEVICE_RDWR
+  PROCEDURE :: SYNC_DEVICE_RDONLY => ${ftn}$_GANG_${type}$_SYNC_DEVICE_RDONLY
+END TYPE ${ftn}$_GANG_${type}$
+
+PUBLIC :: ${ftn}$_GANG_${type}$
+
+#:endfor
+
+CONTAINS
+
+  SUBROUTINE ${ftn}$_GANG_WRAPPER_INIT(SELF, DATA, PERSISTENT, LBOUNDS)
+    CLASS(${ftn}$_GANG_WRAPPER) :: SELF
+    ${ft.type}$, TARGET, INTENT(IN) :: DATA(${ft.shape}$)
+    LOGICAL, INTENT(IN), OPTIONAL :: PERSISTENT
+    INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: LBOUNDS(${ft.rank}$)
+    LOGICAL :: LLPERSISTENT
+    INTEGER (KIND=JPIM) :: IFLR, JFLD, NFLD
+    INTEGER (KIND=JPIM) :: LLBOUNDS (${ft.rank}$)
+    CLASS (${ftn1}$_WRAPPER), POINTER :: YLFW
+
+  
+    CALL SELF%${ftn}$_WRAPPER%INIT (DATA=DATA, PERSISTENT=PERSISTENT, LBOUNDS=LBOUNDS)
+
+    LLBOUNDS = 1
+    IF (PRESENT (LBOUNDS)) LLBOUNDS = LBOUNDS
+
+    IFLR = ${ft.rank}$-1
+    NFLD = SIZE (DATA, IFLR)
+
+    LLBOUNDS(IFLR) = LLBOUNDS (IFLR+1)
+    ALLOCATE (SELF%CHILDREN (NFLD))
+    
+#:set ar = ', '.join ([':'] * (ft.rank-2))
+
+    DO JFLD = 1, NFLD
+      ALLOCATE (YLFW)
+      CALL YLFW%INIT (DATA=DATA(${ar}$, JFLD, :), PERSISTENT=PERSISTENT, LBOUNDS=LLBOUNDS(1:IFLR))
+      SELF%CHILDREN (JFLD)%PTR => YLFW
+    ENDDO
+    
+  END SUBROUTINE ${ftn}$_GANG_WRAPPER_INIT
+
+  SUBROUTINE ${ftn}$_GANG_OWNER_INIT(SELF, LBOUNDS, UBOUNDS, PERSISTENT, DELAYED, INIT_VALUE)
+    CLASS(${ftn}$_GANG_OWNER) :: SELF
+    INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: LBOUNDS(${ft.rank}$)
+    INTEGER(KIND=JPIM), INTENT(IN) :: UBOUNDS(${ft.rank}$)
+    LOGICAL, INTENT(IN), OPTIONAL :: PERSISTENT
+    LOGICAL, OPTIONAL,  INTENT(IN) :: DELAYED
+    ${ft.type}$, OPTIONAL, INTENT(IN) :: INIT_VALUE
+    LOGICAL :: LLPERSISTENT
+    INTEGER (KIND=JPIM) :: IFLR, JFLD, NFLD
+    INTEGER (KIND=JPIM) :: LLBOUNDS (${ft.rank}$)
+    CLASS (${ftn1}$_WRAPPER), POINTER :: YLFW
+
+  
+    CALL SELF%${ftn}$_OWNER%INIT (PERSISTENT=PERSISTENT, LBOUNDS=LBOUNDS, UBOUNDS=UBOUNDS, DELAYED=.FALSE., INIT_VALUE=INIT_VALUE)
+
+    LLBOUNDS = 1
+    IF (PRESENT (LBOUNDS)) LLBOUNDS = LBOUNDS
+
+    IFLR = ${ft.rank}$-1
+    NFLD = UBOUNDS (IFLR) -LLBOUNDS (IFLR)+1
+
+    LLBOUNDS(IFLR) = LLBOUNDS (IFLR+1)
+    ALLOCATE (SELF%CHILDREN (NFLD))
+    
+#:set ar = ', '.join ([':'] * (ft.rank-2))
+
+    DO JFLD = 1, NFLD
+      ALLOCATE (YLFW)
+      CALL YLFW%INIT (DATA=SELF%PTR (${ar}$, JFLD, :), PERSISTENT=PERSISTENT, LBOUNDS=LLBOUNDS(1:IFLR))
+      SELF%CHILDREN (JFLD)%PTR => YLFW
+    ENDDO
+    
+  END SUBROUTINE ${ftn}$_GANG_OWNER_INIT
+
+#:for type in ['WRAPPER', 'OWNER']
+  SUBROUTINE ${ftn}$_GANG_${type}$_FINAL(SELF)
+    CLASS(${ftn}$_GANG_${type}$) :: SELF
+    ${ft.type}$, POINTER :: PTR(${ft.shape}$)
+    INTEGER (KIND=JPIM) :: JFLD
+
+    DO JFLD = 1, SIZE (SELF%CHILDREN)
+      CALL SELF%CHILDREN(JFLD)%PTR%FINAL ()
+      DEALLOCATE (SELF%CHILDREN(JFLD)%PTR)
+      NULLIFY (SELF%CHILDREN(JFLD)%PTR)
+    ENDDO
+  
+    DEALLOCATE (SELF%CHILDREN)  
+    NULLIFY (SELF%CHILDREN)  
+
+    CALL SELF%${ftn}$_${type}$%FINAL ()
+
+  END SUBROUTINE ${ftn}$_GANG_${type}$_FINAL
+
+  SUBROUTINE ${ftn}$_GANG_${type}$_DELETE_DEVICE_DATA(SELF)
+    ! Delete the copy of this field on GPU device
+    CLASS(${ftn}$_GANG_${type}$) :: SELF
+
+    INTEGER (KIND=JPIM) :: JFLD
+
+    IF (ASSOCIATED (SELF%DEVPTR)) THEN
+      DO JFLD = 1, SIZE (SELF%CHILDREN)
+        NULLIFY (SELF%CHILDREN (JFLD)%PTR%DEVPTR)
+      ENDDO
+      CALL DEV_DEALLOCATE (SELF%DEVPTR)
+    ENDIF
+
+  END SUBROUTINE ${ftn}$_GANG_${type}$_DELETE_DEVICE_DATA
+
+  SUBROUTINE ${ftn}$_GANG_${type}$_CREATE_DEVICE_DATA (SELF)
+    CLASS(${ftn}$_GANG_${type}$) :: SELF
+    INTEGER (KIND=JPIM) :: JFLD
+
+    CALL SELF%${ftn}$_${type}$%CREATE_DEVICE_DATA ()
+
+#:set ar = ', '.join ([':'] * (ft.rank-2))
+    DO JFLD = 1, SIZE (SELF%CHILDREN)
+      SELF%CHILDREN (JFLD)%PTR%DEVPTR (${','.join (list (map (lambda i: "LBOUND(SELF%DEVPTR," + str(i) + "):", range (1, ft1.rank))))}$,1:) => SELF%DEVPTR (${ar}$, JFLD, :)
+    ENDDO
+
+  END SUBROUTINE
+
+#:for method in ['SYNC_HOST_RDWR', 'SYNC_HOST_RDONLY', 'SYNC_DEVICE_RDWR', 'SYNC_DEVICE_RDONLY']
+  SUBROUTINE ${ftn}$_GANG_${type}$_${method}$ (SELF, QUEUE)
+    CLASS(${ftn}$_GANG_${type}$) :: SELF
+    INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
+
+    INTEGER (KIND=JPIM) :: JFLD
+
+    CALL SELF%${ftn}$_${type}$%${method}$ (QUEUE)
+
+    DO JFLD = 1, SIZE (SELF%CHILDREN)
+      SELF%CHILDREN(JFLD)%PTR%ISTATUS = SELF%ISTATUS
+    ENDDO
+   
+  END SUBROUTINE ${ftn}$_GANG_${type}$_${method}$
+
+#:endfor
+
+#:for method in ['GET_DEVICE_DATA_RDONLY', 'GET_DEVICE_DATA_RDWR', 'GET_HOST_DATA_RDONLY', 'GET_HOST_DATA_RDWR']
+  SUBROUTINE ${ftn}$_GANG_${type}$_${method}$ (SELF, PPTR, QUEUE)
+    CLASS(${ftn}$_GANG_${type}$) :: SELF
+    ${ft.type}$, POINTER,         INTENT(INOUT) :: PPTR(${ft.shape}$)
+    INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
+
+    INTEGER (KIND=JPIM) :: JFLD
+
+    CALL SELF%${ftn}$_${type}$%${method}$ (PPTR, QUEUE)
+
+    DO JFLD = 1, SIZE (SELF%CHILDREN)
+      SELF%CHILDREN(JFLD)%PTR%ISTATUS = SELF%ISTATUS
+    ENDDO
+   
+  END SUBROUTINE ${ftn}$_GANG_${type}$_${method}$
+  
+#:endfor
+
+#:endfor
+
+#:endif
+
+END MODULE FIELD_${RANK}$${SUFF}$_GANG_MODULE

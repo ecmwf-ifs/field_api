@@ -7,12 +7,12 @@
 #! granted to it by virtue of its status as an intergovernmental organisation
 #! nor does it submit to any jurisdiction.
 
-MODULE FIELD_LIST_MODULE
+MODULE FIELD_GANG_MODULE
 
 #:set fieldTypeList = fieldType.getFieldTypeList ()
 
 #:for ft in fieldTypeList
-USE ${ft.name}$_LIST_MODULE
+USE ${ft.name}$_GANG_MODULE
 #:endfor
 
 ${fieldType.useParkind1 ()}$
@@ -23,8 +23,8 @@ PRIVATE
 
 #:for ft in fieldTypeList
 #:if ft.rank > 2
-PUBLIC :: ${ft.name}$_LIST_WRAPPER
+PUBLIC :: ${ft.name}$_GANG_WRAPPER
 #:endif
 #:endfor
 
-END MODULE FIELD_LIST_MODULE
+END MODULE FIELD_GANG_MODULE
