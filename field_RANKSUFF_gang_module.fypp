@@ -48,6 +48,7 @@ CONTAINS
   PROCEDURE :: SYNC_HOST_RDONLY => ${ftn}$_GANG_${type}$_SYNC_HOST_RDONLY
   PROCEDURE :: SYNC_DEVICE_RDWR => ${ftn}$_GANG_${type}$_SYNC_DEVICE_RDWR
   PROCEDURE :: SYNC_DEVICE_RDONLY => ${ftn}$_GANG_${type}$_SYNC_DEVICE_RDONLY
+  PROCEDURE :: SET_DEVICE_DIRTY => ${ftn}$_GANG_${type}$_SET_DEVICE_DIRTY
 END TYPE ${ftn}$_GANG_${type}$
 
 PUBLIC :: ${ftn}$_GANG_${type}$
@@ -203,6 +204,19 @@ CONTAINS
   END SUBROUTINE ${ftn}$_GANG_${type}$_${method}$
   
 #:endfor
+
+  SUBROUTINE ${ftn}$_GANG_${type}$_SET_DEVICE_DIRTY (SELF)
+    CLASS(${ftn}$_GANG_${type}$) :: SELF
+
+    INTEGER (KIND=JPIM) :: JFLD
+
+    CALL SELF%${ftn}$_${type}$%SET_DEVICE_DIRTY ()
+
+    DO JFLD = 1, SIZE (SELF%CHILDREN)
+      CALL SELF%CHILDREN(JFLD)%PTR%SET_DEVICE_DIRTY ()
+    ENDDO
+
+  END SUBROUTINE
 
 #:endfor
 

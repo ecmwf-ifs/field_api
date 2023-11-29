@@ -229,10 +229,13 @@ CONTAINS
       IF (ZERO) VIEW_PTR(${ft.viewShape}$) = ${ft.default}$
     END IF
 
+    IF (ASSOCIATED (SELF%PARENT)) THEN
+      CALL SELF%PARENT%SET_DEVICE_DIRTY ()
+    ELSE
 ! Mark data dirty on the device: the pointer returned by GET_VIEW may be rw
-    IF (IAND (SELF%ISTATUS, NDEVFRESH)==NDEVFRESH) THEN
-      SELF%ISTATUS = IAND(SELF%ISTATUS, NOT(NDEVFRESH))
+      CALL SELF%SET_DEVICE_DIRTY ()
     ENDIF
+
   END FUNCTION ${ftn}$_GET_VIEW
 
   SUBROUTINE ${ftn}$_DELETE_DEVICE_DATA(SELF)
