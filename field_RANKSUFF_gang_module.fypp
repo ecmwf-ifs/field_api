@@ -20,6 +20,7 @@ MODULE FIELD_${RANK}$${SUFF}$_GANG_MODULE
 USE FIELD_BASIC_MODULE
 USE ${ft.name}$_MODULE
 USE ${ft1.name}$_MODULE
+USE FIELD_CONSTANTS_MODULE
 USE DEV_ALLOC_MODULE
 
 ${fieldType.useParkind1 ()}$
@@ -122,17 +123,22 @@ CONTAINS
     CLASS(${ftn}$_GANG_${type}$) :: SELF
     ${ft.type}$, POINTER :: PTR(${ft.shape}$)
     INTEGER (KIND=JPIM) :: JFLD
+    CLASS (${ftn1}$), POINTER :: YLF
 
     DO JFLD = 1, SIZE (SELF%CHILDREN)
-      CALL SELF%CHILDREN(JFLD)%PTR%FINAL ()
-      DEALLOCATE (SELF%CHILDREN(JFLD)%PTR)
-      NULLIFY (SELF%CHILDREN(JFLD)%PTR)
+      YLF => SELF%CHILDREN(JFLD)%PTR
+      NULLIFY (YLF%DEVPTR)
+      NULLIFY (YLF%PARENT)
+! Mark wrapper as fresh on host, synchronization has to be handled by then parent
+      CALL YLF%SET_STATUS (IOR (SELF%ISTATUS, NHSTFRESH))
+      CALL YLF%FINAL ()
+      DEALLOCATE (YLF)
     ENDDO
   
+    CALL SELF%${ftn}$_${type}$%FINAL ()
+
     DEALLOCATE (SELF%CHILDREN)  
     NULLIFY (SELF%CHILDREN)  
-
-    CALL SELF%${ftn}$_${type}$%FINAL ()
 
   END SUBROUTINE ${ftn}$_GANG_${type}$_FINAL
 
