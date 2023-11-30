@@ -15,6 +15,9 @@ USE DEV_ALLOC_MODULE
 
 #:for ft in fieldTypeList
 USE ${ft.name}$_MODULE
+#:if ft.rank > 2
+USE ${ft.name}$_BUFFER_MODULE, ONLY: ${ft.name}$_BUFFER_WRAPPER, ${ft.name}$_BUFFER_OWNER
+#:endif
 #:endfor
 
 ${fieldType.useParkind1 ()}$
@@ -29,6 +32,10 @@ PUBLIC :: ${ft.name}$_OWNER
 PUBLIC :: ${ft.name}$_WRAPPER
 PUBLIC :: ${ft.name}$_PTR
 PUBLIC :: ${ft.name}$_VIEW
+#:if ft.rank > 2
+PUBLIC :: ${ft.name}$_BUFFER_WRAPPER
+PUBLIC :: ${ft.name}$_BUFFER_OWNER
+#:endif
 #:endfor
 
 PUBLIC :: WAIT_FOR_ASYNC_QUEUE

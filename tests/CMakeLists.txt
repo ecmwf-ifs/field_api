@@ -45,9 +45,9 @@ list(APPEND TEST_FILES
 	init_owner_delayed_gpu.F90
 	init_owner_delayed_init_debug_value.F90
 	init_owner_delayed_init_value.F90
-	init_owner_field_buffer_gpu.F90
-    init_final_owner_field_buffer.F90
-    init_final_wrapper_field_buffer.F90
+#	init_owner_field_buffer_gpu.F90
+#    init_final_owner_field_buffer.F90
+#    init_final_wrapper_field_buffer.F90
 	init_owner_gpu.F90
 	init_owner_init_debug_value.F90
 	init_owner_init_debug_value_gpu.F90

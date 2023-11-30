@@ -109,7 +109,7 @@ foreach (SUFF IN ITEMS IM RM RB RD LM)
   endforeach ()
 endforeach ()
 
-foreach (SRC IN ITEMS dev_alloc_module field_factory_module field_access_module field_buffer_module
+foreach (SRC IN ITEMS dev_alloc_module field_factory_module field_access_module
          field_array_module field_module field_gathscat_module field_util_module field_array_util_module)
   add_custom_command (OUTPUT ${SRC}.F90
 	  COMMAND ${FYPP} -n -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/${SRC}.fypp > ${SRC}.F90
