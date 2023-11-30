@@ -170,8 +170,6 @@ CONTAINS
 
     INTEGER (KIND=JPIM) :: JFLD
 
-WRITE (0, *) __FILE__, ':', __LINE__, " SET_STATUS = ", KSTATUS
-
     CALL SELF%${ftn}$_${type}$%SET_STATUS (KSTATUS)
 
     DO JFLD = 1, SIZE (SELF%CHILDREN)
