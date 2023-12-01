@@ -321,6 +321,7 @@ CONTAINS
   END SUBROUTINE ${ftn}$_WIPE_OBJECT
 
   SUBROUTINE ${ftn}$_COPY_DATA (SELF, KDIR, QUEUE)
+  USE ${ftn}$_DATA_MODULE
   CLASS(${ftn}$) :: SELF
   INTEGER (KIND=JPIM),           INTENT(IN) :: KDIR
   INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN) :: QUEUE
@@ -332,7 +333,7 @@ CONTAINS
   SELECT CASE (SELF%LAST_CONTIGUOUS_DIMENSION)
 #:for d in range (ft.rank + 1)
     CASE (${d}$)
-      CALL COPY_DIM${d}$_CONTIGUOUS (SELF%PTR, SELF%DEVPTR, KDIR, QUEUE)
+      CALL ${ftn}$_COPY_DIM${d}$_CONTIGUOUS (SELF%PTR, SELF%DEVPTR, KDIR, QUEUE)
 #:endfor
   END SELECT
   CALL CPU_TIME(FINISH)
@@ -341,61 +342,6 @@ CONTAINS
   ELSE IF (KDIR == ND2H) THEN
     CALL SELF%STATS%INC_GPU_TO_CPU_TRANSFER(START, FINISH)
   END IF
-
-  CONTAINS
-
-#:for d in range (0, ft.rank+1)
-    SUBROUTINE COPY_DIM${d}$_CONTIGUOUS (HST, DEV, KDIR, QUEUE)
-#ifdef _OPENACC
-    USE OPENACC
-#endif
-    ${ft.type}$, POINTER :: HST (${ft.shape}$), DEV (${ft.shape}$)
-    INTEGER (KIND=JPIM),           INTENT (IN) :: KDIR
-    INTEGER (KIND=JPIM), OPTIONAL, INTENT (IN) :: QUEUE
-    INTEGER (KIND=JPIM) :: ISIZE
-    INTEGER :: ${', '.join (['J'] + list (map (lambda i: 'J' + str (i+1), range (d, ft.rank))))}$
-
-  #:for e in range (ft.rank, d, -1)
-    ${'  ' * (ft.rank - e)}$DO J${e}$ = LBOUND (HST, ${e}$), UBOUND (HST, ${e}$)
-  #:endfor
-  #:set ar = ', '.join ([':'] * d  + list (map (lambda i: 'J' + str (i+1), range (d, ft.rank))))
-  #:set indent = '  ' * (ft.rank - e)
-    #:if d == 0
-    ${indent}$  ISIZE = KIND (HST)
-    #:else
-    ${indent}$  ISIZE = KIND (HST) * SIZE (HST (${ar}$))
-    #:endif
-    ${indent}$  IF (KDIR == NH2D) THEN
-#ifdef _OPENACC
-    ${indent}$    !$acc host_data use_device (DEV)
-    ${indent}$    IF(PRESENT(QUEUE))THEN
-    ${indent}$      CALL ACC_MEMCPY_TO_DEVICE_ASYNC (DEV (${ar}$), HST (${ar}$), ISIZE, QUEUE)
-    ${indent}$    ELSE
-    ${indent}$      CALL ACC_MEMCPY_TO_DEVICE (DEV (${ar}$), HST (${ar}$), ISIZE)
-    ${indent}$    ENDIF
-    ${indent}$    !$acc end host_data
-#else
-    ${indent}$    DEV (${ar}$) = HST (${ar}$)
-#endif
-    ${indent}$  ELSEIF (KDIR == ND2H) THEN
-#ifdef _OPENACC
-    ${indent}$    !$acc host_data use_device (DEV)
-    ${indent}$    IF(PRESENT(QUEUE))THEN
-    ${indent}$      CALL ACC_MEMCPY_FROM_DEVICE_ASYNC (HST (${ar}$), DEV (${ar}$), ISIZE, QUEUE)
-    ${indent}$    ELSE
-    ${indent}$      CALL ACC_MEMCPY_FROM_DEVICE (HST (${ar}$), DEV (${ar}$), ISIZE)
-    ${indent}$    ENDIF
-    ${indent}$    !$acc end host_data
-#else
-    ${indent}$    HST (${ar}$) = DEV (${ar}$)
-#endif
-    ${indent}$  ENDIF
-  #:for e in range (d, ft.rank)
-    ${'  ' * (ft.rank - e - 1)}$ENDDO
-  #:endfor
-    END SUBROUTINE
-
-#:endfor
 
   END SUBROUTINE ${ftn}$_COPY_DATA
 
@@ -635,39 +581,6 @@ CONTAINS
     CALL SELF%INIT(UBOUNDS=UBOUNDS, LBOUNDS=LBOUNDS, PERSISTENT=PERSISTENT, DELAYED=DELAYED, INIT_VALUE=INIT_VALUE)
   END SUBROUTINE ${ftn}$_OWNER_RESIZE
 
-#:endfor
-
-#:for ft in fieldTypeList
-#:set ftn = ft.name
-  INTEGER (KIND=JPIM) FUNCTION ${ftn}$_GET_LAST_CONTIGUOUS_DIMENSION (PTR) RESULT (JDIM)
-  ${ft.type}$, POINTER :: PTR (${ft.shape}$)
-  INTEGER*8 :: ISTRIDE (${ft.rank}$)
-  INTEGER (KIND=JPIM) :: J, LB(${ft.rank}$)
-
-  LB = LBOUND(PTR)
-  ISTRIDE (1) = KIND (PTR)
-  DO J = 2, ${ft.rank}$
-    ISTRIDE (J) = ISTRIDE (J-1) * SIZE (PTR, J-1)
-  ENDDO
-
-  JDIM = 0
-#:for d in range (1, ft.rank+1)
-  #:set ind0 = ""
-  #:set ind1 = ""
-  #:for i in range(1,ft.rank+1)
-    #:set ind0 = ind0 + "LB({}), ".format(i)
-    #:set ind1 = ind1 + "LB({}){}, ".format(i,"+1"*(i==d))
-  #:endfor
-  #:set ind0 = ind0[:-2]
-  #:set ind1 = ind1[:-2]
-  IF (LOC (PTR (${ind1}$)) - LOC (PTR (${ind0}$)) /= ISTRIDE (${d}$)) THEN
-    RETURN
-  ENDIF
-
-  JDIM = ${d}$
-
-#:endfor
-  END FUNCTION ${ftn}$_GET_LAST_CONTIGUOUS_DIMENSION
 #:endfor
 
 #ifdef __PGI
