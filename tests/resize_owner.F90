@@ -13,6 +13,7 @@ PROGRAM RESIZE_OWNER
         USE FIELD_MODULE
         USE FIELD_FACTORY_MODULE
         USE PARKIND1
+        USE FIELD_ABORT_MODULE
         IMPLICIT NONE
         CLASS(FIELD_2RB), POINTER :: O => NULL()
         REAL(KIND=JPRB), POINTER :: PTR(:,:)
@@ -29,15 +30,15 @@ PROGRAM RESIZE_OWNER
         CALL O%GET_DIMS(LBOUNDS=L,UBOUNDS=U)
         IF(.NOT. U(1) == 100)THEN
                 WRITE(*,*)"U(1) != 100"
-                ERROR STOP
+                CALL FIELD_ABORT ("ERROR")
         END IF
         IF(.NOT. U(2) == 100)THEN
                 WRITE(*,*)"U(2) != 100"
-                ERROR STOP
+                CALL FIELD_ABORT ("ERROR")
         END IF
         IF (.NOT. ALL(PTR == 7)) THEN
                 WRITE(*,*)"PTR != 7"
-                ERROR STOP
+                CALL FIELD_ABORT ("ERROR")
         END IF 
         CALL FIELD_DELETE(O)
 END PROGRAM RESIZE_OWNER

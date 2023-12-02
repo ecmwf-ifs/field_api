@@ -13,6 +13,7 @@ PROGRAM TEST_CRC64
         USE FIELD_UTIL_MODULE
         USE OMP_LIB
         USE PARKIND1
+        USE FIELD_ABORT_MODULE
 
         CLASS(FIELD_2RB), POINTER :: W => NULL()
         REAL(KIND=JPRB), POINTER :: D(:,:)
@@ -36,7 +37,7 @@ PROGRAM TEST_CRC64
 
         ICRC = CRC64 (W)
 !       WRITE (*, '(Z16.16)') ICRC
-        IF (ICRC /= ICRC64_PI) ERROR STOP
+        IF (ICRC /= ICRC64_PI) CALL FIELD_ABORT ("ERROR")
 
         D => GET_DEVICE_DATA_RDWR (W)
 
@@ -48,7 +49,7 @@ PROGRAM TEST_CRC64
 
         ICRC = CRC64 (W)
 !       WRITE (*, '(Z16.16)') ICRC
-        IF (ICRC /= ICRC64_E) ERROR STOP
+        IF (ICRC /= ICRC64_E) CALL FIELD_ABORT ("ERROR")
         
 
         CALL FIELD_DELETE(W)

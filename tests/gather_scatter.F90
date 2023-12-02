@@ -5,6 +5,7 @@ PROGRAM GATHER_SCATTER
         USE FIELD_ACCESS_MODULE
         USE FIELD_GATHSCAT_MODULE
         USE PARKIND1
+        USE FIELD_ABORT_MODULE
         IMPLICIT NONE
 
         TYPE(FIELD_GATHSCAT):: FGS
@@ -43,11 +44,11 @@ PROGRAM GATHER_SCATTER
         DO I=1,NPROMA
         IF(MOD(I,2)==0)THEN
                 IF (.NOT. ALL(D(I,:)==2))THEN
-                        ERROR STOP
+                        CALL FIELD_ABORT ("ERROR")
                 ENDIF
         ELSE
                 IF (.NOT. ALL(D(I,:)==1))THEN
-                        ERROR STOP
+                        CALL FIELD_ABORT ("ERROR")
                 ENDIF
         ENDIF
         ENDDO
