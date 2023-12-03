@@ -12,7 +12,8 @@ MODULE FIELD_${RANK}$${SUFF}$_BUFFER_MODULE
 #:set fieldTypeList = fieldType.getFieldTypeList (ranks=[RANK], kinds=['JP' + str (SUFF)])
 
 #:for ft in fieldTypeList
-USE ${ft.name}$_MODULE, ONLY : ${ft.name}$, ${ft.name}$_OWNER, ${ft.name}$_WRAPPER, NDEVFRESH, NHSTFRESH
+USE ${ft.name}$_MODULE, ONLY : ${ft.name}$, ${ft.name}$_OWNER, ${ft.name}$_WRAPPER, &
+&                              NDEVFRESH, NHSTFRESH, NRD, NWR
 USE ${f'FIELD_{ft.rank-1}{ft.suffix}'}$_MODULE, ONLY : ${f'FIELD_{ft.rank-1}{ft.suffix}'}$, &
 & ${f'FIELD_{ft.rank-1}{ft.suffix}'}$_WRAPPER, ${f'FIELD_{ft.rank-1}{ft.suffix}'}$_PTR
 #:endfor
@@ -39,7 +40,13 @@ CONTAINS
    PROCEDURE :: GET_VIEW => ${ftn}$_BUFFER_WRAPPER_GET_VIEW
    PROCEDURE :: GET_DEVICE_DATA_RDONLY => ${ftn}$_BUFFER_WRAPPER_GET_DEVICE_DATA_RDONLY
    PROCEDURE :: GET_DEVICE_DATA_RDWR => ${ftn}$_BUFFER_WRAPPER_GET_DEVICE_DATA_RDWR
-#!   PROCEDURE :: GET_HOST_DATA => ${ftn}$_BUFFER_WRAPPER_GET_HOST_DATA
+   PROCEDURE :: SYNC_DEVICE_RDONLY => ${ftn}$_BUFFER_WRAPPER_SYNC_DEVICE_RDONLY
+   PROCEDURE :: SYNC_DEVICE_RDWR => ${ftn}$_BUFFER_WRAPPER_SYNC_DEVICE_RDWR
+   PROCEDURE :: GET_HOST_DATA_RDONLY => ${ftn}$_BUFFER_WRAPPER_GET_HOST_DATA_RDONLY
+   PROCEDURE :: GET_HOST_DATA_RDWR => ${ftn}$_BUFFER_WRAPPER_GET_HOST_DATA_RDWR
+   PROCEDURE :: SYNC_HOST_RDONLY => ${ftn}$_BUFFER_WRAPPER_SYNC_HOST_RDONLY
+   PROCEDURE :: SYNC_HOST_RDWR => ${ftn}$_BUFFER_WRAPPER_SYNC_HOST_RDWR
+   PROCEDURE :: CREATE_BUFFER_DEVICE_DATA => ${ftn}$_BUFFER_WRAPPER_CREATE_DEVICE_DATA
 END TYPE ${ftn}$_BUFFER_WRAPPER
 
 PUBLIC :: ${ftn}$_BUFFER_WRAPPER
@@ -55,7 +62,13 @@ CONTAINS
    PROCEDURE :: GET_VIEW => ${ftn}$_BUFFER_OWNER_GET_VIEW
    PROCEDURE :: GET_DEVICE_DATA_RDONLY => ${ftn}$_BUFFER_OWNER_GET_DEVICE_DATA_RDONLY
    PROCEDURE :: GET_DEVICE_DATA_RDWR => ${ftn}$_BUFFER_OWNER_GET_DEVICE_DATA_RDWR
-#!   PROCEDURE :: GET_HOST_DATA => ${ftn}$_BUFFER_OWNER_GET_HOST_DATA
+   PROCEDURE :: SYNC_DEVICE_RDONLY => ${ftn}$_BUFFER_OWNER_SYNC_DEVICE_RDONLY
+   PROCEDURE :: SYNC_DEVICE_RDWR => ${ftn}$_BUFFER_OWNER_SYNC_DEVICE_RDWR
+   PROCEDURE :: GET_HOST_DATA_RDONLY => ${ftn}$_BUFFER_OWNER_GET_HOST_DATA_RDONLY
+   PROCEDURE :: GET_HOST_DATA_RDWR => ${ftn}$_BUFFER_OWNER_GET_HOST_DATA_RDWR
+   PROCEDURE :: SYNC_HOST_RDONLY => ${ftn}$_BUFFER_OWNER_SYNC_HOST_RDONLY
+   PROCEDURE :: SYNC_HOST_RDWR => ${ftn}$_BUFFER_OWNER_SYNC_HOST_RDWR
+   PROCEDURE :: CREATE_BUFFER_DEVICE_DATA => ${ftn}$_BUFFER_OWNER_CREATE_DEVICE_DATA
 END TYPE ${ftn}$_BUFFER_OWNER
 
 PUBLIC :: ${ftn}$_BUFFER_OWNER
@@ -78,7 +91,7 @@ SUBROUTINE ${ftn}$_WRAPPER_INIT(SELF, NUM_CHILDREN, CHILDREN, LBOUNDS, DATA, PER
   LOGICAL, OPTIONAL, INTENT(IN) :: CONTIG_FIELDS
   
   LOGICAL :: LLPERSISTENT
-  INTEGER(KIND=JPIM) :: LLBOUNDS(${ft.rank}$), IFIELD
+  INTEGER(KIND=JPIM) :: LLBOUNDS(${ft.rank}$), CHILD_LBOUNDS(${ft.rank-1}$)
   ${ft.type}$ :: LINIT_VALUE
 
   SELF%NUM_CHILDREN = NUM_CHILDREN
@@ -114,7 +127,22 @@ SUBROUTINE ${ftn}$_WRAPPER_INIT(SELF, NUM_CHILDREN, CHILDREN, LBOUNDS, DATA, PER
 
   CALL SELF%${ft.name}$_WRAP(DATA=DATA, LBOUNDS=LLBOUNDS, PERSISTENT=LLPERSISTENT)
 
-  CALL ${ftn}$_ASSIGN_CHILDREN(NUM_CHILDREN, SELF%CHILDREN, CHILDREN, SELF%PTR, LLPERSISTENT, SELF%CONTIG_FIELDS)
+  IF(SELF%CONTIG_FIELDS)THEN
+    #:for r in range(1, ft.rank)
+    CHILD_LBOUNDS(${r}$) = LBOUND(SELF%PTR, ${r}$)
+    #:endfor
+  ELSE
+    #:for r in range(1, ft.rank-1)
+    CHILD_LBOUNDS(${r}$) = LBOUND(SELF%PTR, ${r}$)
+    #:endfor
+    CHILD_LBOUNDS(${ft.rank-1}$) = LBOUND(SELF%PTR, ${ft.rank}$)
+  ENDIF
+
+  CALL ${ftn}$_ASSIGN_CHILDREN(NUM_CHILDREN, SELF%CHILDREN, CHILDREN, SELF%PTR, LLPERSISTENT, SELF%CONTIG_FIELDS, CHILD_LBOUNDS)
+
+  ! We allocate device memory here so that we can point CHILD%DEVPTR to a discontiguous
+  ! slice of BUFFER%DEVPTR
+  CALL SELF%CREATE_BUFFER_DEVICE_DATA
 END SUBROUTINE ${ftn}$_WRAPPER_INIT
 
 SUBROUTINE ${ftn}$_OWNER_INIT(SELF, NUM_CHILDREN, CHILDREN, LBOUNDS, UBOUNDS, &
@@ -131,7 +159,7 @@ SUBROUTINE ${ftn}$_OWNER_INIT(SELF, NUM_CHILDREN, CHILDREN, LBOUNDS, UBOUNDS, &
   ${ft.type}$, OPTIONAL, INTENT(IN) :: INIT_VALUE
   
   LOGICAL :: LLPERSISTENT
-  INTEGER(KIND=JPIM) :: LLBOUNDS(${ft.rank}$), IFIELD
+  INTEGER(KIND=JPIM) :: LLBOUNDS(${ft.rank}$), CHILD_LBOUNDS(${ft.rank-1}$)
   ${ft.type}$ :: LINIT_VALUE
 
   SELF%NUM_CHILDREN = NUM_CHILDREN
@@ -173,47 +201,32 @@ SUBROUTINE ${ftn}$_OWNER_INIT(SELF, NUM_CHILDREN, CHILDREN, LBOUNDS, UBOUNDS, &
 
   CALL SELF%${ft.name}$_OWNER_INIT(LBOUNDS=LBOUNDS, UBOUNDS=UBOUNDS, PERSISTENT=LLPERSISTENT, INIT_VALUE=LINIT_VALUE)
 
-  CALL ${ftn}$_ASSIGN_CHILDREN(NUM_CHILDREN, SELF%CHILDREN, CHILDREN, SELF%PTR, LLPERSISTENT, SELF%CONTIG_FIELDS)
+  IF(SELF%CONTIG_FIELDS)THEN
+    #:for r in range(1, ft.rank)
+    CHILD_LBOUNDS(${r}$) = LBOUND(SELF%PTR, ${r}$)
+    #:endfor
+  ELSE
+    #:for r in range(1, ft.rank-1)
+    CHILD_LBOUNDS(${r}$) = LBOUND(SELF%PTR, ${r}$)
+    #:endfor
+    CHILD_LBOUNDS(${ft.rank-1}$) = LBOUND(SELF%PTR, ${ft.rank}$)
+  ENDIF
+
+  CALL ${ftn}$_ASSIGN_CHILDREN(NUM_CHILDREN, SELF%CHILDREN, CHILDREN, SELF%PTR, LLPERSISTENT, SELF%CONTIG_FIELDS, CHILD_LBOUNDS)
+
+  ! We allocate device memory here so that we can point CHILD%DEVPTR to a discontiguous
+  ! slice of BUFFER%DEVPTR
+  CALL SELF%CREATE_BUFFER_DEVICE_DATA
 END SUBROUTINE ${ftn}$_OWNER_INIT
 
-SUBROUTINE ${ftn}$_WRAPPER_FINAL(SELF)
-  CLASS(${ftn}$_WRAPPER) :: SELF
-  INTEGER(KIND=JPIM) :: IFIELD
-
-  DO IFIELD=1,SELF%NUM_CHILDREN
-     CALL SELF%CHILDREN(IFIELD)%PTR%FINAL()
-     IF(ASSOCIATED(SELF%CHILDREN(IFIELD)%PTR))THEN
-       DEALLOCATE(SELF%CHILDREN(IFIELD)%PTR)
-       NULLIFY(SELF%CHILDREN(IFIELD)%PTR)
-     ENDIF
-  ENDDO
-
-  CALL SELF%${ft.name}$_WRAPPER_FINAL
-END SUBROUTINE ${ftn}$_WRAPPER_FINAL
-
-SUBROUTINE ${ftn}$_OWNER_FINAL(SELF)
-  CLASS(${ftn}$_OWNER) :: SELF
-  INTEGER(KIND=JPIM) :: IFIELD
-
-  DO IFIELD=1,SELF%NUM_CHILDREN
-     CALL SELF%CHILDREN(IFIELD)%PTR%FINAL()
-     IF(ASSOCIATED(SELF%CHILDREN(IFIELD)%PTR))THEN
-       DEALLOCATE(SELF%CHILDREN(IFIELD)%PTR)
-       NULLIFY(SELF%CHILDREN(IFIELD)%PTR)
-     ENDIF
-  ENDDO
-
-  CALL SELF%${ft.name}$_OWNER_FINAL
-END SUBROUTINE ${ftn}$_OWNER_FINAL
-
-SUBROUTINE ${ftn}$_ASSIGN_CHILDREN(NUM_CHILDREN, CHILDREN_, CHILDREN, DATA, PERSISTENT, CONTIG_FIELDS)
+SUBROUTINE ${ftn}$_ASSIGN_CHILDREN(NUM_CHILDREN, CHILDREN_, CHILDREN, DATA, PERSISTENT, CONTIG_FIELDS, LBOUNDS)
   INTEGER(KIND=JPIM), INTENT(IN) :: NUM_CHILDREN
+  INTEGER(KIND=JPIM), INTENT(IN) :: LBOUNDS(${ft.rank-1}$)
   TYPE(${f'FIELD_{ft.rank-1}{ft.suffix}'}$_PTR), POINTER, INTENT(OUT) :: CHILDREN_(:)
   TYPE(${f'FIELD_{ft.rank-1}{ft.suffix}'}$_PTR), TARGET, INTENT(INOUT) :: CHILDREN(:)
   LOGICAL, INTENT(IN) :: PERSISTENT, CONTIG_FIELDS
   ${ft.type}$, INTENT(IN) :: DATA(${ft.shape}$)
 
-  INTEGER(KIND=JPIM), DIMENSION(${ft.rank-1}$) :: LBOUNDS
   INTEGER(KIND=JPIM) :: IFIELD
 
   DO IFIELD=1,NUM_CHILDREN
@@ -221,20 +234,11 @@ SUBROUTINE ${ftn}$_ASSIGN_CHILDREN(NUM_CHILDREN, CHILDREN_, CHILDREN, DATA, PERS
   ENDDO
 
   IF(CONTIG_FIELDS)THEN
-     #:for r in range(1, ft.rank)
-     LBOUNDS(${r}$) = LBOUND(DATA, ${r}$)
-     #:endfor
-
      #:set ar = (',').join([':' for _ in range(0, ft.rank-1)])
      DO IFIELD=1,NUM_CHILDREN
         CALL ${f'FIELD_{ft.rank-1}{ft.suffix}'}$_INIT_CHILD(CHILDREN(IFIELD)%PTR, DATA(${ar}$,IFIELD), LBOUNDS, PERSISTENT)
      ENDDO
   ELSE
-     #:for r in range(1, ft.rank-1)
-     LBOUNDS(${r}$) = LBOUND(DATA, ${r}$)
-     #:endfor
-     LBOUNDS(${ft.rank-1}$) = LBOUND(DATA, ${ft.rank}$)
-
      #:set ar = (',').join([':' for _ in range(0, ft.rank-2)])
      DO IFIELD=1,NUM_CHILDREN
         CALL ${f'FIELD_{ft.rank-1}{ft.suffix}'}$_INIT_CHILD(CHILDREN(IFIELD)%PTR, DATA(${ar}$,IFIELD,:), LBOUNDS, PERSISTENT)
@@ -256,176 +260,6 @@ SUBROUTINE ${f'FIELD_{ft.rank-1}{ft.suffix}'}$_INIT_CHILD(CHILD, DATA, LBOUNDS, 
      CALL CHILD%INIT(DATA=DATA, LBOUNDS=LBOUNDS, PERSISTENT=PERSISTENT)
   END SELECT
 END SUBROUTINE ${f'FIELD_{ft.rank-1}{ft.suffix}'}$_INIT_CHILD 
-
-#!SUBROUTINE ${ftn}$_GET_HOST_DATA_RDWR(SELF, PPTR, QUEUE)
-#!    CLASS(${ftn}$),   INTENT(INOUT) :: SELF
-#!    ${ft.type}$, POINTER,         INTENT(INOUT) :: PPTR(${ft.shape}$)
-#!    INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
-#!    INTEGER(KIND=JPIM) :: IFIELD
-#!
-#!    CALL SELF%BUFFER%GET_HOST_DATA_RDWR(PPTR, QUEUE=QUEUE)
-#!
-#!    DO IFIELD=1,SELF%NUM_FIELDS
-#!       SELF%FIELDS(IFIELD)%PTR%ISTATUS = SELF%BUFFER%ISTATUS
-#!    ENDDO
-#!
-#!END SUBROUTINE ${ftn}$_GET_HOST_DATA_RDWR
-#!
-#!SUBROUTINE ${ftn}$_GET_DEVICE_DATA_RDWR(SELF, PPTR, QUEUE)
-#!    CLASS(${ftn}$),   INTENT(INOUT) :: SELF
-#!    ${ft.type}$, POINTER,         INTENT(INOUT) :: PPTR(${ft.shape}$)
-#!    INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
-#!    INTEGER(KIND=JPIM) :: IFIELD
-#!
-#!    CALL SELF%BUFFER%GET_DEVICE_DATA_RDWR(PPTR, QUEUE=QUEUE)
-#!
-#!    DO IFIELD=1,SELF%NUM_FIELDS
-#!       SELF%FIELDS(IFIELD)%PTR%ISTATUS = SELF%BUFFER%ISTATUS
-#!    ENDDO
-#!
-#!    IF(.NOT. ASSOCIATED(SELF%FIELDS(1)%PTR%DEVPTR))THEN
-#!       IF(SELF%CONTIG_FIELDS)THEN
-#!          #:set ar = (',').join([':' for _ in range(0, ft.rank-1)])
-#!          DO IFIELD=1,SELF%NUM_FIELDS
-#!             SELF%FIELDS(IFIELD)%PTR%DEVPTR => SELF%BUFFER%DEVPTR(${ar}$,IFIELD)
-#!          ENDDO
-#!       ELSE
-#!          #:set ar = (',').join([':' for _ in range(0, ft.rank-2)])
-#!          DO IFIELD=1,SELF%NUM_FIELDS
-#!             SELF%FIELDS(IFIELD)%PTR%DEVPTR => SELF%BUFFER%DEVPTR(${ar}$,IFIELD,:)
-#!          ENDDO
-#!       ENDIF
-#!    ENDIF
-#!
-#!END SUBROUTINE ${ftn}$_GET_DEVICE_DATA_RDWR
-#!
-#!SUBROUTINE ${ftn}$_GET_HOST_DATA_RDONLY(SELF, PPTR, QUEUE)
-#!    CLASS(${ftn}$),   INTENT(INOUT) :: SELF
-#!    ${ft.type}$, POINTER,         INTENT(INOUT) :: PPTR(${ft.shape}$)
-#!    INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
-#!    INTEGER(KIND=JPIM) :: IFIELD
-#!
-#!    CALL SELF%BUFFER%GET_HOST_DATA_RDONLY(PPTR, QUEUE=QUEUE)
-#!
-#!    DO IFIELD=1,SELF%NUM_FIELDS
-#!       SELF%FIELDS(IFIELD)%PTR%ISTATUS = SELF%BUFFER%ISTATUS
-#!    ENDDO
-#!
-#!END SUBROUTINE ${ftn}$_GET_HOST_DATA_RDONLY
-#!
-#!SUBROUTINE ${ftn}$_GET_DEVICE_DATA_RDONLY(SELF, PPTR, QUEUE)
-#!    CLASS(${ftn}$),   INTENT(INOUT) :: SELF
-#!    ${ft.type}$, POINTER,         INTENT(INOUT) :: PPTR(${ft.shape}$)
-#!    INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
-#!    INTEGER(KIND=JPIM) :: IFIELD
-#!
-#!    CALL SELF%BUFFER%GET_DEVICE_DATA_RDONLY(PPTR, QUEUE=QUEUE)
-#!
-#!    DO IFIELD=1,SELF%NUM_FIELDS
-#!       SELF%FIELDS(IFIELD)%PTR%ISTATUS = SELF%BUFFER%ISTATUS
-#!    ENDDO
-#!
-#!    IF(.NOT. ASSOCIATED(SELF%FIELDS(1)%PTR%DEVPTR))THEN
-#!       IF(SELF%CONTIG_FIELDS)THEN
-#!          #:set ar = (',').join([':' for _ in range(0, ft.rank-1)])
-#!          DO IFIELD=1,SELF%NUM_FIELDS
-#!             SELF%FIELDS(IFIELD)%PTR%DEVPTR => SELF%BUFFER%DEVPTR(${ar}$,IFIELD)
-#!          ENDDO
-#!       ELSE
-#!          #:set ar = (',').join([':' for _ in range(0, ft.rank-2)])
-#!          DO IFIELD=1,SELF%NUM_FIELDS
-#!             SELF%FIELDS(IFIELD)%PTR%DEVPTR => SELF%BUFFER%DEVPTR(${ar}$,IFIELD,:)
-#!          ENDDO
-#!       ENDIF
-#!    ENDIF
-#!
-#!END SUBROUTINE ${ftn}$_GET_DEVICE_DATA_RDONLY
-#!
-#!SUBROUTINE ${ftn}$_SYNC_HOST_RDWR(SELF, QUEUE)
-#!    CLASS(${ftn}$),   INTENT(INOUT) :: SELF
-#!    INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
-#!
-#!    ${ft.type}$, POINTER :: PPTR(${ft.shape}$)
-#!    INTEGER(KIND=JPIM) :: IFIELD
-#!
-#!    CALL SELF%BUFFER%GET_HOST_DATA_RDWR(PPTR, QUEUE=QUEUE)
-#!
-#!    DO IFIELD=1,SELF%NUM_FIELDS
-#!       SELF%FIELDS(IFIELD)%PTR%ISTATUS = SELF%BUFFER%ISTATUS
-#!    ENDDO
-#!
-#!END SUBROUTINE ${ftn}$_SYNC_HOST_RDWR
-#!
-#!SUBROUTINE ${ftn}$_SYNC_HOST_RDONLY(SELF, QUEUE)
-#!    CLASS(${ftn}$),   INTENT(INOUT) :: SELF
-#!    INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
-#!
-#!    ${ft.type}$, POINTER :: PPTR(${ft.shape}$)
-#!    INTEGER(KIND=JPIM) :: IFIELD
-#!
-#!    CALL SELF%BUFFER%GET_HOST_DATA_RDONLY(PPTR, QUEUE=QUEUE)
-#!
-#!    DO IFIELD=1,SELF%NUM_FIELDS
-#!       SELF%FIELDS(IFIELD)%PTR%ISTATUS = SELF%BUFFER%ISTATUS
-#!    ENDDO
-#!
-#!END SUBROUTINE ${ftn}$_SYNC_HOST_RDONLY
-#!
-#!SUBROUTINE ${ftn}$_SYNC_DEVICE_RDWR(SELF, QUEUE)
-#!    CLASS(${ftn}$),   INTENT(INOUT) :: SELF
-#!    INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
-#!    ${ft.type}$, POINTER :: PPTR(${ft.shape}$)
-#!    INTEGER(KIND=JPIM) :: IFIELD
-#!
-#!    CALL SELF%BUFFER%GET_DEVICE_DATA_RDWR(PPTR, QUEUE=QUEUE)
-#!
-#!    DO IFIELD=1,SELF%NUM_FIELDS
-#!       SELF%FIELDS(IFIELD)%PTR%ISTATUS = SELF%BUFFER%ISTATUS
-#!    ENDDO
-#!
-#!    IF(.NOT. ASSOCIATED(SELF%FIELDS(1)%PTR%DEVPTR))THEN
-#!       IF(SELF%CONTIG_FIELDS)THEN
-#!          #:set ar = (',').join([':' for _ in range(0, ft.rank-1)])
-#!          DO IFIELD=1,SELF%NUM_FIELDS
-#!             SELF%FIELDS(IFIELD)%PTR%DEVPTR => SELF%BUFFER%DEVPTR(${ar}$,IFIELD)
-#!          ENDDO
-#!       ELSE
-#!          #:set ar = (',').join([':' for _ in range(0, ft.rank-2)])
-#!          DO IFIELD=1,SELF%NUM_FIELDS
-#!             SELF%FIELDS(IFIELD)%PTR%DEVPTR => SELF%BUFFER%DEVPTR(${ar}$,IFIELD,:)
-#!          ENDDO
-#!       ENDIF
-#!    ENDIF
-#!
-#!END SUBROUTINE ${ftn}$_SYNC_DEVICE_RDWR
-#!
-#!SUBROUTINE ${ftn}$_SYNC_DEVICE_RDONLY(SELF, QUEUE)
-#!    CLASS(${ftn}$),   INTENT(INOUT) :: SELF
-#!    INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
-#!    ${ft.type}$, POINTER :: PPTR(${ft.shape}$)
-#!    INTEGER(KIND=JPIM) :: IFIELD
-#!
-#!    CALL SELF%BUFFER%GET_DEVICE_DATA_RDONLY(PPTR, QUEUE=QUEUE)
-#!
-#!    DO IFIELD=1,SELF%NUM_FIELDS
-#!       SELF%FIELDS(IFIELD)%PTR%ISTATUS = SELF%BUFFER%ISTATUS
-#!    ENDDO
-#!
-#!    IF(.NOT. ASSOCIATED(SELF%FIELDS(1)%PTR%DEVPTR))THEN
-#!       IF(SELF%CONTIG_FIELDS)THEN
-#!          #:set ar = (',').join([':' for _ in range(0, ft.rank-1)])
-#!          DO IFIELD=1,SELF%NUM_FIELDS
-#!             SELF%FIELDS(IFIELD)%PTR%DEVPTR => SELF%BUFFER%DEVPTR(${ar}$,IFIELD)
-#!          ENDDO
-#!       ELSE
-#!          #:set ar = (',').join([':' for _ in range(0, ft.rank-2)])
-#!          DO IFIELD=1,SELF%NUM_FIELDS
-#!             SELF%FIELDS(IFIELD)%PTR%DEVPTR => SELF%BUFFER%DEVPTR(${ar}$,IFIELD,:)
-#!          ENDDO
-#!       ENDIF
-#!    ENDIF
-#!
-#!END SUBROUTINE ${ftn}$_SYNC_DEVICE_RDONLY
 
 SUBROUTINE ${ftn}$_GET_VIEW(VIEW_PTR, IDX, DATA, CONTIG_FIELDS)
   ${ft.type}$, POINTER, INTENT(OUT) :: VIEW_PTR(${ft.viewShape}$)
@@ -469,6 +303,49 @@ SUBROUTINE ${ftn}$_CHECK_CHILDREN_STATUS(CHILDREN, ISTATUS, STAT)
 END SUBROUTINE ${ftn}$_CHECK_CHILDREN_STATUS
 
 #:for buffer_type in ['OWNER', 'WRAPPER']
+SUBROUTINE ${ftn}$_${buffer_type}$_CREATE_DEVICE_DATA(SELF)
+  CLASS(${ftn}$_${buffer_type}$) :: SELF
+  INTEGER(KIND=JPIM) :: IFIELD
+  
+  IF (.NOT. ASSOCIATED (SELF%DEVPTR)) THEN
+    CALL SELF%CREATE_DEVICE_DATA
+    IF(SELF%CONTIG_FIELDS)THEN
+       #:set ar = (',').join([':' for _ in range(0, ft.rank-1)])
+       DO IFIELD=1,SELF%NUM_CHILDREN
+          SELF%CHILDREN(IFIELD)%PTR%DEVPTR => SELF%DEVPTR(${ar}$,IFIELD)
+       ENDDO
+    ELSE
+       #:set ar = (',').join([':' for _ in range(0, ft.rank-2)])
+       DO IFIELD=1,SELF%NUM_CHILDREN
+          SELF%CHILDREN(IFIELD)%PTR%DEVPTR => SELF%DEVPTR(${ar}$,IFIELD,:)
+       ENDDO
+    ENDIF
+  ENDIF
+END SUBROUTINE ${ftn}$_${buffer_type}$_CREATE_DEVICE_DATA
+
+SUBROUTINE ${ftn}$_${buffer_type}$_FINAL(SELF)
+  CLASS(${ftn}$_${buffer_type}$) :: SELF
+  INTEGER(KIND=JPIM) :: IFIELD
+
+  ! CHILD%DEVPTR was never allocated and is a discontiguous slice of BUFFER%DEVPTR
+  ! To avoid calling CHILD%DELETE_DEVICE, we copy back all the data here and 
+  ! nullify CHILD%DEVPTR
+  DO IFIELD=1,SELF%NUM_CHILDREN
+     CALL SELF%CHILDREN(IFIELD)%PTR%SYNC_HOST_RDWR()
+     NULLIFY(SELF%CHILDREN(IFIELD)%PTR%DEVPTR)
+  ENDDO
+
+  DO IFIELD=1,SELF%NUM_CHILDREN
+     CALL SELF%CHILDREN(IFIELD)%PTR%FINAL()
+     IF(ASSOCIATED(SELF%CHILDREN(IFIELD)%PTR))THEN
+       DEALLOCATE(SELF%CHILDREN(IFIELD)%PTR)
+       NULLIFY(SELF%CHILDREN(IFIELD)%PTR)
+     ENDIF
+  ENDDO
+
+  CALL SELF%${ft.name}$_${buffer_type}$_FINAL
+END SUBROUTINE ${ftn}$_${buffer_type}$_FINAL
+
 FUNCTION ${ftn}$_${buffer_type}$_GET_VIEW(SELF, BLOCK_INDEX, ZERO) RESULT(VIEW_PTR)
   CLASS(${ftn}$_${buffer_type}$) :: SELF
   ${ft.type}$, POINTER :: VIEW_PTR(${ft.viewShape}$)
@@ -501,52 +378,131 @@ SUBROUTINE ${ftn}$_${buffer_type}$_GET_DEVICE_DATA_${mode}$(SELF, PPTR, QUEUE)
   INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
 
   LOGICAL :: STAT
-  INTEGER(KIND=JPIM) :: IFIELD
+  INTEGER(KIND=JPIM) :: IFIELD, MODE
   INTEGER(KIND=JPIM) :: LBOUNDS(${ft.rank}$)
 
   CALL ${ftn}$_CHECK_CHILDREN_STATUS(SELF%CHILDREN, SELF%ISTATUS, STAT)
 
+  ! If the CHILDREN all have the same ISTATUS as the BUFFER, then we can safely
+  ! exchange data on a per BUFFER basis. Otherwise, data exchange must be done
+  ! on a per field basis
   IF(STAT)THEN
     CALL SELF%${ft.name}$_GET_DEVICE_DATA_${mode}$(PPTR, QUEUE=QUEUE)
-
-    DO IFIELD=1,SELF%NUM_CHILDREN
-       SELF%CHILDREN(IFIELD)%PTR%ISTATUS = SELF%ISTATUS
-    ENDDO
-
-    IF(SELF%CONTIG_FIELDS)THEN
-       #:set ar = (',').join([':' for _ in range(0, ft.rank-1)])
-       DO IFIELD=1,SELF%NUM_CHILDREN
-          SELF%CHILDREN(IFIELD)%PTR%DEVPTR => SELF%DEVPTR(${ar}$,IFIELD)
-       ENDDO
-    ELSE
-       #:set ar = (',').join([':' for _ in range(0, ft.rank-2)])
-       DO IFIELD=1,SELF%NUM_CHILDREN
-          SELF%CHILDREN(IFIELD)%PTR%DEVPTR => SELF%DEVPTR(${ar}$,IFIELD,:)
-       ENDDO
-    ENDIF
+    CALL ${ftn}$_SET_CHILDREN_STATUS(SELF%CHILDREN, SELF%ISTATUS)
   ELSE
     DO IFIELD=1,SELF%NUM_CHILDREN
-       CALL SELF%CHILDREN(IFIELD)%PTR%${f'FIELD_{ft.rank-1}{ft.suffix}'}$_SYNC_DEVICE_${mode}$(QUEUE=QUEUE)
+       CALL SELF%CHILDREN(IFIELD)%PTR%SYNC_DEVICE_${mode}$(QUEUE=QUEUE)
     ENDDO
 
-    SELF%ISTATUS = SELF%CHILDREN(1)%PTR%ISTATUS
-
-    IF(SELF%CONTIG_FIELDS)THEN
-       #:set ar = (',').join([':' for _ in range(0, ft.rank-1)])
-       DO IFIELD=1,SELF%NUM_CHILDREN
-          SELF%DEVPTR(${ar}$,IFIELD) = SELF%CHILDREN(IFIELD)%PTR%DEVPTR
-       ENDDO
-    ELSE
-       #:set ar = (',').join([':' for _ in range(0, ft.rank-2)])
-       DO IFIELD=1,SELF%NUM_CHILDREN
-          SELF%DEVPTR(${ar}$,IFIELD,:) = SELF%CHILDREN(IFIELD)%PTR%DEVPTR
-       ENDDO
+#:if mode == 'RDWR'
+    MODE = IOR (NRD, NWR)
+#:else
+    MODE = NRD
+#:endif
+    IF (IAND (MODE, NWR) /= 0) THEN
+      SELF%ISTATUS = IAND (SELF%ISTATUS, NOT (NHSTFRESH))
     ENDIF
-
-    LBOUNDS=LBOUND(SELF%PTR)
-    PPTR (${ft.lbptr}$) => SELF%DEVPTR (${','.join(':' for _ in range(ft.rank))}$)
+    LBOUNDS = LBOUND(SELF%PTR)
+    PPTR(${ft.lbptr}$) => SELF%DEVPTR (${','.join(':' for _ in range(ft.rank))}$)
   ENDIF
 END SUBROUTINE ${ftn}$_${buffer_type}$_GET_DEVICE_DATA_${mode}$
+
+SUBROUTINE ${ftn}$_${buffer_type}$_SYNC_DEVICE_${mode}$(SELF, QUEUE)
+  CLASS(${ftn}$_${buffer_type}$),                INTENT(INOUT) :: SELF
+  INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
+
+  LOGICAL :: STAT
+  INTEGER(KIND=JPIM) :: IFIELD, MODE
+
+  CALL ${ftn}$_CHECK_CHILDREN_STATUS(SELF%CHILDREN, SELF%ISTATUS, STAT)
+
+  ! If the CHILDREN all have the same ISTATUS as the BUFFER, then we can safely
+  ! exchange data on a per BUFFER basis. Otherwise, data exchange must be done
+  ! on a per field basis
+  IF(STAT)THEN
+    CALL SELF%${ft.name}$_SYNC_DEVICE_${mode}$(QUEUE=QUEUE)
+    CALL ${ftn}$_SET_CHILDREN_STATUS(SELF%CHILDREN, SELF%ISTATUS)
+  ELSE
+    DO IFIELD=1,SELF%NUM_CHILDREN
+       CALL SELF%CHILDREN(IFIELD)%PTR%SYNC_DEVICE_${mode}$(QUEUE=QUEUE)
+    ENDDO
+
+#:if mode == 'RDWR'
+    MODE = IOR (NRD, NWR)
+#:else
+    MODE = NRD
+#:endif
+    IF (IAND (MODE, NWR) /= 0) THEN
+      SELF%ISTATUS = IAND (SELF%ISTATUS, NOT (NHSTFRESH))
+    ENDIF
+  ENDIF
+END SUBROUTINE ${ftn}$_${buffer_type}$_SYNC_DEVICE_${mode}$
+
+SUBROUTINE ${ftn}$_${buffer_type}$_GET_HOST_DATA_${mode}$(SELF, PPTR, QUEUE)
+  CLASS(${ftn}$_${buffer_type}$),                INTENT(INOUT) :: SELF
+  ${ft.type}$, POINTER,          INTENT(INOUT) :: PPTR(${ft.shape}$)
+  INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
+
+  LOGICAL :: STAT
+  INTEGER(KIND=JPIM) :: IFIELD, MODE
+  INTEGER(KIND=JPIM) :: LBOUNDS(${ft.rank}$)
+
+  CALL ${ftn}$_CHECK_CHILDREN_STATUS(SELF%CHILDREN, SELF%ISTATUS, STAT)
+
+  ! If the CHILDREN all have the same ISTATUS as the BUFFER, then we can safely
+  ! exchange data on a per BUFFER basis. Otherwise, data exchange must be done
+  ! on a per field basis
+  IF(STAT)THEN
+    CALL SELF%${ft.name}$_GET_HOST_DATA_${mode}$(PPTR, QUEUE=QUEUE)
+    CALL ${ftn}$_SET_CHILDREN_STATUS(SELF%CHILDREN, SELF%ISTATUS)
+  ELSE
+    DO IFIELD=1,SELF%NUM_CHILDREN
+       CALL SELF%CHILDREN(IFIELD)%PTR%${f'FIELD_{ft.rank-1}{ft.suffix}'}$_SYNC_HOST_${mode}$(QUEUE=QUEUE)
+    ENDDO
+
+#:if mode == 'RDWR'
+    MODE = IOR (NRD, NWR)
+#:else
+    MODE = NRD
+#:endif
+    IF (IAND (MODE, NWR) /= 0) THEN
+      SELF%ISTATUS = IAND (SELF%ISTATUS, NOT (NDEVFRESH))
+    ENDIF
+    LBOUNDS=LBOUND(SELF%PTR)
+    PPTR (${ft.lbptr}$) => SELF%PTR (${','.join(':' for _ in range(ft.rank))}$)
+  ENDIF
+END SUBROUTINE ${ftn}$_${buffer_type}$_GET_HOST_DATA_${mode}$
+
+SUBROUTINE ${ftn}$_${buffer_type}$_SYNC_HOST_${mode}$(SELF, QUEUE)
+  CLASS(${ftn}$_${buffer_type}$),                INTENT(INOUT) :: SELF
+  INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
+
+  LOGICAL :: STAT
+  INTEGER(KIND=JPIM) :: IFIELD, MODE
+
+  CALL ${ftn}$_CHECK_CHILDREN_STATUS(SELF%CHILDREN, SELF%ISTATUS, STAT)
+
+  ! If the CHILDREN all have the same ISTATUS as the BUFFER, then we can safely
+  ! exchange data on a per BUFFER basis. Otherwise, data exchange must be done
+  ! on a per field basis
+  IF(STAT)THEN
+    CALL SELF%${ft.name}$_SYNC_HOST_${mode}$(QUEUE=QUEUE)
+    CALL ${ftn}$_SET_CHILDREN_STATUS(SELF%CHILDREN, SELF%ISTATUS)
+  ELSE
+    DO IFIELD=1,SELF%NUM_CHILDREN
+       CALL SELF%CHILDREN(IFIELD)%PTR%${f'FIELD_{ft.rank-1}{ft.suffix}'}$_SYNC_HOST_${mode}$(QUEUE=QUEUE)
+    ENDDO
+
+#:if mode == 'RDWR'
+    MODE = IOR (NRD, NWR)
+#:else
+    MODE = NRD
+#:endif
+    IF (IAND (MODE, NWR) /= 0) THEN
+      SELF%ISTATUS = IAND (SELF%ISTATUS, NOT (NDEVFRESH))
+    ENDIF
+  ENDIF
+END SUBROUTINE ${ftn}$_${buffer_type}$_SYNC_HOST_${mode}$
 
 #:endfor
 #:endfor
