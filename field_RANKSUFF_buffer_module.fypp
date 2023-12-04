@@ -400,7 +400,7 @@ SUBROUTINE ${ftn}$_${buffer_type}$_GET_DEVICE_DATA_${mode}$(SELF, PPTR, QUEUE)
     MODE = NRD
 #:endif
     IF (IAND (MODE, NWR) /= 0) THEN
-      SELF%ISTATUS = IAND (SELF%ISTATUS, NOT (NHSTFRESH))
+      SELF%ISTATUS = NDEVFRESH
     ENDIF
     LBOUNDS = LBOUND(SELF%PTR)
     PPTR(${ft.lbptr}$) => SELF%DEVPTR (${','.join(':' for _ in range(ft.rank))}$)
@@ -433,7 +433,7 @@ SUBROUTINE ${ftn}$_${buffer_type}$_SYNC_DEVICE_${mode}$(SELF, QUEUE)
     MODE = NRD
 #:endif
     IF (IAND (MODE, NWR) /= 0) THEN
-      SELF%ISTATUS = IAND (SELF%ISTATUS, NOT (NHSTFRESH))
+      SELF%ISTATUS = NDEVFRESH
     ENDIF
   ENDIF
 END SUBROUTINE ${ftn}$_${buffer_type}$_SYNC_DEVICE_${mode}$
@@ -466,7 +466,7 @@ SUBROUTINE ${ftn}$_${buffer_type}$_GET_HOST_DATA_${mode}$(SELF, PPTR, QUEUE)
     MODE = NRD
 #:endif
     IF (IAND (MODE, NWR) /= 0) THEN
-      SELF%ISTATUS = IAND (SELF%ISTATUS, NOT (NDEVFRESH))
+      SELF%ISTATUS = NHSTFRESH
     ENDIF
     LBOUNDS=LBOUND(SELF%PTR)
     PPTR (${ft.lbptr}$) => SELF%PTR (${','.join(':' for _ in range(ft.rank))}$)
@@ -499,7 +499,7 @@ SUBROUTINE ${ftn}$_${buffer_type}$_SYNC_HOST_${mode}$(SELF, QUEUE)
     MODE = NRD
 #:endif
     IF (IAND (MODE, NWR) /= 0) THEN
-      SELF%ISTATUS = IAND (SELF%ISTATUS, NOT (NDEVFRESH))
+      SELF%ISTATUS = NHSTFRESH
     ENDIF
   ENDIF
 END SUBROUTINE ${ftn}$_${buffer_type}$_SYNC_HOST_${mode}$
