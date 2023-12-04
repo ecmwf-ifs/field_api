@@ -1,0 +1,862 @@
+! (C) Copyright 2022- ECMWF.
+! (C) Copyright 2022- Meteo-France.
+!
+! This software is licensed under the terms of the Apache Licence Version 2.0
+! which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
+! In applying this licence, ECMWF does not waive the privileges and immunities
+! granted to it by virtue of its status as an intergovernmental organisation
+! nor does it submit to any jurisdiction.
+
+PROGRAM TEST_BUFFER
+
+    USE FIELD_MODULE
+    USE FIELD_FACTORY_MODULE
+    USE FIELD_ACCESS_MODULE
+!    USE FIELD_ABORT_MODULE
+    USE PARKIND1, ONLY : JPRD, JPIM
+    
+    IMPLICIT NONE
+    
+    CLASS(FIELD_4RD), POINTER :: YLF4
+    TYPE(FIELD_3RD_PTR), ALLOCATABLE :: YLF3L (:)
+    
+    INTEGER (KIND=JPIM), PARAMETER :: NPROMA = 32, NFLEVG = 15, NDIM = 3, NGPBLKS = 10
+    LOGICAL, PARAMETER :: LLPERSISTENT = .TRUE.
+    
+    INTEGER (KIND=JPIM), PARAMETER :: ILB (4) = [1,0,1,1], IUB (4) = [NPROMA, NFLEVG, NDIM, NGPBLKS]
+    REAL (KIND=JPRD), ALLOCATABLE :: ZDATA4 (:,:,:,:)
+    
+    INTEGER (KIND=JPIM) :: JDIM
+    INTEGER (KIND=JPIM) :: ISTEP
+    LOGICAL, PARAMETER :: LLVERBOSE = .TRUE.
+    
+    INTEGER :: IERROR = 0
+    
+    REAL (KIND=JPRD) :: ZCOEF (NDIM)
+    !$acc declare create (ZCOEF)
+    
+    ALLOCATE (ZDATA4 (ILB (1):IUB (1), ILB (2):IUB (2), ILB (3):IUB (3), ILB (4):IUB (4)))
+    
+    DO JDIM = 1, NDIM
+      ZCOEF (JDIM) = REAL (JDIM, JPRD)
+    ENDDO
+    
+    YLF4 => NULL ()
+    
+    DO ISTEP = 1, 2000
+      CALL STEP
+    ENDDO
+    
+    IF (ASSOCIATED (YLF4)) THEN
+      CALL DEL_YLF4
+    ENDIF
+    
+    CONTAINS
+    
+!    SUBROUTINE TEST_GANG_ABORT (CDMESS)
+!    
+!    CHARACTER (LEN=*), INTENT (IN) :: CDMESS
+!    
+!    IERROR = IERROR + 1
+!    
+!    END SUBROUTINE
+    
+    INTEGER (KIND=JPIM) FUNCTION IRAND (K1, K2)
+    
+    INTEGER (KIND=JPIM) :: K1, K2
+    
+    INTEGER*8, SAVE :: X = 2713
+    
+    X = MODULO (16807_8 * X, 2147483647_8)
+    
+    IRAND = K1 + MODULO (X, INT (K2-K1+1, 8))
+    
+    END FUNCTION
+    
+    SUBROUTINE SORTR8 (KDIM, KORD, PVAL)
+    
+    INTEGER (KIND=JPIM) :: KDIM
+    INTEGER (KIND=JPIM) :: KORD (KDIM)
+    REAL (KIND=JPRD)    :: PVAL (KDIM)
+    
+    INTEGER (KIND=JPIM) :: I, J, ITMP
+    
+    DO I = 1, KDIM
+      DO J = I+1, KDIM
+        IF (PVAL (KORD (I)) > PVAL (KORD (J))) THEN
+          ITMP = KORD (I)
+          KORD (I) = KORD (J)
+          KORD (J) = ITMP
+        ENDIF
+      ENDDO
+    ENDDO
+    
+    END SUBROUTINE
+    
+    SUBROUTINE STEP
+    
+    INTEGER (KIND=JPIM) :: IFLD (NDIM)
+    INTEGER (KIND=JPIM) :: ICASE, ISIZE
+    INTEGER (KIND=JPIM) :: JFLD, JDIM, ITMP
+    
+    REAL (KIND=JPRD) :: ZVAL (NDIM)
+    
+    ISIZE = IRAND (1, NDIM)
+    
+    DO JFLD = 1, NDIM
+      IFLD (JFLD) = JFLD
+      ZVAL (JFLD) = REAL (IRAND (0, 100000), JPRD) / REAL (100000, JPRD)
+    ENDDO
+    
+    
+    CALL SORTR8 (NDIM, IFLD, ZVAL)
+    
+    IF (.NOT. ASSOCIATED (YLF4)) THEN
+    
+      SELECT CASE (IRAND (1, 2))
+        CASE (1)
+          CALL NEW_OWNER_YLF4
+        CASE (2)
+          CALL NEW_WRAPPER_YLF4
+        CASE DEFAULT
+!          CALL FIELD_ABORT ('UNEXPECTED CASE')
+          PRINT *, "UNEXPECTED CASE"
+          ERROR STOP
+      END SELECT
+      
+      SELECT CASE (IRAND (1, 6))
+        CASE (1)
+          CALL SET_VIEW_YLF4
+        CASE (2)
+          CALL SET_DEVICE_YLF4
+        CASE (3)
+          CALL SET_HOST_YLF4
+        CASE (4)
+          CALL SET_VIEW_YLF3 ([(JFLD, JFLD = 1, NDIM)])
+        CASE (5)
+          CALL SET_DEVICE_YLF3 ([(JFLD, JFLD = 1, NDIM)])
+        CASE (6)
+          CALL SET_HOST_YLF3 ([(JFLD, JFLD = 1, NDIM)])
+        CASE DEFAULT
+!          CALL FIELD_ABORT ('UNEXPECTED CASE')
+          PRINT *, "UNEXPECTED CASE"
+          ERROR STOP
+      END SELECT
+      
+    ELSE
+    
+      SELECT CASE (IRAND (1, 134))
+        CASE (1:10)
+          CALL UPDATE_COEF
+          CALL SET_VIEW_YLF4
+        CASE (11:20)
+          CALL GET_VIEW_YLF4
+        CASE (21:30)
+          CALL UPDATE_COEF (IFLD (1:ISIZE))
+          CALL SET_VIEW_YLF3 (IFLD (1:ISIZE))
+        CASE (31:40)
+          CALL GET_VIEW_YLF3 (IFLD (1:ISIZE))
+        CASE (41:50)
+          CALL UPDATE_COEF
+          CALL SET_HOST_YLF4
+        CASE (51:60)
+          CALL UPDATE_COEF
+          CALL SET_DEVICE_YLF4
+        CASE (61:70)
+          CALL GET_HOST_YLF4
+        CASE (71:80)
+          CALL GET_DEVICE_YLF4
+        CASE (81:90)
+          CALL UPDATE_COEF (IFLD (1:ISIZE))
+          CALL SET_HOST_YLF3 (IFLD (1:ISIZE))
+        CASE (91:100)
+          CALL UPDATE_COEF (IFLD (1:ISIZE))
+          CALL SET_DEVICE_YLF3 (IFLD (1:ISIZE))
+        CASE (101:110)
+          CALL GET_DEVICE_YLF3 (IFLD (1:ISIZE))
+        CASE (111:120)
+          CALL GET_HOST_YLF3 (IFLD (1:ISIZE))
+        CASE (121:130)
+!          CALL FAIL_VIEW_YLF4
+        CASE (131:134)
+          CALL DEL_YLF4
+        CASE DEFAULT
+!          CALL FIELD_ABORT ('UNEXPECTED CASE')
+          PRINT *, "UNEXPECTED CASE"
+          ERROR STOP
+      END SELECT 
+    
+    ENDIF
+    
+    END SUBROUTINE
+    
+    SUBROUTINE UPDATE_COEF (KFLD)
+    
+    INTEGER (KIND=JPIM), OPTIONAL, INTENT (IN) :: KFLD (:)
+    
+    INTEGER (KIND=JPIM) :: JDIM, JFLD
+    
+    IF (PRESENT (KFLD)) THEN
+    
+      CALL PLOG ("UPDATE_COEF", KFLD)
+    
+      DO JDIM = 1, SIZE (KFLD)
+        JFLD = KFLD (JDIM)
+        ZCOEF (JFLD) = REAL (JFLD, JPRD) * REAL (IRAND (0, 999), JPRD) / 1000._JPRD
+      ENDDO
+    
+    ELSE
+    
+      CALL PLOG ("UPDATE_COEF")
+    
+      DO JFLD = 1, NDIM
+        ZCOEF (JFLD) = REAL (JFLD, JPRD) * REAL (IRAND (0, 999), JPRD) / 1000._JPRD
+      ENDDO
+    
+    ENDIF
+    
+    END SUBROUTINE
+    
+    REAL (KIND=JPRD) FUNCTION FUNC (JLON_, JLEV_, JFLD_, JBLK_, PCOEF_)
+    
+    !$acc routine (FUNC) seq
+    
+    INTEGER (KIND=JPIM) :: JLON_, JLEV_, JFLD_, JBLK_
+    REAL (KIND=JPRD) :: PCOEF_ (NDIM)
+    
+    FUNC = REAL (JLON_, JPRD) + 100._JPRD * (REAL (JLEV_, JPRD) + 100._JPRD * &
+        & (PCOEF_ (JFLD_) + 100._JPRD * (REAL (JBLK_, JPRD))))
+    
+    END FUNCTION
+    
+    SUBROUTINE NEW_OWNER_YLF4
+    
+    CALL PLOG ("NEW_OWNER_YLF4")
+    
+    CALL FIELD_NEW (YLF4, NUM_CHILDREN=NDIM, CHILDREN=YLF3L, UBOUNDS=IUB, LBOUNDS=ILB, PERSISTENT=LLPERSISTENT)
+    
+    CALL CHECK_STATUS
+    
+    END SUBROUTINE
+    
+    SUBROUTINE NEW_WRAPPER_YLF4
+    
+    CALL PLOG ("NEW_WRAPPER_YLF4")
+    
+    CALL FIELD_NEW (YLF4, NUM_CHILDREN=NDIM, CHILDREN=YLF3L, LBOUNDS=ILB, PERSISTENT=LLPERSISTENT, DATA=ZDATA4)
+    
+    CALL CHECK_STATUS
+    
+    END SUBROUTINE
+    
+    SUBROUTINE SET_VIEW_YLF4
+    
+    INTEGER (KIND=JPIM) :: JLON, JLEV, JFLD, JBLK
+    REAL (KIND=JPRD), POINTER :: ZPTR3 (:,:,:)
+    
+    CALL PLOG ("SET_VIEW_YLF4")
+    
+    CALL YLF4%SYNC_HOST_RDWR ()
+    
+    !$OMP PARALLEL DO PRIVATE (ZPTR3, JBLK)
+    DO JBLK = 1, NGPBLKS
+      ZPTR3 => YLF4%GET_VIEW (BLOCK_INDEX=JBLK)
+      DO JFLD = 1, NDIM
+        DO JLEV = 0, NFLEVG
+          DO JLON = 1, NPROMA
+            ZPTR3 (JLON, JLEV, JFLD) = FUNC (JLON, JLEV, JFLD, JBLK, ZCOEF)
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDDO
+    !$OMP END PARALLEL DO
+    
+    END SUBROUTINE
+    
+!    SUBROUTINE FAIL_VIEW_YLF4
+!    
+!!    USE FIELD_ABORT_MODULE
+!    
+!    INTEGER (KIND=JPIM) :: JLON, JLEV, JFLD, JBLK
+!    REAL (KIND=JPRD), POINTER :: ZPTR3 (:,:,:)
+!    
+!    CALL PLOG ("FAIL_VIEW_YLF4")
+!    
+!    CALL YLF4%SYNC_DEVICE_RDWR ()
+!    
+!!    FIELD_ABORT_FUNC => TEST_GANG_ABORT
+!    
+!    !$OMP PARALLEL DO PRIVATE (ZPTR3, JBLK)
+!    DO JBLK = 1, NGPBLKS
+!      ZPTR3 => YLF4%GET_VIEW (BLOCK_INDEX=JBLK)
+!      DO JFLD = 1, NDIM
+!        DO JLEV = 0, NFLEVG
+!          DO JLON = 1, NPROMA
+!            ZPTR3 (JLON, JLEV, JFLD) = FUNC (JLON, JLEV, JFLD, JBLK, ZCOEF)
+!          ENDDO
+!        ENDDO
+!      ENDDO
+!    ENDDO
+!    !$OMP END PARALLEL DO
+!    
+!    
+!    FIELD_ABORT_FUNC => NULL ()
+!    
+!    IF (IERROR == 0) THEN
+!      CALL FIELD_ABORT ('ERROR WAS EXPECTED')
+!    ENDIF
+!    
+!    IERROR = 0
+!    
+!    END SUBROUTINE
+    
+    SUBROUTINE GET_VIEW_YLF4
+    
+    INTEGER (KIND=JPIM) :: JLON, JLEV, JFLD, JBLK
+    REAL (KIND=JPRD), POINTER :: ZPTR3 (:,:,:)
+    
+    CALL PLOG ("GET_VIEW_YLF4")
+    
+    CALL YLF4%SYNC_HOST_RDWR ()
+    
+    !$OMP PARALLEL DO PRIVATE (ZPTR3, JBLK)
+    DO JBLK = 1, NGPBLKS
+      ZPTR3 => YLF4%GET_VIEW (BLOCK_INDEX=JBLK)
+      DO JFLD = 1, NDIM
+       DO JLEV = 0, NFLEVG
+         DO JLON = 1, NPROMA
+           IF (ZPTR3 (JLON, JLEV, JFLD) /= FUNC (JLON, JLEV, JFLD, JBLK, ZCOEF)) THEN
+             PRINT *, ZPTR3 (JLON, JLEV, JFLD)
+             PRINT *, FUNC (JLON, JLEV, JFLD, JBLK, ZCOEF)
+!             CALL FIELD_ABORT ('GET_VIEW_YLF4: VALUE MISMATCH')
+             PRINT *, 'GET_VIEW_YLF4: VALUE MISMATCH'
+             ERROR STOP
+           ENDIF
+         ENDDO
+       ENDDO
+      ENDDO
+    ENDDO
+    !$OMP END PARALLEL DO
+    
+    END SUBROUTINE
+    
+    SUBROUTINE SET_VIEW_YLF3 (KFLD)
+    
+    INTEGER (KIND=JPIM), INTENT (IN) :: KFLD (:)
+    
+    INTEGER (KIND=JPIM) :: JLON, JLEV, JFLD, JBLK, JDIM
+    REAL (KIND=JPRD), POINTER :: ZPTR2 (:,:)
+    
+    CALL PLOG ("SET_VIEW_YLF3", KFLD)
+    
+    DO JDIM = 1, SIZE (KFLD)
+      JFLD = KFLD (JDIM)
+      CALL YLF3L(JFLD)%PTR%SYNC_HOST_RDWR ()
+    ENDDO
+    
+    !$OMP PARALLEL DO PRIVATE (ZPTR2, JBLK, JFLD)
+    DO JBLK = 1, NGPBLKS
+      DO JDIM = 1, SIZE (KFLD)
+        JFLD = KFLD (JDIM)
+        ZPTR2 => YLF3L(JFLD)%PTR%GET_VIEW (BLOCK_INDEX=JBLK)
+        DO JLEV = 0, NFLEVG
+          DO JLON = 1, NPROMA
+            ZPTR2 (JLON, JLEV) = FUNC (JLON, JLEV, JFLD, JBLK, ZCOEF)
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDDO
+    !$OMP END PARALLEL DO
+    
+    END SUBROUTINE
+    
+    SUBROUTINE GET_VIEW_YLF3 (KFLD)
+    
+    INTEGER (KIND=JPIM), INTENT (IN) :: KFLD (:)
+    
+    INTEGER (KIND=JPIM) :: JLON, JLEV, JFLD, JBLK, JDIM
+    REAL (KIND=JPRD), POINTER :: ZPTR2 (:,:)
+    
+    CALL PLOG ("GET_VIEW_YLF3", KFLD)
+    
+    DO JDIM = 1, SIZE (KFLD)
+      JFLD = KFLD (JDIM)
+      CALL YLF3L(JFLD)%PTR%SYNC_HOST_RDWR ()
+    ENDDO
+    
+    !$OMP PARALLEL DO PRIVATE (ZPTR2, JBLK, JFLD)
+    DO JBLK = 1, NGPBLKS
+      DO JDIM = 1, SIZE (KFLD)
+        JFLD = KFLD (JDIM)
+        ZPTR2 => YLF3L(JFLD)%PTR%GET_VIEW (BLOCK_INDEX=JBLK)
+        DO JLEV = 0, NFLEVG
+          DO JLON = 1, NPROMA
+            IF (ZPTR2 (JLON, JLEV) /= FUNC (JLON, JLEV, JFLD, JBLK, ZCOEF)) THEN
+              PRINT *, ZPTR2 (JLON, JLEV)
+              PRINT *, FUNC (JLON, JLEV, JFLD, JBLK, ZCOEF)
+ !             CALL FIELD_ABORT ('GET_VIEW_YLF4: VALUE MISMATCH')
+              PRINT *, 'GET_VIEW_YLF4: VALUE MISMATCH'
+              ERROR STOP
+            ENDIF
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDDO
+    !$OMP END PARALLEL DO
+    
+    END SUBROUTINE
+    
+    SUBROUTINE SET_HOST_YLF4
+    
+    REAL (KIND=JPRD), POINTER :: ZHOST4 (:,:,:,:)
+    INTEGER (KIND=JPIM) :: JBLK, JLEV, JLON, JFLD
+    
+    CALL PLOG ("SET_HOST_YLF4")
+    
+    ZHOST4 => GET_HOST_DATA_RDWR (YLF4)
+    
+    CALL CHECK_STATUS
+    
+    DO JBLK = 1, NGPBLKS
+      DO JFLD = 1, NDIM
+        DO JLEV = 0, NFLEVG
+          DO JLON = 1, NPROMA
+            ZHOST4 (JLON, JLEV, JFLD, JBLK) = FUNC (JLON, JLEV, JFLD, JBLK, ZCOEF)
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDDO
+    
+    CALL CHECK_STATUS
+    
+    END SUBROUTINE
+    
+    SUBROUTINE SET_DEVICE_YLF4
+    
+    REAL (KIND=JPRD), POINTER :: ZDEVICE4 (:,:,:,:)
+    INTEGER (KIND=JPIM) :: JBLK, JLEV, JLON, JFLD
+    
+    CALL PLOG ("SET_DEVICE_YLF4")
+    
+    ZDEVICE4 => GET_DEVICE_DATA_RDWR (YLF4)
+    
+    CALL CHECK_STATUS
+    
+    
+    !$acc update device (ZCOEF)
+    
+    !$acc serial present (ZDEVICE4) 
+    DO JBLK = 1, NGPBLKS
+      DO JFLD = 1, NDIM
+        DO JLEV = 0, NFLEVG
+          DO JLON = 1, NPROMA
+            ZDEVICE4 (JLON, JLEV, JFLD, JBLK) = FUNC (JLON, JLEV, JFLD, JBLK, ZCOEF)
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDDO
+    !$acc end serial
+    
+    
+    CALL CHECK_STATUS
+    
+    END SUBROUTINE
+    
+    SUBROUTINE DEL_YLF4
+    
+    CALL PLOG ("DEL_YLF4")
+    
+    CALL FIELD_DELETE (YLF4,YLF3L)
+    YLF4 => NULL ()
+    
+    END SUBROUTINE
+    
+    SUBROUTINE GET_HOST_YLF4
+    
+    REAL (KIND=JPRD), POINTER :: ZHOST4 (:,:,:,:)
+    
+    INTEGER (KIND=JPIM) :: JBLK, JLEV, JLON, JFLD
+    
+    CALL PLOG ("GET_HOST_YLF4")
+    
+!    IF (SIZE (YLF3L) /= NDIM) CALL FIELD_ABORT ('SIZE MISMATCH')
+    IF (SIZE (YLF3L) /= NDIM)THEN
+        PRINT *, 'SIZE MISMATCH'
+        ERROR STOP
+    ENDIF
+    
+    ZHOST4 => GET_HOST_DATA_RDONLY (YLF4)
+    
+    CALL CHECK_DIMS_YLF4 (ZHOST4)
+    
+    DO JBLK = 1, NGPBLKS
+      DO JFLD = 1, NDIM
+        DO JLEV = 0, NFLEVG
+          DO JLON = 1, NPROMA
+            IF (ZHOST4 (JLON, JLEV, JFLD, JBLK) /= FUNC (JLON, JLEV, JFLD, JBLK, ZCOEF)) THEN
+              PRINT *, ZHOST4 (JLON, JLEV, JFLD, JBLK)
+              PRINT *,  FUNC (JLON, JLEV, JFLD, JBLK, ZCOEF)
+!              CALL FIELD_ABORT ('GET_HOST_YLF4: VALUE MISMATCH')
+              PRINT *, 'GET_HOST_YLF4: VALUE MISMATCH'
+              ERROR STOP
+            ENDIF
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDDO
+    
+! STATUS doesn't need to be synchronised for RDONLY calls to buffer
+!    CALL CHECK_STATUS
+    
+    END SUBROUTINE
+    
+    SUBROUTINE GET_DEVICE_YLF4
+    
+    REAL (KIND=JPRD), POINTER :: ZDEVICE4 (:,:,:,:)
+    
+    INTEGER (KIND=JPIM) :: JBLK, JLEV, JLON, JFLD
+    
+    CALL PLOG ("GET_DEVICE_YLF4")
+    
+!    IF (SIZE (YLF3L) /= NDIM) CALL FIELD_ABORT ('SIZE MISMATCH')
+    IF (SIZE (YLF3L) /= NDIM) THEN
+        PRINT *, 'SIZE MISMATCH'
+        ERROR STOP
+    ENDIF
+    
+    ZDEVICE4 => GET_DEVICE_DATA_RDONLY (YLF4)
+    
+    CALL CHECK_DIMS_YLF4 (ZDEVICE4)
+    
+    !$acc update device (ZCOEF)
+    
+    !$acc serial present (ZDEVICE4) 
+    
+    DO JBLK = 1, NGPBLKS
+      DO JFLD = 1, NDIM
+        DO JLEV = 0, NFLEVG
+          DO JLON = 1, NPROMA
+            IF (ZDEVICE4 (JLON, JLEV, JFLD, JBLK) /= FUNC (JLON, JLEV, JFLD, JBLK, ZCOEF)) THEN
+              PRINT *, JLON, JLEV, JFLD, JBLK
+              PRINT *, ZDEVICE4 (JLON, JLEV, JFLD, JBLK)
+              PRINT *,  FUNC (JLON, JLEV, JFLD, JBLK, ZCOEF)
+              CALL ABOR1_ACC ('VALUE MISMATCH')
+            ENDIF
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDDO
+    
+    !$acc end serial
+ 
+! STATUS doesn't need to be synchronised for RDONLY calls to buffer
+!    CALL CHECK_STATUS
+    
+    END SUBROUTINE
+    
+    SUBROUTINE CHECK_DIMS_YLF4 (P4)
+    
+    INTEGER (KIND=JPIM) :: JDIM
+    
+    REAL (KIND=JPRD), POINTER :: P4 (:,:,:,:)
+    
+    DO JDIM = 1, 4
+      IF (LBOUND (P4, JDIM) /= ILB (JDIM)) THEN
+        PRINT *, LBOUND (P4) 
+        PRINT *, ILB 
+!        CALL FIELD_ABORT ('LBOUND MISMATCH')
+        PRINT *, 'LBOUND MISMATCH'
+        ERROR STOP
+      ENDIF
+      IF (UBOUND (P4, JDIM) /= IUB (JDIM)) THEN
+        PRINT *, UBOUND (P4)  
+        PRINT *, IUB 
+!        CALL FIELD_ABORT ('UBOUND MISMATCH')
+        PRINT *, 'UBOUND MISMATCH'
+        ERROR STOP
+      ENDIF
+    ENDDO
+    
+    END SUBROUTINE
+    
+    SUBROUTINE CHECK_DIMS_YLF3 (P3)
+    
+    INTEGER (KIND=JPIM) :: JDIM
+    
+    REAL (KIND=JPRD), POINTER :: P3 (:,:,:)
+    
+    DO JDIM = 1, 2
+!      IF (LBOUND (P3, JDIM) /= ILB (JDIM)) CALL FIELD_ABORT ('LBOUND MISMATCH')
+      IF (LBOUND (P3, JDIM) /= ILB (JDIM)) THEN
+        PRINT *, 'LBOUND MISMATCH'
+        ERROR STOP
+      ENDIF
+!      IF (UBOUND (P3, JDIM) /= IUB (JDIM)) CALL FIELD_ABORT ('UBOUND MISMATCH')
+      IF (UBOUND (P3, JDIM) /= IUB (JDIM)) THEN
+        PRINT *, 'UBOUND MISMATCH'
+        ERROR STOP
+      ENDIF
+    ENDDO
+    
+!    IF (LBOUND (P3, 3) /= ILB (4)) CALL FIELD_ABORT ('LBOUND MISMATCH')
+    IF (LBOUND (P3, 3) /= ILB (4)) THEN
+        PRINT *, 'LBOUND MISMATCH'
+        ERROR STOP
+    ENDIF
+!    IF (UBOUND (P3, 3) /= IUB (4)) CALL FIELD_ABORT ('UBOUND MISMATCH')
+    IF (UBOUND (P3, 3) /= IUB (4)) THEN
+        PRINT *, 'UBOUND MISMATCH'
+        ERROR STOP
+    ENDIF
+    
+    END SUBROUTINE
+    
+    SUBROUTINE SET_HOST_YLF3 (KFLD)
+    
+    INTEGER (KIND=JPIM), INTENT (IN) :: KFLD (:)
+    
+    REAL (KIND=JPRD), POINTER :: ZHOST3 (:,:,:)
+    INTEGER (KIND=JPIM) :: JBLK, JLEV, JLON, JFLD, JDIM
+    
+    CALL PLOG ("SET_HOST_YLF3", KFLD)
+    
+    DO JDIM = 1, SIZE (KFLD)
+    
+      JFLD = KFLD (JDIM)
+    
+      IF (JFLD < 1 .OR. NDIM < JFLD) THEN
+!        CALL FIELD_ABORT ('UNEXPECTED JFLD')
+        PRINT *, 'UNEXPECTED JFLD'
+        ERROR STOP
+      ENDIF
+    
+      ZHOST3 => GET_HOST_DATA_RDWR (YLF3L (JFLD)%PTR)
+    
+      CALL CHECK_DIMS_YLF3 (ZHOST3)
+    
+      DO JBLK = 1, NGPBLKS
+        DO JLEV = 0, NFLEVG
+          DO JLON = 1, NPROMA
+            ZHOST3 (JLON, JLEV, JBLK) = FUNC (JLON, JLEV, JFLD, JBLK, ZCOEF)
+          ENDDO
+        ENDDO
+      ENDDO
+ 
+!   STATUS only needs to be synced when calling GET/SYNC_HOST/DEVICE methods on BUFFER
+!      CALL CHECK_STATUS
+    
+    ENDDO
+    
+    END SUBROUTINE
+    
+    SUBROUTINE SET_DEVICE_YLF3 (KFLD)
+    
+    INTEGER (KIND=JPIM), INTENT (IN) :: KFLD (:)
+    
+    REAL (KIND=JPRD), POINTER :: ZDEVICE3 (:,:,:)
+    INTEGER (KIND=JPIM) :: JBLK, JLEV, JLON, JFLD, JDIM
+    
+    CALL PLOG ("SET_DEVICE_YLF3", KFLD)
+    
+    DO JDIM = 1, SIZE (KFLD)
+    
+!   STATUS only needs to be synced when calling GET/SYNC_HOST/DEVICE methods on BUFFER
+!      CALL CHECK_STATUS
+    
+      JFLD = KFLD (JDIM)
+    
+      IF (JFLD < 1 .OR. NDIM < JFLD) THEN
+!        CALL FIELD_ABORT ('UNEXPECTED JFLD')
+        PRINT *, 'UNEXPECTED JFLD'
+        ERROR STOP
+      ENDIF
+    
+      ZDEVICE3 => GET_DEVICE_DATA_RDWR (YLF3L (JFLD)%PTR)
+    
+!   STATUS only needs to be synced when calling GET/SYNC_HOST/DEVICE methods on BUFFER
+!      CALL CHECK_STATUS
+    
+      CALL CHECK_DIMS_YLF3 (ZDEVICE3)
+    
+    !$acc update device (ZCOEF)
+    
+    !$acc serial present (ZDEVICE3) 
+    
+      DO JBLK = 1, NGPBLKS
+        DO JLEV = 0, NFLEVG
+          DO JLON = 1, NPROMA
+            ZDEVICE3 (JLON, JLEV, JBLK) = FUNC (JLON, JLEV, JFLD, JBLK, ZCOEF)
+          ENDDO
+        ENDDO
+      ENDDO
+    
+    !$acc end serial
+    
+    
+!   STATUS only needs to be synced when calling GET/SYNC_HOST/DEVICE methods on BUFFER
+!      CALL CHECK_STATUS
+    
+    ENDDO
+    
+    END SUBROUTINE
+    
+    SUBROUTINE GET_DEVICE_YLF3 (KFLD)
+    
+    INTEGER (KIND=JPIM), INTENT (IN) :: KFLD (:)
+    
+    REAL (KIND=JPRD), POINTER :: ZDEVICE3 (:,:,:)
+    INTEGER (KIND=JPIM) :: JBLK, JLEV, JLON, JFLD, JDIM
+    
+    CALL PLOG ("GET_DEVICE_YLF3", KFLD)
+    
+    DO JDIM = 1, SIZE (KFLD)
+    
+      JFLD = KFLD (JDIM)
+    
+      IF (JFLD < 1 .OR. NDIM < JFLD) THEN
+!        CALL FIELD_ABORT ('UNEXPECTED JFLD')
+        PRINT *, 'UNEXPECTED JFLD'
+        ERROR STOP
+      ENDIF
+    
+      ZDEVICE3 => GET_DEVICE_DATA_RDONLY (YLF3L (JFLD)%PTR)
+    
+      CALL CHECK_DIMS_YLF3 (ZDEVICE3)
+    
+    
+    !$acc update device (ZCOEF)
+    
+    !$acc serial present (ZDEVICE3) 
+    
+      DO JBLK = 1, NGPBLKS
+        DO JLEV = 0, NFLEVG
+          DO JLON = 1, NPROMA
+            IF (ZDEVICE3 (JLON, JLEV, JBLK) /= FUNC (JLON, JLEV, JFLD, JBLK, ZCOEF)) THEN
+              PRINT *, ZDEVICE3 (JLON, JLEV, JBLK)
+              PRINT *,  FUNC (JLON, JLEV, JFLD, JBLK, ZCOEF)
+              CALL ABOR1_ACC ('VALUE MISMATCH')
+            ENDIF
+          ENDDO
+        ENDDO
+      ENDDO
+    
+    !$acc end serial
+    
+    
+!   STATUS only needs to be synced when calling GET/SYNC_HOST/DEVICE methods on BUFFER
+!      CALL CHECK_STATUS
+    
+    ENDDO
+    
+    END SUBROUTINE
+    
+    SUBROUTINE GET_HOST_YLF3 (KFLD)
+    
+    INTEGER (KIND=JPIM), INTENT (IN) :: KFLD (:)
+    
+    REAL (KIND=JPRD), POINTER :: ZHOST3 (:,:,:)
+    INTEGER (KIND=JPIM) :: JBLK, JLEV, JLON, JFLD, JDIM
+    
+    CALL PLOG ("GET_HOST_YLF3", KFLD)
+    
+    DO JDIM = 1, SIZE (KFLD)
+    
+      JFLD = KFLD (JDIM)
+    
+      IF (JFLD < 1 .OR. NDIM < JFLD) THEN
+!        CALL FIELD_ABORT ('UNEXPECTED JFLD')
+        PRINT *, 'UNEXPECTED JFLD'
+        ERROR STOP
+      ENDIF
+    
+      ZHOST3 => GET_HOST_DATA_RDONLY (YLF3L (JFLD)%PTR)
+    
+      CALL CHECK_DIMS_YLF3 (ZHOST3)
+    
+      DO JBLK = 1, NGPBLKS
+        DO JLEV = 0, NFLEVG
+          DO JLON = 1, NPROMA
+            IF (ZHOST3 (JLON, JLEV, JBLK) /= FUNC (JLON, JLEV, JFLD, JBLK, ZCOEF)) THEN
+              PRINT *, JLON, JLEV, JBLK
+              PRINT *, ZHOST3 (JLON, JLEV, JBLK)
+              PRINT *,  FUNC (JLON, JLEV, JFLD, JBLK, ZCOEF)
+!              CALL FIELD_ABORT ('VALUE MISMATCH')
+              PRINT *, 'VALUE MISMATCH'
+              ERROR STOP
+            ENDIF
+          ENDDO
+        ENDDO
+      ENDDO
+    
+!   STATUS only needs to be synced when calling GET/SYNC_HOST/DEVICE methods on BUFFER
+!      CALL CHECK_STATUS
+    
+    ENDDO
+    
+    END SUBROUTINE
+    
+    SUBROUTINE CHECK_STATUS
+    
+    INTEGER (KIND=JPIM) :: JFLD
+    
+    DO JFLD = 1, NDIM
+!      IF (.NOT. ASSOCIATED (YLF3L(JFLD)%PTR%PARENT, YLF4)) THEN
+!        PRINT *, JFLD
+!        PRINT *, ASSOCIATED (YLF3L(JFLD)%PTR%PARENT)
+!        CALL FIELD_ABORT ('PARENT MISMATCH')
+!      ENDIF
+      IF (YLF4%ISTATUS /= YLF3L(JFLD)%PTR%ISTATUS) THEN
+        PRINT *, JFLD
+        WRITE (*, '("YLF4 = ",Z16.16)') YLF4%ISTATUS
+        WRITE (*, '("YLF3L (",I0,")=",Z16.16)') JFLD, YLF3L(JFLD)%PTR%ISTATUS
+!        CALL FIELD_ABORT ('STATUS MISMATCH')
+        PRINT *, 'STATUS MISMATCH'
+        ERROR STOP
+      ENDIF
+    ENDDO
+    
+    END SUBROUTINE
+    
+    SUBROUTINE PLOG (CDNAME, KFLD)
+    
+    CHARACTER (LEN=*), INTENT (IN) :: CDNAME
+    INTEGER (KIND=JPIM), INTENT (IN), OPTIONAL :: KFLD (:)
+    
+    INTEGER (KIND=JPIM) :: JDIM, JSPC
+    
+    IF (LLVERBOSE) THEN
+    
+      WRITE (*, '(A)', ADVANCE='NO') CDNAME
+    
+      DO JSPC = LEN (CDNAME), 16
+        WRITE (*, '(A)', ADVANCE='NO') ' '
+      ENDDO
+      
+      IF (PRESENT (KFLD)) THEN
+        WRITE (*, '("(")', ADVANCE='NO')
+        DO JDIM = 1, SIZE (KFLD)
+          WRITE (*, '(I0)', ADVANCE='NO') KFLD (JDIM)
+          
+          IF (JDIM < SIZE (KFLD)) WRITE (*, '(",")', ADVANCE='NO')
+        ENDDO
+        WRITE (*, '(")")', ADVANCE='NO')
+      ENDIF
+    
+      WRITE (*, *)
+    
+    ENDIF
+    
+    END SUBROUTINE
+    
+    SUBROUTINE ABOR1_ACC (CDMESS)
+    
+    CHARACTER (LEN=*), INTENT (IN) :: CDMESS
+    
+    !$acc routine (ABOR1_ACC) seq
+    
+    PRINT *, CDMESS
+    STOP 1
+    
+    END SUBROUTINE
+    
+    END PROGRAM 
