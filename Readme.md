@@ -195,6 +195,49 @@ init_debug_value_jpim* to a custom value.
    CALL FIELD_NEW(O, LBOUNDS=[1,1], UBOUNDS=[10,10])
 ```
 
+## FIELD_BUFFER
+
+Multiple fields can be packed together in a container data-structure using the `FIELD_XX_BUFFER_OWNER` and `FIELD_XX_BUFFER_WRAPPER` types. 
+The fields can then be managed/accessed either via the buffer or via the individual constituent fields. The functionality of the `BUFFER` types
+is largely the same as their corresponding `FIELD_XX` type with some noteable exceptions, e.g., unlike an owned field,
+an owned buffer cannot be resized.
+
+### Initialisation
+
+A buffer can be initialised using the `FIELD_NEW` constructor. Only two extra arguments are needed compared to an ordinary field:
+
+```Fortran
+USE FIELD_MODULE
+USE FIELD_FACTOR_MODULE
+
+CLASS(FIELD_3RB), POINTER :: BUFFER => NULL()
+TYPE(FIELD_2RB_PTR), ALLOCATABLE :: CHILDREN
+INTEGER(KIND=JPIM) :: NUM_CHILDREN
+
+CALL FIELD_NEW(BUFFER, NUM_CHILDREN, CHILDREN, ...)
+```
+
+Please note that when deleting the buffer, we must also pass `CHILDREN` to the destructor:
+```Fortran
+CALL FIELD_DELETE(BUFFER, CHILDREN)
+```
+
+### GPU offload
+
+Data movement can be triggered either via the buffer or via the constituent fields. If one wishes to perform data transfers on a per buffer granularity rather than a per field granularity, then data movement must be triggered on the buffer before the children, e.g.:
+
+```Fortran
+CALL BUFFER%SYNC_DEVICE_RDWR()
+DO I=1,NUM_CHILDREN
+  CALL CHILDREN(I)%PTR%GET_DEVICE_DATA_RDWR(...) ! This will not trigger any data movement, and will only return an updated device pointer
+ENDDO
+...
+CALL BUFFER%SYNC_HOST_RDWR()
+DO I=1,NUM_CHILDREN
+  CALL CHILDREN(I)%PTR%GET_HOST_DATA_RDWR(...) ! This will not trigger any data movement, and will only return an updated host pointer
+ENDDO
+```
+
 ## Asynchronism
 
 This functionnality is still being tested.
