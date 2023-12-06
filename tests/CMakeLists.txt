@@ -38,6 +38,7 @@ list(APPEND TEST_FILES
 	get_view_get_device_data.F90
 	get_view_when_nhstfresh.F90
 	get_view_when_uninitialized.F90
+	get_view_after_transfer.F90
 	init_owner.F90
 	init_owner2.F90
 	init_owner_delayed.F90
