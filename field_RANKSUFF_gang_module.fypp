@@ -52,6 +52,9 @@ CONTAINS
   PROCEDURE :: FINAL => ${ftn}$_GANG_${type}$_FINAL
   PROCEDURE :: CREATE_DEVICE_DATA => ${ftn}$_GANG_${type}$_CREATE_DEVICE_DATA
   PROCEDURE :: DELETE_DEVICE_DATA => ${ftn}$_GANG_${type}$_DELETE_DEVICE_DATA
+#:for what in ['HOST', 'DEVICE']
+  PROCEDURE :: GET_${what}$_DATA => ${ftn}$_GANG_${type}$_GET_${what}$_DATA
+#:endfor
   PROCEDURE :: SET_STATUS => ${ftn}$_GANG_${type}$_SET_STATUS
 END TYPE ${ftn}$_GANG_${type}$
 
@@ -170,6 +173,19 @@ CONTAINS
     
   END SUBROUTINE ${ftn}$_GANG_OWNER_INIT
 
+  SUBROUTINE ${ftn}$_GANG_CHECK_CHILDREN_STATUS(CHILDREN, ISTATUS, STAT)
+   TYPE(${ftn1}$_WRAPPER_HELPER_PTR), INTENT(INOUT):: CHILDREN(:)
+   INTEGER(KIND=JPIM), INTENT(IN) :: ISTATUS
+   LOGICAL, INTENT(OUT) :: STAT
+   INTEGER(KIND=JPIM) :: I
+
+   STAT = .TRUE.
+   DO I=1,SIZE(CHILDREN)
+      IF(CHILDREN(I)%PTR%ISTATUS /= ISTATUS) STAT = .FALSE.
+   ENDDO
+
+  END SUBROUTINE ${ftn}$_GANG_CHECK_CHILDREN_STATUS
+
 #:for type in ['WRAPPER', 'OWNER']
   SUBROUTINE ${ftn}$_GANG_${type}$_FINAL(SELF)
 
@@ -242,6 +258,64 @@ CONTAINS
 
   END SUBROUTINE
 
+#:for what in ['HOST', 'DEVICE']
+  SUBROUTINE ${ftn}$_GANG_${type}$_GET_${what}$_DATA(SELF, MODE, PTR, QUEUE)
+    CLASS(${ftn}$_GANG_${type}$)                 :: SELF
+    INTEGER (KIND=JPIM),           INTENT(IN)    :: MODE
+    ${ft.type}$, POINTER,          INTENT(INOUT) :: PTR(${ft.shape}$)
+    INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
+  
+    LOGICAL :: STAT
+    INTEGER(KIND=JPIM) :: IFIELD
+    INTEGER(KIND=JPIM) :: LBOUNDS(${ft.rank}$)
+    ${ft.type}$, POINTER :: CHILD_PTR(${ft.viewShape}$)
+  
+    CALL ${ftn}$_GANG_CHECK_CHILDREN_STATUS(SELF%CHILDREN, SELF%ISTATUS, STAT)
+  
+    ! If the CHILDREN all have the same ISTATUS as the BUFFER, then we can safely
+    ! exchange data on a per BUFFER basis. Otherwise, data exchange must be done
+    ! on a per field basis
+    IF(STAT)THEN
+    #:if type == 'OWNER'
+      CALL SELF%${ftn}$_OWNER_GET_${what}$_DATA(MODE, PTR, QUEUE=QUEUE)
+    #:else
+      CALL SELF%${ftn}$_GET_${what}$_DATA(MODE, PTR, QUEUE=QUEUE)
+    #:endif
+    ELSE
+      DO IFIELD=1,SIZE(SELF%CHILDREN)
+         CALL SELF%CHILDREN(IFIELD)%PTR%GET_${what}$_DATA(MODE, CHILD_PTR, QUEUE=QUEUE)
+      ENDDO
+  
+  #:if what == 'HOST'
+      LBOUNDS = LBOUND(SELF%PTR)
+      PTR(${ft.lbptr}$) => SELF%PTR (${','.join(':' for _ in range(ft.rank))}$)
+  #:else
+      LBOUNDS = LBOUND(SELF%DEVPTR)
+      PTR(${ft.lbptr}$) => SELF%DEVPTR (${','.join(':' for _ in range(ft.rank))}$)
+  #:endif
+  
+  #:if what == 'HOST'
+      IF (IAND (SELF%GET_STATUS (), NHSTFRESH) == 0) THEN
+        CALL SELF%${ftn}$_${type}$%SET_STATUS (IOR (SELF%GET_STATUS (), NHSTFRESH))
+      ENDIF
+  #:else
+      IF (IAND (SELF%GET_STATUS (), NDEVFRESH) == 0) THEN
+        CALL SELF%${ftn}$_${type}$%SET_STATUS (IOR (SELF%GET_STATUS (), NDEVFRESH))
+      ENDIF
+  #:endif
+  
+      IF (IAND (MODE, NWR) /= 0) THEN
+  #:if what == 'HOST'
+        CALL SELF%${ftn}$_${type}$%SET_STATUS (IAND (SELF%GET_STATUS(), NOT (NDEVFRESH)))
+  #:else
+        CALL SELF%${ftn}$_${type}$%SET_STATUS (IAND (SELF%GET_STATUS(), NOT (NHSTFRESH)))
+  #:endif
+      ENDIF
+    ENDIF
+  
+  END SUBROUTINE ${ftn}$_GANG_${type}$_GET_${what}$_DATA
+
+#:endfor
 #:endfor
 
 #:endfor
