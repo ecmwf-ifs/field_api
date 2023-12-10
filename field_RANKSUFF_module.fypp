@@ -237,12 +237,7 @@ CONTAINS
       IF (ZERO) VIEW_PTR(${ft.viewShape}$) = ${ft.default}$
     END IF
 
-    IF (ASSOCIATED (SELF%PARENT)) THEN
-      CALL SELF%PARENT%SET_DEVICE_DIRTY ()
-    ELSE
-! Mark data dirty on the device: the pointer returned by GET_VIEW may be rw
-      CALL SELF%SET_DEVICE_DIRTY ()
-    ENDIF
+    CALL SELF%SET_DEVICE_DIRTY ()
 
   END FUNCTION ${ftn}$_GET_VIEW
 
