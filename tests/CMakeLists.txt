@@ -64,6 +64,7 @@ list(APPEND TEST_FILES
 	sync_host.F90
 	test_crc64.F90
 	wrapper_modify_gpu.F90
+        test_gang.F90
 	)
 
 #Place-holder for failing tests

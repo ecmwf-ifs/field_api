@@ -16,6 +16,7 @@ PROGRAM INIT_OWNER_OPENMP
         USE FIELD_FACTORY_MODULE
         USE OMP_LIB
         USE PARKIND1
+        USE FIELD_ABORT_MODULE
         IMPLICIT NONE
         CLASS(FIELD_2RB), POINTER :: O => NULL()
         REAL(KIND=JPRB), POINTER :: PTR(:,:)
@@ -26,15 +27,15 @@ PROGRAM INIT_OWNER_OPENMP
         PTR=42
 
         IF (SIZE(O%PTR,1) /= 12) THEN
-                ERROR STOP
+                CALL FIELD_ABORT ("ERROR")
         END IF
         !4 BECAUSE WE SET THE NUMBER OF THREADS TO 4
         IF (SIZE(O%PTR,2) /= 4) THEN
-                ERROR STOP
+                CALL FIELD_ABORT ("ERROR")
         END IF
 
         IF (.NOT. ALL(O%PTR == 42)) THEN
-                ERROR STOP
+                CALL FIELD_ABORT ("ERROR")
         END IF 
         CALL FIELD_DELETE(O)
 END PROGRAM INIT_OWNER_OPENMP

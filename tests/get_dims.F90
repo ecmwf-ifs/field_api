@@ -14,6 +14,7 @@ PROGRAM GET_DIMS
         USE FIELD_FACTORY_MODULE
         USE PARKIND1
         USE OML_MOD, ONLY: OML_MAX_THREADS
+        USE FIELD_ABORT_MODULE
         IMPLICIT NONE
         CLASS(FIELD_2RB), POINTER :: O => NULL()
         CLASS(FIELD_2RB), POINTER :: W => NULL()
@@ -25,11 +26,11 @@ PROGRAM GET_DIMS
         CALL O%GET_DIMS(LBOUNDS=L, UBOUNDS=U)
         IF(L(1)/= 10 .AND. L(2)/=5)THEN
                 WRITE(*,*)"OWNER BAD LOWER BOUNDS"
-                ERROR STOP
+                CALL FIELD_ABORT ("ERROR")
         END IF
         IF(U(1)/= 21 .AND. U(2) /= 11)THEN
                 WRITE(*,*)"OWNER BAD UPPER BOUNDS"
-                ERROR STOP
+                CALL FIELD_ABORT ("ERROR")
         END IF
         CALL FIELD_DELETE(O)
 
@@ -37,11 +38,11 @@ PROGRAM GET_DIMS
         CALL FIELD_NEW(O, LBOUNDS=[10,5], UBOUNDS=[21,11], PERSISTENT=.FALSE.)
         IF(L(1)/= 10 .AND. L(2)/=1)THEN
                 WRITE(*,*)"OWNER BAD LOWER BOUNDS WHEN PERSISTENT"
-                ERROR STOP
+                CALL FIELD_ABORT ("ERROR")
         END IF
         IF(U(1)/= 21 .AND. U(2) /= OML_MAX_THREADS())THEN
                 WRITE(*,*)"OWNER BAD UPPER BOUNDS WHEN PERSISTENT"
-                ERROR STOP
+                CALL FIELD_ABORT ("ERROR")
         END IF
         CALL FIELD_DELETE(O)
 
@@ -50,11 +51,11 @@ PROGRAM GET_DIMS
         CALL W%GET_DIMS(LBOUNDS=L, UBOUNDS=U)
         IF(L(1)/= 1 .AND. L(2)/=1)THEN
                 WRITE(*,*)"WRAPPER BAD LOWER BOUNDS"
-                ERROR STOP
+                CALL FIELD_ABORT ("ERROR")
         END IF
         IF(U(1)/= 32 .AND. U(2) /= 3)THEN
                 WRITE(*,*)"WRAPPER BAD UPPER BOUNDS"
-                ERROR STOP
+                CALL FIELD_ABORT ("ERROR")
         END IF
         CALL FIELD_DELETE(W)
 
@@ -63,11 +64,11 @@ PROGRAM GET_DIMS
         CALL W%GET_DIMS(LBOUNDS=L, UBOUNDS=U)
         IF(L(1)/= 2 .AND. L(2)/=2)THEN
                 WRITE(*,*)"WRAPPER BAD LOWER BOUNDS WITH LBOUNDS ARG"
-                ERROR STOP
+                CALL FIELD_ABORT ("ERROR")
         END IF
         IF(U(1)/= 33 .AND. U(2) /= 4)THEN
                 WRITE(*,*)"WRAPPER BAD UPPER BOUNDS WITH LBOUNDS ARG"
-                ERROR STOP
+                CALL FIELD_ABORT ("ERROR")
         END IF
         CALL FIELD_DELETE(W)
 

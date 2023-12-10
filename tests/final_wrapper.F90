@@ -13,6 +13,7 @@ PROGRAM FINAL_WRAPPER
         USE FIELD_MODULE
         USE FIELD_FACTORY_MODULE
         USE PARKIND1
+        USE FIELD_ABORT_MODULE
         IMPLICIT NONE
         CLASS(FIELD_2RB), POINTER :: W => NULL()
         REAL(KIND=JPRB), ALLOCATABLE :: D(:,:)
@@ -24,17 +25,17 @@ PROGRAM FINAL_WRAPPER
         CALL W%FINAL()
 
         IF (ASSOCIATED(W%PTR)) THEN
-                ERROR STOP
+                CALL FIELD_ABORT ("ERROR")
         END IF
         IF (ASSOCIATED(W%DEVPTR)) THEN
-                ERROR STOP
+                CALL FIELD_ABORT ("ERROR")
         END IF
 
         IF (.NOT. ALLOCATED(D)) THEN
-                ERROR STOP
+                CALL FIELD_ABORT ("ERROR")
         END IF
 
         IF (.NOT. ALL(D == 7)) THEN
-                ERROR STOP
+                CALL FIELD_ABORT ("ERROR")
         END IF 
 END PROGRAM FINAL_WRAPPER

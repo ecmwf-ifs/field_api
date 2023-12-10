@@ -16,6 +16,7 @@ PROGRAM INIT_OWNER_DELAYED
         USE FIELD_FACTORY_MODULE
         USE PARKIND1
         USE OMP_LIB, ONLY: OMP_GET_MAX_THREADS
+        USE FIELD_ABORT_MODULE
         IMPLICIT NONE
         CLASS(FIELD_2RB), POINTER :: O => NULL()
         REAL(KIND=JPRB), POINTER :: PTR(:,:)
@@ -25,14 +26,14 @@ PROGRAM INIT_OWNER_DELAYED
         PTR=42
 
         IF (SIZE(O%PTR,1) /= 12) THEN
-                ERROR STOP
+                CALL FIELD_ABORT ("ERROR")
         END IF
         IF (SIZE(O%PTR,2) /= OMP_GET_MAX_THREADS()) THEN
-                ERROR STOP
+                CALL FIELD_ABORT ("ERROR")
         END IF
 
         IF (.NOT. ALL(O%PTR == 42)) THEN
-                ERROR STOP
+                CALL FIELD_ABORT ("ERROR")
         END IF 
         CALL FIELD_DELETE(O)
 END PROGRAM INIT_OWNER_DELAYED

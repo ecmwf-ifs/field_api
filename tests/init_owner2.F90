@@ -15,6 +15,7 @@ PROGRAM INIT_OWNER2
         USE FIELD_MODULE
         USE FIELD_FACTORY_MODULE
         USE PARKIND1
+        USE FIELD_ABORT_MODULE
         IMPLICIT NONE
         CLASS(FIELD_2RB), POINTER :: O => NULL()
         REAL(KIND=JPRB), POINTER :: PTR(:,:)
@@ -26,17 +27,17 @@ PROGRAM INIT_OWNER2
         IF (SIZE(O%PTR,1) /= 12) THEN
                 WRITE(*,*) "WRONG SIZE IN DIM 1"
                 WRITE(*,*) "FOUND ", SIZE(O%PTR,1), "EXPECTING 12"
-                ERROR STOP
+                CALL FIELD_ABORT ("ERROR")
         END IF
         IF (SIZE(O%PTR,2) /= 11) THEN
                 WRITE(*,*)"WRONG SIZE IN DIM 2"
                 WRITE(*,*) "FOUND ", SIZE(O%PTR,2), "EXPECTING 11"
-                ERROR STOP
+                CALL FIELD_ABORT ("ERROR")
         END IF
 
         IF (.NOT. ALL(O%PTR == 42)) THEN
                 WRITE(*,*) "EXPECTED ALL VALUES TO BE 42"
-                ERROR STOP
+                CALL FIELD_ABORT ("ERROR")
         END IF 
         CALL FIELD_DELETE(O)
 END PROGRAM INIT_OWNER2

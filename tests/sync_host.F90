@@ -11,6 +11,7 @@ PROGRAM SYNC_HOST
         USE FIELD_MODULE
         USE FIELD_FACTORY_MODULE
         USE PARKIND1
+        USE FIELD_ABORT_MODULE
         IMPLICIT NONE
 
         CLASS(FIELD_2RB), POINTER :: W => NULL()
@@ -34,7 +35,7 @@ PROGRAM SYNC_HOST
         DO I=1,10
         DO J=1,10
         IF (D(I,J) /= 7) THEN
-                STOP
+                CALL FIELD_ABORT ("ERROR")
         ENDIF
         ENDDO
         ENDDO

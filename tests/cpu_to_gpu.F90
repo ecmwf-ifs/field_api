@@ -4,6 +4,7 @@ PROGRAM CPU_TO_GPU
         USE FIELD_MODULE
         USE FIELD_FACTORY_MODULE
         USE PARKIND1
+        USE FIELD_ABORT_MODULE
         IMPLICIT NONE
         CLASS(FIELD_2IM), POINTER :: O => NULL()
         INTEGER(KIND=JPIM), POINTER :: PTR_HOST(:,:) => NULL()
@@ -16,7 +17,7 @@ PROGRAM CPU_TO_GPU
         PTR_HOST=7
 
         IF (.NOT. ALL(PTR_HOST == 7)) THEN
-                ERROR STOP
+                CALL FIELD_ABORT ("ERROR")
         END IF 
 
         CALL O%GET_DEVICE_DATA_RDONLY(PTR_DEV)
@@ -32,7 +33,7 @@ PROGRAM CPU_TO_GPU
         ENDDO
         !$ACC END PARALLEL
         IF(OKAY .EQV. .FALSE.)THEN
-                ERROR STOP
+                CALL FIELD_ABORT ("ERROR")
         ENDIF
         CALL FIELD_DELETE(O)
 END PROGRAM CPU_TO_GPU
