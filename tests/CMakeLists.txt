@@ -91,7 +91,7 @@ list(APPEND TEST_FILES
 	)
 
 if(HAVE_FIELD_GANG)
-  list(APPEND TEST_FILES test_gang.F90)
+  list(APPEND TEST_FILES test_gang.F90 test_field_gang_sparse_copy.F90)
 endif()
 
 #Place-holder for failing tests
