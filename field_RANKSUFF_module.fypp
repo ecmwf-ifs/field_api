@@ -42,9 +42,6 @@ INTEGER (KIND=JPIM), PARAMETER :: NWR = INT(B'00000010', KIND=JPIM)
 TYPE, ABSTRACT, EXTENDS (FIELD_BASIC) :: ${ftn}$
   ${ft.type}$, POINTER :: PTR(${ft.shape}$) => NULL()
   ${ft.type}$, POINTER, CONTIGUOUS :: DEVPTR(${ft.shape}$) => NULL()
-#:if defined('CUDA')
-  ${ft.type}$, DEVICE, ALLOCATABLE, PRIVATE :: DEVDATA(${ft.shape}$)
-#:endif
 CONTAINS
 
   PROCEDURE :: FINAL => ${ftn}$_FINAL
@@ -286,11 +283,7 @@ CONTAINS
     CLASS(${ftn}$) :: SELF
 
     IF (ASSOCIATED (SELF%DEVPTR)) THEN
-    #:if defined('CUDA')
-      CALL DEV_DEALLOCATE (DEVDATA=SELF%DEVDATA, DEVPTR=SELF%DEVPTR)
-    #:else
       CALL DEV_DEALLOCATE (SELF%DEVPTR)
-    #:endif
     ENDIF
   END SUBROUTINE ${ftn}$_DELETE_DEVICE
 
@@ -384,11 +377,7 @@ CONTAINS
   SELECT CASE (SELF%LAST_CONTIGUOUS_DIMENSION)
 #:for d in range (ft.rank + 1)
     CASE (${d}$)
-#:if defined('CUDA')
-      CALL COPY_DIM${d}$_CONTIGUOUS (SELF%PTR, SELF%DEVDATA, KDIR, QUEUE)
-#:else
       CALL COPY_DIM${d}$_CONTIGUOUS (SELF%PTR, SELF%DEVPTR, KDIR, QUEUE)
-#:endif
 #:endfor
   END SELECT
   CALL CPU_TIME(FINISH)
@@ -402,38 +391,56 @@ CONTAINS
 
 #:for d in range (0, ft.rank+1)
     SUBROUTINE COPY_DIM${d}$_CONTIGUOUS (HST, DEV, KDIR, QUEUE)
-    ${ft.type}$, POINTER :: HST (${ft.shape}$)
-#:if defined('CUDA')
-    ${ft.type}$, DEVICE :: DEV (${ft.shape}$)
-#:else
-    ${ft.type}$, POINTER :: DEV (${ft.shape}$)
-#:endif
+    ${ft.type}$ :: HST (${ft.shape}$), DEV (${ft.shape}$)
+
     INTEGER (KIND=JPIM),           INTENT (IN) :: KDIR
     INTEGER (KIND=JPIM), OPTIONAL, INTENT (IN) :: QUEUE
     INTEGER (KIND=JPIM) :: ISIZE
     INTEGER :: ${', '.join (['J'] + list (map (lambda i: 'J' + str (i+1), range (d, ft.rank))))}$
+#:if defined('CUDA')
+    INTEGER :: ISTAT
+    INTEGER(ACC_HANDLE_KIND) :: STRM
+#:endif
+
+#:if defined('CUDA')
+    IF(PRESENT(QUEUE))THEN
+      STRM = ACC_GET_CUDA_STREAM(QUEUE)
+    ENDIF
+#:endif
 
   #:for e in range (ft.rank, d, -1)
     ${'  ' * (ft.rank - e)}$DO J${e}$ = LBOUND (HST, ${e}$), UBOUND (HST, ${e}$)
   #:endfor
   #:set ar = ', '.join ([':'] * d  + list (map (lambda i: 'J' + str (i+1), range (d, ft.rank))))
   #:set indent = '  ' * (ft.rank - e)
+  #:if defined('CUDA')
+    #:if d == 0
+    ${indent}$  ISIZE = 1
+    #:else
+    ${indent}$  ISIZE = SIZE(HST (${ar}$))
+    #:endif
+  #:else
     #:if d == 0
     ${indent}$  ISIZE = KIND (HST)
     #:else
     ${indent}$  ISIZE = KIND (HST) * SIZE (HST (${ar}$))
     #:endif
+  #:endif
     ${indent}$  IF (KDIR == NH2D) THEN
 #ifdef _OPENACC
-#:if not defined('CUDA')
+#:if defined('CUDA')
+    ${indent}$    IF(PRESENT(QUEUE))THEN
+    ${indent}$      ISTAT = cudaMemcpyAsync (DEV (${ar}$), HST (${ar}$), ISIZE, cudaMemcpyHostToDevice, STRM)
+    ${indent}$    ELSE
+    ${indent}$      ISTAT = cudaMemcpy (DEV (${ar}$), HST (${ar}$), ISIZE, cudaMemcpyHostToDevice)
+    ${indent}$    ENDIF
+#:else
     ${indent}$    !$acc host_data use_device (DEV)
-#:endif
     ${indent}$    IF(PRESENT(QUEUE))THEN
     ${indent}$      CALL ACC_MEMCPY_TO_DEVICE_ASYNC (DEV (${ar}$), HST (${ar}$), ISIZE, QUEUE)
     ${indent}$    ELSE
     ${indent}$      CALL ACC_MEMCPY_TO_DEVICE (DEV (${ar}$), HST (${ar}$), ISIZE)
     ${indent}$    ENDIF
-#:if not defined('CUDA')
     ${indent}$    !$acc end host_data
 #:endif
 #else
@@ -441,15 +448,19 @@ CONTAINS
 #endif
     ${indent}$  ELSEIF (KDIR == ND2H) THEN
 #ifdef _OPENACC
-#:if not defined('CUDA')
+#:if defined('CUDA')
+    ${indent}$    IF(PRESENT(QUEUE))THEN
+    ${indent}$      ISTAT = cudaMemcpyAsync (HST (${ar}$), DEV (${ar}$), ISIZE, cudaMemcpyDeviceToHost, STRM)
+    ${indent}$    ELSE
+    ${indent}$      ISTAT = cudaMemcpy (HST (${ar}$), DEV (${ar}$), ISIZE, cudaMemcpyDeviceToHost)
+    ${indent}$    ENDIF
+#:else
     ${indent}$    !$acc host_data use_device (DEV)
-#:endif
     ${indent}$    IF(PRESENT(QUEUE))THEN
     ${indent}$      CALL ACC_MEMCPY_FROM_DEVICE_ASYNC (HST (${ar}$), DEV (${ar}$), ISIZE, QUEUE)
     ${indent}$    ELSE
     ${indent}$      CALL ACC_MEMCPY_FROM_DEVICE (HST (${ar}$), DEV (${ar}$), ISIZE)
     ${indent}$    ENDIF
-#:if not defined('CUDA')
     ${indent}$    !$acc end host_data
 #:endif
 #else
@@ -543,11 +554,7 @@ CONTAINS
   SUBROUTINE ${ftn}$_CREATE_DEVICE_DATA (SELF)
     CLASS(${ftn}$), INTENT (INOUT) :: SELF
 
-#:if defined('CUDA')
-    CALL DEV_ALLOCATE_HST (DEVPTR=SELF%DEVPTR, DEVDATA=SELF%DEVDATA, HST=SELF%PTR)
-#:else
     CALL DEV_ALLOCATE_HST (DEV=SELF%DEVPTR, HST=SELF%PTR)
-#:endif
   END SUBROUTINE
 
   SUBROUTINE ${ftn}$_GET_DEVICE_DATA (SELF, MODE, PTR, QUEUE)

@@ -13,7 +13,7 @@ MODULE DEV_ALLOC_MODULE
 
 ${fieldType.useParkind1 ()}$
 
-#:if defined('USE_BUDDY_MALLOC')
+#:if defined('USE_BUDDY_MALLOC') or defined('CUDA')
 USE ISO_C_BINDING
 #:endif
 #ifdef _OPENACC
@@ -59,12 +59,26 @@ INTERFACE
 END INTERFACE
 #:endif
 
+#:if defined('CUDA')
+INTERFACE
+  INTEGER FUNCTION CUDA_MALLOC (PTR,SIZ) BIND (C, NAME='cudaMalloc')
+    IMPORT :: C_PTR, C_SIZE_T
+    INTEGER (C_SIZE_T), VALUE, INTENT(IN) :: SIZ
+    TYPE (C_PTR), INTENT(OUT) :: PTR
+  END FUNCTION CUDA_MALLOC
+  INTEGER FUNCTION CUDA_FREE (PTR) BIND (C, NAME='cudaFree')
+    IMPORT :: C_PTR
+    TYPE (C_PTR), VALUE, INTENT(IN) :: PTR
+  END FUNCTION CUDA_FREE
+END INTERFACE
+#:endif
+
 CONTAINS
 
 
 #:for ft in fieldTypeList
 
-#:if defined('USE_BUDDY_MALLOC')
+#:if defined('USE_BUDDY_MALLOC') or defined('CUDA')
 
 SUBROUTINE ${ft.name}$_DEV_ALLOCATE_HST (DEV, HST)
 
@@ -91,6 +105,9 @@ ${ft.type}$, POINTER :: TMP(${ft.shape}$)
 
 TYPE (C_PTR) :: PTR
 INTEGER (C_SIZE_T) :: SIZ
+#:if defined('CUDA')
+INTEGER :: ISTAT
+#:endif
 
 ILBOUNDS = 1
 IF (PRESENT (LBOUNDS)) ILBOUNDS = LBOUNDS
@@ -100,11 +117,18 @@ SIZ = KIND (DEV)
 SIZ = SIZ * INT (UBOUNDS(${i}$)-ILBOUNDS(${i}$)+1, C_SIZE_T)
 #:endfor
 
+#:if defined('CUDA')
+ISTAT = CUDA_MALLOC(PTR,SIZ)
+#:else
 CALL DEV_MALLOC (SIZ, PTR)
+#:endif
+
 CALL C_F_POINTER (PTR, TMP, UBOUNDS-ILBOUNDS+1)
 DEV (${ ', '.join (map (lambda i: 'ILBOUNDS (' + str (i) + '):', range (1, ft.rank+1))) }$) => TMP
 
+#:if not defined('CUDA')
 !$acc enter data create (DEV)
+#:endif
 
 END SUBROUTINE ${ft.name}$_DEV_ALLOCATE_DIM
 
@@ -112,38 +136,21 @@ SUBROUTINE ${ft.name}$_DEV_DEALLOCATE (DEV)
 
 ${ft.type}$, POINTER :: DEV(${ft.shape}$)
 TYPE (C_PTR) :: PTR
+#:if defined('CUDA')
+INTEGER :: ISTAT
+#:endif
 
 IF (ASSOCIATED (DEV)) THEN
-  !$acc exit data delete (DEV)
   PTR = C_LOC (DEV (${ ', '.join (map (lambda i: 'LBOUND (DEV, ' + str (i) + ')', range (1, ft.rank+1))) }$))
+#:if defined('CUDA')
+  ISTAT = CUDA_FREE (PTR)
+#:else
   CALL DEV_FREE (PTR)
+  !$acc exit data delete (DEV)
+#:endif
   NULLIFY (DEV)
+
 ENDIF
-
-END SUBROUTINE ${ft.name}$_DEV_DEALLOCATE
-
-#:elif defined('CUDA')
-
-SUBROUTINE ${ft.name}$_DEV_ALLOCATE_HST (DEVDATA, DEVPTR, HST)
-
-${ft.type}$, DEVICE, ALLOCATABLE, TARGET :: DEVDATA(${ft.shape}$)
-${ft.type}$, POINTER, CONTIGUOUS :: DEVPTR(${ft.shape}$)
-${ft.type}$, POINTER :: HST(${ft.shape}$)
-
-ALLOCATE (DEVDATA, MOLD=HST)
-DEVPTR => DEVDATA
-
-END SUBROUTINE ${ft.name}$_DEV_ALLOCATE_HST
-
-SUBROUTINE ${ft.name}$_DEV_DEALLOCATE (DEVDATA, DEVPTR)
-
-${ft.type}$, DEVICE, ALLOCATABLE :: DEVDATA(${ft.shape}$)
-${ft.type}$, POINTER, CONTIGUOUS :: DEVPTR(${ft.shape}$)
-
-IF (ALLOCATED (DEVDATA)) THEN
-  DEALLOCATE(DEVDATA)
-ENDIF
-NULLIFY(DEVPTR)
 
 END SUBROUTINE ${ft.name}$_DEV_DEALLOCATE
 
