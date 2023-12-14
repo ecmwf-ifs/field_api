@@ -43,7 +43,7 @@ TYPE, ABSTRACT, EXTENDS (FIELD_BASIC) :: ${ftn}$
   ${ft.type}$, POINTER :: PTR(${ft.shape}$) => NULL()
   ${ft.type}$, POINTER, CONTIGUOUS :: DEVPTR(${ft.shape}$) => NULL()
 #:if defined('CUDA')
-  ${ft.type}$, DEVICE, ALLOCATABLE :: DEVDATA(${ft.shape}$)
+  ${ft.type}$, DEVICE, ALLOCATABLE, PRIVATE :: DEVDATA(${ft.shape}$)
 #:endif
 CONTAINS
 
