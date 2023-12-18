@@ -12,20 +12,12 @@ PROGRAM INIT_OWNER_DELAYED_GPU
 
         CALL FIELD_NEW(O, LBOUNDS=[10,1], UBOUNDS=[21,11], DELAYED=.TRUE.)
         CALL O%GET_DEVICE_DATA_RDWR(PTR)
-#ifdef _CUDA
-        !$ACC KERNELS DEVICEPTR(PTR)
-#else
         !$ACC KERNELS PRESENT(PTR)
-#endif
         PTR=42
         !$ACC END KERNELS
 
         OKAY=.TRUE.
-#ifdef _CUDA
-        !$ACC SERIAL DEVICEPTR(PTR) COPY(OKAY)
-#else
         !$ACC SERIAL PRESENT(PTR) COPY(OKAY)
-#endif
         IF(.NOT. ALL(PTR == 42))THEN
                 OKAY=.FALSE.
         ENDIF

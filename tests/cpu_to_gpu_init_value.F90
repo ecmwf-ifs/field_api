@@ -36,11 +36,7 @@ PROGRAM CPU_TO_GPU_INIT_VALUE
                 ERROR STOP
         ENDIF
         OKAY=.TRUE.
-#ifdef _CUDA
-        !$ACC PARALLEL DEVICEPTR(PTR_DEV) COPY(OKAY)
-#else
         !$ACC PARALLEL PRESENT(PTR_DEV) COPY(OKAY)
-#endif
         DO I=1,5
         DO J=1,5
         IF (PTR_DEV(I,J) /= 3)THEN

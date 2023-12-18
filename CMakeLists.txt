@@ -103,15 +103,14 @@ ecbuild_add_option( FEATURE CUDA
 ecbuild_add_option( FEATURE BUDDY_MALLOC
     DESCRIPTION "Use buddy allocator for shadow host allocation"
     DEFAULT ON
-    CONDITION NOT HAVE_CUDA
 )
 
 ## fypp preprocessor flags
-set(fypp_defines "")
 if(HAVE_BUDDY_MALLOC)
-  set(fypp_defines "-DUSE_BUDDY_MALLOC")
-elseif(HAVE_CUDA)
-  set(fypp_defines "-DCUDA")
+  list( APPEND fypp_defines "-DUSE_BUDDY_MALLOC")
+endif()
+if(HAVE_CUDA)
+  list( APPEND fypp_defines "-DCUDA")
 endif()
 
 ## preprocess fypp files

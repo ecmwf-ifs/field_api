@@ -22,11 +22,7 @@ PROGRAM CPU_TO_GPU
         CALL O%GET_DEVICE_DATA_RDONLY(PTR_DEV)
 
         OKAY=.TRUE.
-#ifdef _CUDA
-        !$ACC PARALLEL DEVICEPTR(PTR_DEV) COPY(OKAY)
-#else
         !$ACC PARALLEL PRESENT(PTR_DEV) COPY(OKAY)
-#endif
         DO I=1,11
         DO J=1,11
           IF(PTR_DEV(I,J)/=7)THEN

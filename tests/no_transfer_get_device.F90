@@ -19,11 +19,7 @@ PROGRAM NO_TRANSFER
                 ERROR STOP
         ENDIF
 
-#ifdef _CUDA
-        !$ACC PARALLEL LOOP DEVICEPTR(PTR)
-#else
         !$ACC PARALLEL LOOP PRESENT(PTR)
-#endif
         DO I=1,5
         DO J=1,5
         PTR(I,J)=7

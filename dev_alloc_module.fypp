@@ -80,10 +80,11 @@ CONTAINS
 
 #:if defined('USE_BUDDY_MALLOC') or defined('CUDA')
 
-SUBROUTINE ${ft.name}$_DEV_ALLOCATE_HST (DEV, HST)
+SUBROUTINE ${ft.name}$_DEV_ALLOCATE_HST (DEV, HST, MAP_DEVPTR)
 
 ${ft.type}$, POINTER :: DEV(${ft.shape}$)
 ${ft.type}$, POINTER :: HST(${ft.shape}$)
+LOGICAL, INTENT(IN) :: MAP_DEVPTR
 
 INTEGER :: ILBOUNDS (${ft.rank}$)
 INTEGER :: IUBOUNDS (${ft.rank}$)
@@ -91,17 +92,18 @@ INTEGER :: IUBOUNDS (${ft.rank}$)
 ILBOUNDS = LBOUND (HST)
 IUBOUNDS = UBOUND (HST)
 
-CALL ${ft.name}$_DEV_ALLOCATE_DIM (DEV, UBOUNDS=IUBOUNDS, LBOUNDS=ILBOUNDS)
+CALL ${ft.name}$_DEV_ALLOCATE_DIM (DEV, UBOUNDS=IUBOUNDS, LBOUNDS=ILBOUNDS, MAP_DEVPTR=MAP_DEVPTR)
 
 END SUBROUTINE ${ft.name}$_DEV_ALLOCATE_HST
 
-SUBROUTINE ${ft.name}$_DEV_ALLOCATE_DIM (DEV, UBOUNDS, LBOUNDS)
+SUBROUTINE ${ft.name}$_DEV_ALLOCATE_DIM (DEV, UBOUNDS, LBOUNDS, MAP_DEVPTR)
 
 ${ft.type}$, POINTER :: DEV(${ft.shape}$)
 INTEGER (KIND=JPIM), INTENT (IN) :: UBOUNDS (${ft.rank}$)
 INTEGER (KIND=JPIM), INTENT (IN), OPTIONAL :: LBOUNDS (${ft.rank}$)
 INTEGER (KIND=JPIM) :: ILBOUNDS (${ft.rank}$)
 ${ft.type}$, POINTER :: TMP(${ft.shape}$)
+LOGICAL, INTENT(IN) :: MAP_DEVPTR
 
 TYPE (C_PTR) :: PTR
 INTEGER (C_SIZE_T) :: SIZ
@@ -117,24 +119,27 @@ SIZ = KIND (DEV)
 SIZ = SIZ * INT (UBOUNDS(${i}$)-ILBOUNDS(${i}$)+1, C_SIZE_T)
 #:endfor
 
+IF(MAP_DEVPTR)THEN
+  CALL DEV_MALLOC (SIZ, PTR)
+ELSE
 #:if defined('CUDA')
-ISTAT = CUDA_MALLOC(PTR,SIZ)
-#:else
-CALL DEV_MALLOC (SIZ, PTR)
+  ISTAT = CUDA_MALLOC(PTR, SIZ)
 #:endif
+ENDIF
 
 CALL C_F_POINTER (PTR, TMP, UBOUNDS-ILBOUNDS+1)
 DEV (${ ', '.join (map (lambda i: 'ILBOUNDS (' + str (i) + '):', range (1, ft.rank+1))) }$) => TMP
 
-#:if not defined('CUDA')
+IF(MAP_DEVPTR)THEN
 !$acc enter data create (DEV)
-#:endif
+ENDIF
 
 END SUBROUTINE ${ft.name}$_DEV_ALLOCATE_DIM
 
-SUBROUTINE ${ft.name}$_DEV_DEALLOCATE (DEV)
+SUBROUTINE ${ft.name}$_DEV_DEALLOCATE (DEV, MAP_DEVPTR)
 
 ${ft.type}$, POINTER :: DEV(${ft.shape}$)
+LOGICAL, INTENT(IN) :: MAP_DEVPTR
 TYPE (C_PTR) :: PTR
 #:if defined('CUDA')
 INTEGER :: ISTAT
@@ -142,12 +147,16 @@ INTEGER :: ISTAT
 
 IF (ASSOCIATED (DEV)) THEN
   PTR = C_LOC (DEV (${ ', '.join (map (lambda i: 'LBOUND (DEV, ' + str (i) + ')', range (1, ft.rank+1))) }$))
+  
+  IF(MAP_DEVPTR)THEN
+    CALL DEV_FREE (PTR)
+    !$acc exit data delete (DEV)
+  ELSE
 #:if defined('CUDA')
-  ISTAT = CUDA_FREE (PTR)
-#:else
-  CALL DEV_FREE (PTR)
-  !$acc exit data delete (DEV)
+    ISTAT = CUDA_FREE (PTR)
 #:endif
+  ENDIF
+
   NULLIFY (DEV)
 
 ENDIF
@@ -156,10 +165,11 @@ END SUBROUTINE ${ft.name}$_DEV_DEALLOCATE
 
 #:else
 
-SUBROUTINE ${ft.name}$_DEV_ALLOCATE_HST (DEV, HST)
+SUBROUTINE ${ft.name}$_DEV_ALLOCATE_HST (DEV, HST, MAP_DEVPTR)
 
 ${ft.type}$, POINTER :: DEV(${ft.shape}$)
 ${ft.type}$, POINTER :: HST(${ft.shape}$)
+LOGICAL, INTENT(IN) :: MAP_DEVPTR
 
 #if __INTEL_COMPILER == 1800 && __INTEL_COMPILER_UPDATE == 5
 ! Bug with Intel 18.0.5.274
@@ -172,9 +182,10 @@ ALLOCATE (DEV, MOLD=HST)
 
 END SUBROUTINE ${ft.name}$_DEV_ALLOCATE_HST
 
-SUBROUTINE ${ft.name}$_DEV_DEALLOCATE (DEV)
+SUBROUTINE ${ft.name}$_DEV_DEALLOCATE (DEV, MAP_DEVPTR)
 
 ${ft.type}$, POINTER :: DEV(${ft.shape}$)
+LOGICAL, INTENT(IN) :: MAP_DEVPTR
 
 IF (ASSOCIATED (DEV)) THEN
   !$acc exit data delete (DEV)
