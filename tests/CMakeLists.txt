@@ -79,17 +79,21 @@ set(ABOR1_TEST_FILES
 	resize_wrapper.F90
 	)
 
+#Set OMP_NUM_THREADS for tests
+set(omp_num_threads 8)
+
 foreach(TEST_FILE ${TEST_FILES})
 	get_filename_component(TEST_NAME ${TEST_FILE} NAME_WE)
     ecbuild_add_test(
         TARGET ${TEST_NAME}.x
         SOURCES ${TEST_FILE}
         LIBS
-	${LIBNAME_PREC}
-	parkind_${DEFAULT_PRECISION}
+           ${LIBNAME_PREC}
+           parkind_${DEFAULT_PRECISION}
            fiat
            OpenMP::OpenMP_Fortran
         LINKER_LANGUAGE Fortran
+        OMP ${omp_num_threads}
     )
 
     set_target_properties(${TEST_NAME}.x
@@ -107,6 +111,7 @@ foreach(FAILING_TEST_FILE ${FAILING_TEST_FILES})
 	set_target_properties(${FAILING_TEST_NAME}.x PROPERTIES LINKER_LANGUAGE Fortran)
 	add_test(NAME ${FAILING_TEST_NAME} COMMAND ${FAILING_TEST_NAME}.x)
 	set_property(TEST ${FAILING_TEST_NAME} PROPERTY WILL_FAIL TRUE)
+	set_property(TEST ${FAILING_TEST_NAME} PROPERTY ENVIRONMENT "OMP_NUM_THREADS=${omp_num_threads}")
     target_link_options( ${FAILING_TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:-cuda;-gpu=pinned> )
     target_compile_definitions( ${FAILING_TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:_CUDA> )
 endforeach()
@@ -116,7 +121,8 @@ foreach(ABOR1_TEST_FILE ${ABOR1_TEST_FILES})
 	add_executable(${ABOR1_TEST_NAME}.x ${ABOR1_TEST_FILE})
 	target_link_libraries(${ABOR1_TEST_NAME}.x ${LIBNAME_PREC} parkind_${DEFAULT_PRECISION} fiat OpenMP::OpenMP_Fortran)
 	set_target_properties(${ABOR1_TEST_NAME}.x PROPERTIES LINKER_LANGUAGE Fortran)
-	add_test(NAME ${ABOR1_TEST_NAME} COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/abor1catcher.sh ${ABOR1_TEST_NAME}.x)
+	add_test(NAME ${ABOR1_TEST_NAME} COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/abor1catcher.sh "./${ABOR1_TEST_NAME}.x")
+	set_property(TEST ${ABOR1_TEST_NAME} PROPERTY ENVIRONMENT "OMP_NUM_THREADS=${omp_num_threads}")
     target_link_options( ${ABOR1_TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:-cuda;-gpu=pinned> )
     target_compile_definitions( ${ABOR1_TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:_CUDA> )
 endforeach()
