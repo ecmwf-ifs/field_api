@@ -130,7 +130,8 @@ foreach (SUFF IN ITEMS IM RM RB RD LM)
 endforeach ()
 
 foreach (SRC IN ITEMS dev_alloc_module field_factory_module field_access_module 
-         field_array_module field_module field_gathscat_module field_util_module field_array_util_module)
+         field_array_module field_module field_gathscat_module field_util_module
+         field_array_util_module host_alloc_module)
   add_custom_command (OUTPUT ${SRC}.F90
 	  COMMAND ${FYPP} -n -m os ${fypp_defines} -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/${SRC}.fypp > ${SRC}.F90
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${SRC}.fypp
@@ -138,6 +139,7 @@ foreach (SRC IN ITEMS dev_alloc_module field_factory_module field_access_module
   list(APPEND srcs "${SRC}.F90")
 endforeach ()
 set_source_files_properties("dev_alloc_module.F90" PROPERTIES COMPILE_OPTIONS $<${HAVE_CUDA}:-cuda>)
+set_source_files_properties("host_alloc_module.F90" PROPERTIES COMPILE_OPTIONS $<${HAVE_CUDA}:-cuda>)
 
 foreach(prec ${precisions})
   ## add field_api target

@@ -14,6 +14,7 @@ MODULE FIELD_${RANK}$${SUFF}$_MODULE
 USE OML_MOD, ONLY: OML_MAX_THREADS , OML_MY_THREAD 
 USE IEEE_ARITHMETIC, ONLY: IEEE_SIGNALING_NAN
 USE DEV_ALLOC_MODULE
+USE HOST_ALLOC_MODULE
 USE FIELD_BASIC_MODULE
 USE FIELD_INIT_DEBUG_VALUE_MODULE
 #:if defined('CUDA')
@@ -246,40 +247,9 @@ CONTAINS
 
   SUBROUTINE ${ftn}$_ALLOCATE (SELF)
     ! Create FIELD object by explicitly allocating new data
-    USE ISO_C_BINDING, ONLY : C_PTR, C_SIZE_T, C_F_POINTER
     CLASS(${ftn}$_OWNER) :: SELF
-    ${ft.type}$, POINTER :: PTR(${ft.shape}$)
-    TYPE(C_PTR) :: DATA
-    INTEGER(C_SIZE_T) :: ARR_SIZE
-    INTEGER :: SHAPE(${ft.rank}$), ISTAT
 
-    INTERFACE
-      SUBROUTINE C_MALLOC (SIZ, PTR) BIND (C, NAME='c_malloc')
-        IMPORT :: C_PTR, C_SIZE_T
-        INTEGER (C_SIZE_T), VALUE, INTENT(IN) :: SIZ
-        TYPE (C_PTR), INTENT(OUT) :: PTR
-      END SUBROUTINE C_MALLOC
-    END INTERFACE
-
-    ARR_SIZE = KIND(SELF%PTR)
-#:for r in range(ft.rank)
-    SHAPE(${r+1}$) = SELF%UBOUNDS(${r+1}$) - SELF%LBOUNDS(${r+1}$) + 1
-    ARR_SIZE = ARR_SIZE * SHAPE(${r+1}$)
-#:endfor
-
-    CALL C_MALLOC(ARR_SIZE, DATA)
-
-#:if defined('CUDA')
-    IF(SELF%PINNED)THEN
-      ISTAT = cudaHostRegister(DATA, ARR_SIZE, cudaHostRegisterMapped)
-      IF(ISTAT /= 0)THEN
-          PRINT *, "${ftn}$_OWNER: FAILED TO REGISTER IN PAGE-LOCKED MEMORY"
-      ENDIF
-    ENDIF
-#:endif
-
-    CALL C_F_POINTER(DATA, PTR, SHAPE=SHAPE)
-    SELF%PTR(${', '.join(map(lambda r: 'SELF%LBOUNDS('+str(r+1)+'):', range(0, ft.rank)))}$) => PTR
+    CALL HOST_ALLOC(SELF%PTR, SELF%LBOUNDS, SELF%UBOUNDS, SELF%PINNED)
     SELF%ISTATUS = UNINITIALIZED
   END SUBROUTINE ${ftn}$_ALLOCATE
 
@@ -338,22 +308,12 @@ CONTAINS
 
   SUBROUTINE ${ftn}$_OWNER_FINAL(SELF)
     ! Finalizes field and deallocates owned data
-    USE ISO_C_BINDING, ONLY : C_LOC, C_PTR
     CLASS(${ftn}$_OWNER) :: SELF
-    TYPE(C_PTR) :: DATA
 
-    INTERFACE
-      SUBROUTINE C_FREE (PTR) BIND (C, NAME='c_free')
-        IMPORT :: C_PTR
-        TYPE (C_PTR), VALUE, INTENT(IN) :: PTR
-      END SUBROUTINE C_FREE
-    END INTERFACE
+    IF(ASSOCIATED(SELF%PTR))THEN
+       CALL HOST_DEALLOC(SELF%PTR)
+    ENDIF
 
-    IF (ASSOCIATED(SELF%PTR)) THEN
-      DATA = C_LOC (SELF%PTR (${ ', '.join (map (lambda i: 'LBOUND (SELF%PTR, ' + str (i) + ')', range (1, ft.rank+1))) }$))
-      NULLIFY(SELF%PTR)
-      CALL C_FREE(DATA)
-    END IF
     CALL SELF%${ftn}$_FINAL
   END SUBROUTINE ${ftn}$_OWNER_FINAL
 
