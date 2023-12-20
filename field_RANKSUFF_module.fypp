@@ -11,11 +11,18 @@ MODULE FIELD_${RANK}$${SUFF}$_MODULE
 
 #:set fieldTypeList = fieldType.getFieldTypeList (ranks=[RANK], kinds=['JP' + str (SUFF)])
 
-USE OML_MOD, ONLY: OML_MAX_THREADS , OML_MY_THREAD
+USE OML_MOD, ONLY: OML_MAX_THREADS , OML_MY_THREAD 
 USE IEEE_ARITHMETIC, ONLY: IEEE_SIGNALING_NAN
 USE DEV_ALLOC_MODULE
+USE HOST_ALLOC_MODULE
 USE FIELD_BASIC_MODULE
 USE FIELD_INIT_DEBUG_VALUE_MODULE
+#:if defined('CUDA')
+USE CUDAFOR
+#:endif
+#ifdef _OPENACC
+USE OPENACC
+#endif
 ${fieldType.useParkind1 ()}$
 
 IMPLICIT NONE
@@ -96,6 +103,7 @@ PUBLIC :: ${ftn}$_WRAPPER
 TYPE, EXTENDS(${ftn}$) :: ${ftn}$_OWNER
   INTEGER(KIND=JPIM) :: LBOUNDS(${ft.rank}$), UBOUNDS(${ft.rank}$)
   LOGICAL :: HAS_INIT_VALUE = .FALSE.
+  LOGICAL :: PINNED = .FALSE.
   ${ft.type}$ :: INIT_VALUE
 CONTAINS
   PROCEDURE :: INIT => ${ftn}$_OWNER_INIT
@@ -127,13 +135,15 @@ CONTAINS
 
 #:for ft in fieldTypeList
 #:set ftn = ft.name
-  SUBROUTINE ${ftn}$_WRAP(SELF, DATA, PERSISTENT, LBOUNDS)
+  SUBROUTINE ${ftn}$_WRAP(SELF, DATA, PERSISTENT, LBOUNDS, MAP_DEVPTR)
     ! Create FIELD object by wrapping existing data
     CLASS(${ftn}$_WRAPPER), INTENT(INOUT) :: SELF
     ${ft.type}$, TARGET, INTENT(IN) :: DATA(${ft.shape}$)
     LOGICAL, INTENT(IN), OPTIONAL :: PERSISTENT
+    LOGICAL, INTENT(IN), OPTIONAL :: MAP_DEVPTR
     INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: LBOUNDS(${ft.rank}$)
     LOGICAL :: LLPERSISTENT
+#include "abor1.intfb.h"
 
     LLPERSISTENT = .TRUE.
     IF (PRESENT (PERSISTENT)) LLPERSISTENT = PERSISTENT
@@ -146,6 +156,15 @@ CONTAINS
     SELF%THREAD_BUFFER = .NOT. LLPERSISTENT
     SELF%ISTATUS = NHSTFRESH
 
+    IF(PRESENT(MAP_DEVPTR))THEN
+      SELF%MAP_DEVPTR = MAP_DEVPTR
+    ENDIF
+#:if not defined('CUDA')
+    IF(.NOT. SELF%MAP_DEVPTR)THEN
+       CALL ABOR1("${ftn}$_OWNER_INIT: CUDA backend needed to disable host-mapped device-pointer")
+    ENDIF
+#:endif
+
     IF (.NOT. LLPERSISTENT) THEN
       IF (OML_MAX_THREADS () /= SIZE (DATA, ${ft.rank}$)) THEN
         CALL ABOR1 ('${ftn}$_WRAP: DIMENSION MISMATCH')
@@ -154,19 +173,39 @@ CONTAINS
 
   END SUBROUTINE ${ftn}$_WRAP
 
-  SUBROUTINE ${ftn}$_OWNER_INIT (SELF, LBOUNDS, UBOUNDS, PERSISTENT, DELAYED, INIT_VALUE)
+  SUBROUTINE ${ftn}$_OWNER_INIT (SELF, LBOUNDS, UBOUNDS, PERSISTENT, DELAYED, INIT_VALUE, PINNED, MAP_DEVPTR)
     CLASS(${ftn}$_OWNER) :: SELF
     INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: LBOUNDS(${ft.rank}$)
     INTEGER(KIND=JPIM), INTENT(IN) :: UBOUNDS(${ft.rank}$)
     LOGICAL, OPTIONAL,  INTENT(IN) :: PERSISTENT
     LOGICAL, OPTIONAL,  INTENT(IN) :: DELAYED
+    LOGICAL, OPTIONAL,  INTENT(IN) :: PINNED
+    LOGICAL, OPTIONAL,  INTENT(IN) :: MAP_DEVPTR
     ${ft.type}$, OPTIONAL, INTENT(IN) :: INIT_VALUE
     LOGICAL :: IS_DELAYED
+#include "abor1.intfb.h"
 
     IS_DELAYED = .FALSE.
     IF(PRESENT(DELAYED))THEN
       IS_DELAYED = DELAYED
     ENDIF
+
+#:if defined('CUDA')
+    ! In the presence of CUDA we pin by default
+    SELF%PINNED = .TRUE.
+#:endif
+    IF(PRESENT(PINNED))THEN
+      SELF%PINNED = PINNED
+    ENDIF
+
+    IF(PRESENT(MAP_DEVPTR))THEN
+      SELF%MAP_DEVPTR = MAP_DEVPTR
+    ENDIF
+#:if not defined('CUDA')
+    IF(.NOT. SELF%MAP_DEVPTR)THEN
+       CALL ABOR1("${ftn}$_OWNER_INIT: CUDA backend needed to disable host-mapped device-pointer")
+    ENDIF
+#:endif
 
     IF (PRESENT (LBOUNDS)) THEN
       SELF%LBOUNDS=LBOUNDS
@@ -201,7 +240,7 @@ CONTAINS
       CALL SELF%ALLOCATE()
       IF (SELF%HAS_INIT_VALUE) THEN
         SELF%PTR=SELF%INIT_VALUE
-	SELF%ISTATUS=NHSTFRESH
+        SELF%ISTATUS=NHSTFRESH
       ENDIF
     ENDIF
   END SUBROUTINE ${ftn}$_OWNER_INIT
@@ -210,7 +249,7 @@ CONTAINS
     ! Create FIELD object by explicitly allocating new data
     CLASS(${ftn}$_OWNER) :: SELF
 
-    ALLOCATE(SELF%PTR(${', '.join(map(lambda r: 'SELF%LBOUNDS('+str(r+1)+'):SELF%UBOUNDS('+str(r+1)+')', range(0, ft.rank)))}$))
+    CALL HOST_ALLOC(SELF%PTR, SELF%LBOUNDS, SELF%UBOUNDS, SELF%PINNED)
     SELF%ISTATUS = UNINITIALIZED
   END SUBROUTINE ${ftn}$_ALLOCATE
 
@@ -248,7 +287,7 @@ CONTAINS
     CLASS(${ftn}$) :: SELF
 
     IF (ASSOCIATED (SELF%DEVPTR)) THEN
-      CALL DEV_DEALLOCATE (SELF%DEVPTR)
+      CALL DEV_DEALLOCATE (SELF%DEVPTR, SELF%MAP_DEVPTR)
     ENDIF
   END SUBROUTINE ${ftn}$_DELETE_DEVICE
 
@@ -270,9 +309,11 @@ CONTAINS
   SUBROUTINE ${ftn}$_OWNER_FINAL(SELF)
     ! Finalizes field and deallocates owned data
     CLASS(${ftn}$_OWNER) :: SELF
-    IF (ASSOCIATED(SELF%PTR)) THEN
-      DEALLOCATE(SELF%PTR)
-    END IF
+
+    IF(ASSOCIATED(SELF%PTR))THEN
+       CALL HOST_DEALLOC(SELF%PTR)
+    ENDIF
+
     CALL SELF%${ftn}$_FINAL
   END SUBROUTINE ${ftn}$_OWNER_FINAL
 
@@ -344,20 +385,32 @@ CONTAINS
 
 #:for d in range (0, ft.rank+1)
     SUBROUTINE COPY_DIM${d}$_CONTIGUOUS (HST, DEV, KDIR, QUEUE)
-#ifdef _OPENACC
-    USE OPENACC
-#endif
-    ${ft.type}$, POINTER :: HST (${ft.shape}$), DEV (${ft.shape}$)
+    ${ft.type}$ :: HST (${ft.shape}$), DEV (${ft.shape}$)
+
     INTEGER (KIND=JPIM),           INTENT (IN) :: KDIR
     INTEGER (KIND=JPIM), OPTIONAL, INTENT (IN) :: QUEUE
     INTEGER (KIND=JPIM) :: ISIZE
     INTEGER :: ${', '.join (['J'] + list (map (lambda i: 'J' + str (i+1), range (d, ft.rank))))}$
+#ifdef _OPENACC
+    TYPE(C_DEVPTR) :: DEVPTR
+#endif
 
   #:for e in range (ft.rank, d, -1)
     ${'  ' * (ft.rank - e)}$DO J${e}$ = LBOUND (HST, ${e}$), UBOUND (HST, ${e}$)
   #:endfor
   #:set ar = ', '.join ([':'] * d  + list (map (lambda i: 'J' + str (i+1), range (d, ft.rank))))
   #:set indent = '  ' * (ft.rank - e)
+#ifdef _OPENACC
+    ${indent}$  IF(SELF%MAP_DEVPTR)THEN
+    ${indent}$    DEVPTR = ACC_DEVICEPTR(DEV (${ar}$))
+    ${indent}$  ELSE
+  #:if defined('CUDA')
+  !$acc data deviceptr(DEVPTR, DEV)
+    ${indent}$    DEVPTR = C_DEVLOC(DEV (${ar}$))
+  !$acc end data
+  #:endif
+    ${indent}$  ENDIF
+#endif
     #:if d == 0
     ${indent}$  ISIZE = KIND (HST)
     #:else
@@ -365,25 +418,21 @@ CONTAINS
     #:endif
     ${indent}$  IF (KDIR == NH2D) THEN
 #ifdef _OPENACC
-    ${indent}$    !$acc host_data use_device (DEV)
     ${indent}$    IF(PRESENT(QUEUE))THEN
-    ${indent}$      CALL ACC_MEMCPY_TO_DEVICE_ASYNC (DEV (${ar}$), HST (${ar}$), ISIZE, QUEUE)
+    ${indent}$      CALL ACC_MEMCPY_TO_DEVICE_ASYNC (DEVPTR , HST (${ar}$), ISIZE, QUEUE)
     ${indent}$    ELSE
-    ${indent}$      CALL ACC_MEMCPY_TO_DEVICE (DEV (${ar}$), HST (${ar}$), ISIZE)
+    ${indent}$      CALL ACC_MEMCPY_TO_DEVICE (DEVPTR , HST (${ar}$), ISIZE)
     ${indent}$    ENDIF
-    ${indent}$    !$acc end host_data
 #else
     ${indent}$    DEV (${ar}$) = HST (${ar}$)
 #endif
     ${indent}$  ELSEIF (KDIR == ND2H) THEN
 #ifdef _OPENACC
-    ${indent}$    !$acc host_data use_device (DEV)
     ${indent}$    IF(PRESENT(QUEUE))THEN
-    ${indent}$      CALL ACC_MEMCPY_FROM_DEVICE_ASYNC (HST (${ar}$), DEV (${ar}$), ISIZE, QUEUE)
+    ${indent}$      CALL ACC_MEMCPY_FROM_DEVICE_ASYNC (HST (${ar}$), DEVPTR, ISIZE, QUEUE)
     ${indent}$    ELSE
-    ${indent}$      CALL ACC_MEMCPY_FROM_DEVICE (HST (${ar}$), DEV (${ar}$), ISIZE)
+    ${indent}$      CALL ACC_MEMCPY_FROM_DEVICE (HST (${ar}$), DEVPTR, ISIZE)
     ${indent}$    ENDIF
-    ${indent}$    !$acc end host_data
 #else
     ${indent}$    HST (${ar}$) = DEV (${ar}$)
 #endif
@@ -429,7 +478,7 @@ CONTAINS
       CALL SELF%ALLOCATE()
       IF (SELF%HAS_INIT_VALUE) THEN
         SELF%PTR=SELF%INIT_VALUE
-	SELF%ISTATUS=NHSTFRESH
+        SELF%ISTATUS=NHSTFRESH
       ENDIF
     ENDIF
     CALL SELF%${ftn}$_GET_HOST_DATA(MODE, PTR, QUEUE)
@@ -474,7 +523,8 @@ CONTAINS
 
   SUBROUTINE ${ftn}$_CREATE_DEVICE_DATA (SELF)
     CLASS(${ftn}$), INTENT (INOUT) :: SELF
-    CALL DEV_ALLOCATE_HST (DEV=SELF%DEVPTR, HST=SELF%PTR)
+
+    CALL DEV_ALLOCATE_HST (DEV=SELF%DEVPTR, HST=SELF%PTR, MAP_DEVPTR=SELF%MAP_DEVPTR)
   END SUBROUTINE
 
   SUBROUTINE ${ftn}$_GET_DEVICE_DATA (SELF, MODE, PTR, QUEUE)
@@ -489,7 +539,7 @@ CONTAINS
       CALL SELF%CREATE_DEVICE_DATA
     ENDIF
     IF (IAND (SELF%ISTATUS, NDEVFRESH) == 0) THEN
-      CALL SELF%COPY_DATA (NH2D, QUEUE)
+      CALL SELF%COPY_DATA ( NH2D, QUEUE)
       SELF%ISTATUS = IOR (SELF%ISTATUS, NDEVFRESH)
     ENDIF
     PTR (${ft.lbptr}$) => SELF%DEVPTR (${','.join(':' for _ in range(ft.rank))}$)
@@ -510,7 +560,7 @@ CONTAINS
       IF (SELF%HAS_INIT_VALUE) THEN
         CALL SELF%CREATE_DEVICE_DATA
         SELF%PTR=SELF%INIT_VALUE
-	SELF%ISTATUS=NHSTFRESH
+        SELF%ISTATUS=NHSTFRESH
       ENDIF
     ENDIF
     CALL SELF%${ftn}$_GET_DEVICE_DATA(MODE, PTR, QUEUE)

@@ -17,7 +17,7 @@ PROGRAM FINAL_OWNER
         CLASS(FIELD_2RB), POINTER :: O => NULL()
         REAL(KIND=JPRB), POINTER :: PTR(:,:)
 
-        CALL FIELD_NEW(O, [10,1],[21,11])
+        CALL FIELD_NEW(O, LBOUNDS=[10,1],UBOUNDS=[21,11])
         CALL O%GET_HOST_DATA_RDWR(PTR)
         PTR=42
         CALL O%FINAL()
@@ -25,6 +25,7 @@ PROGRAM FINAL_OWNER
         IF (ASSOCIATED(O%PTR)) THEN
                 ERROR STOP
         END IF
+
         IF (ASSOCIATED(O%DEVPTR)) THEN
                 ERROR STOP
         END IF
