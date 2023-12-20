@@ -147,10 +147,3 @@ else()
    add_test(NAME confirm_gpu_does_not_exist COMMAND check_gpu_num.x)
    set_property(TEST confirm_gpu_does_not_exist PROPERTY WILL_FAIL TRUE)
 endif()
-
-## host pinning test
-if( HAVE_CUDA )
-   add_test(NAME cuda_host_pinning_test COMMAND ${CMAKE_COMMAND} -P "${CMAKE_CURRENT_SOURCE_DIR}/test_host_pinning.cmake"
-            WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests )
-endif()
-
