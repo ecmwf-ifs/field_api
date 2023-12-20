@@ -96,7 +96,7 @@ list(APPEND srcs field_basic_module.F90 field_init_debug_value_module.F90 dev_al
 include(CheckLanguage)
 check_language(CUDA)
 ecbuild_add_option( FEATURE CUDA
-    DESCRIPTION "CUDA" DEFAULT OFF
+    DESCRIPTION "CUDA" DEFAULT ON
     CONDITION CMAKE_CUDA_COMPILER AND HAVE_ACC )
 
 ## buddy allocator option
