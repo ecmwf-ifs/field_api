@@ -26,7 +26,6 @@ PROGRAM FINAL_WRAPPER
         IF (ASSOCIATED(W%PTR)) THEN
                 ERROR STOP
         END IF
-
         IF (ASSOCIATED(W%DEVPTR)) THEN
                 ERROR STOP
         END IF
