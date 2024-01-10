@@ -25,6 +25,7 @@ target_compile_definitions( main.x PRIVATE $<${HAVE_CUDA}:_CUDA> )
 
 ## Unit tests
 list(APPEND TEST_FILES
+        test_pinned.F90
 	async_host.F90
 	cpu_to_gpu.F90
 	cpu_to_gpu_delayed_init_value.F90
@@ -139,8 +140,11 @@ ecbuild_add_test(
     LINKER_LANGUAGE Fortran
     CONDITION ${HAVE_SINGLE_PRECISION}
 )
+
+if (HAVE_SINGLE_PRECISION)
 # don't need gpu=pinned link flag because this test only has wrapper fields
 target_link_options( init_wrapper_mixed_precision.x PRIVATE $<${HAVE_CUDA}:-cuda> )
+endif ()
 
 ## Test presence of GPUs
 add_executable(check_gpu_num.x check_gpu_num.F90)
