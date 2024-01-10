@@ -1,0 +1,98 @@
+#! (C) Copyright 2022- ECMWF.
+#! (C) Copyright 2022- Meteo-France.
+#!
+#! This software is licensed under the terms of the Apache Licence Version 2.0
+#! which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
+#! In applying this licence, ECMWF does not waive the privileges and immunities
+#! granted to it by virtue of its status as an intergovernmental organisation
+#! nor does it submit to any jurisdiction.
+
+MODULE HOST_ALLOC_MODULE
+
+#:set fieldTypeList = list (filter (lambda ft: not ft.alias, fieldType.getFieldTypeList ([2,3,4,5])))
+
+${fieldType.useParkind1 ()}$
+USE ISO_C_BINDING
+#:if defined('CUDA')
+USE CUDAFOR
+#:endif
+
+IMPLICIT NONE
+
+PRIVATE
+
+INTERFACE HOST_ALLOC
+#:for ft in fieldTypeList
+  MODULE PROCEDURE ${ft.name}$_HOST_ALLOC
+#:endfor
+END INTERFACE HOST_ALLOC
+
+INTERFACE HOST_DEALLOC
+#:for ft in fieldTypeList
+  MODULE PROCEDURE ${ft.name}$_HOST_DEALLOC
+#:endfor
+END INTERFACE HOST_DEALLOC
+
+INTERFACE
+  SUBROUTINE C_MALLOC (SIZ, PTR) BIND (C, NAME='c_malloc')
+    IMPORT :: C_PTR, C_SIZE_T
+    INTEGER (C_SIZE_T), VALUE, INTENT(IN) :: SIZ
+    TYPE (C_PTR), INTENT(OUT) :: PTR
+  END SUBROUTINE C_MALLOC
+  SUBROUTINE C_FREE (PTR) BIND (C, NAME='c_free')
+    IMPORT :: C_PTR
+    TYPE (C_PTR), VALUE, INTENT(IN) :: PTR
+  END SUBROUTINE C_FREE
+END INTERFACE
+
+PUBLIC :: HOST_ALLOC
+PUBLIC :: HOST_DEALLOC
+
+CONTAINS
+
+#:for ft in fieldTypeList
+SUBROUTINE ${ft.name}$_HOST_ALLOC (HST, LBOUNDS, UBOUNDS, PINNED)
+   ${ft.type}$, POINTER, INTENT(OUT) :: HST(${ft.shape}$)
+   INTEGER(KIND=JPIM), INTENT(IN) :: LBOUNDS(${ft.rank}$)
+   INTEGER(KIND=JPIM), INTENT(IN) :: UBOUNDS(${ft.rank}$)
+   LOGICAL, INTENT(IN) :: PINNED
+
+   ${ft.type}$, POINTER :: PTR(${ft.shape}$)
+   TYPE(C_PTR) :: DATA
+   INTEGER(C_SIZE_T) :: ARR_SIZE
+   INTEGER :: SHAPE(${ft.rank}$), ISTAT
+#include "abor1.intfb.h"
+
+   ARR_SIZE = KIND(HST)
+#:for r in range(ft.rank)
+   SHAPE(${r+1}$) = UBOUNDS(${r+1}$) - LBOUNDS(${r+1}$) + 1
+   ARR_SIZE = ARR_SIZE * SHAPE(${r+1}$)
+#:endfor
+
+   CALL C_MALLOC(ARR_SIZE, DATA)
+
+#:if defined('CUDA')
+   IF(PINNED)THEN
+     ISTAT = cudaHostRegister(DATA, ARR_SIZE, cudaHostRegisterMapped)
+     IF(ISTAT /= 0)THEN
+         CALL ABOR1("${ft.name}$_OWNER: FAILED TO REGISTER IN PAGE-LOCKED MEMORY")
+     ENDIF
+   ENDIF
+#:endif
+
+   CALL C_F_POINTER(DATA, PTR, SHAPE=SHAPE)
+   HST(${', '.join(map(lambda r: 'LBOUNDS('+str(r+1)+'):', range(0, ft.rank)))}$) => PTR
+END SUBROUTINE ${ft.name}$_HOST_ALLOC
+
+SUBROUTINE ${ft.name}$_HOST_DEALLOC(HST)
+   ${ft.type}$, POINTER, INTENT(INOUT) :: HST(${ft.shape}$)
+   TYPE(C_PTR) :: DATA
+
+   DATA = C_LOC (HST (${ ', '.join (map (lambda i: 'LBOUND (HST, ' + str (i) + ')', range (1, ft.rank+1))) }$))
+   NULLIFY(HST)
+   CALL C_FREE(DATA)
+END SUBROUTINE ${ft.name}$_HOST_DEALLOC
+
+#:endfor
+
+END MODULE HOST_ALLOC_MODULE
