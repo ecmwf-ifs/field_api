@@ -52,6 +52,8 @@ CONTAINS
 
 #:for ft in fieldTypeList
 SUBROUTINE ${ft.name}$_HOST_ALLOC (HST, LBOUNDS, UBOUNDS, PINNED)
+   USE FIELD_ABORT_MODULE
+
    ${ft.type}$, POINTER, INTENT(OUT) :: HST(${ft.shape}$)
    INTEGER(KIND=JPIM), INTENT(IN) :: LBOUNDS(${ft.rank}$)
    INTEGER(KIND=JPIM), INTENT(IN) :: UBOUNDS(${ft.rank}$)
@@ -60,37 +62,53 @@ SUBROUTINE ${ft.name}$_HOST_ALLOC (HST, LBOUNDS, UBOUNDS, PINNED)
    ${ft.type}$, POINTER :: PTR(${ft.shape}$)
    TYPE(C_PTR) :: DATA
    INTEGER(C_SIZE_T) :: ARR_SIZE
-   INTEGER :: SHAPE(${ft.rank}$), ISTAT
+   INTEGER :: ISHAPE(${ft.rank}$), ISTAT
 #include "abor1.intfb.h"
 
    ARR_SIZE = KIND(HST)
 #:for r in range(ft.rank)
-   SHAPE(${r+1}$) = UBOUNDS(${r+1}$) - LBOUNDS(${r+1}$) + 1
-   ARR_SIZE = ARR_SIZE * SHAPE(${r+1}$)
+   ISHAPE(${r+1}$) = UBOUNDS(${r+1}$) - LBOUNDS(${r+1}$) + 1
+   ARR_SIZE = ARR_SIZE * ISHAPE(${r+1}$)
 #:endfor
 
    CALL C_MALLOC(ARR_SIZE, DATA)
 
 #:if defined('CUDA')
    IF(PINNED)THEN
-     ISTAT = cudaHostRegister(DATA, ARR_SIZE, cudaHostRegisterMapped)
+     ISTAT = CUDAHOSTREGISTER (DATA, ARR_SIZE, CUDAHOSTREGISTERMAPPED)
      IF(ISTAT /= 0)THEN
-         CALL ABOR1("${ft.name}$_OWNER: FAILED TO REGISTER IN PAGE-LOCKED MEMORY")
+         CALL FIELD_ABORT ("${ft.name}$_OWNER: FAILED TO REGISTER IN PAGE-LOCKED MEMORY")
      ENDIF
    ENDIF
 #:endif
 
-   CALL C_F_POINTER(DATA, PTR, SHAPE=SHAPE)
+   CALL C_F_POINTER(DATA, PTR, SHAPE=ISHAPE)
    HST(${', '.join(map(lambda r: 'LBOUNDS('+str(r+1)+'):', range(0, ft.rank)))}$) => PTR
+
 END SUBROUTINE ${ft.name}$_HOST_ALLOC
 
-SUBROUTINE ${ft.name}$_HOST_DEALLOC(HST)
-   ${ft.type}$, POINTER, INTENT(INOUT) :: HST(${ft.shape}$)
-   TYPE(C_PTR) :: DATA
+SUBROUTINE ${ft.name}$_HOST_DEALLOC(HST, PINNED)
+   USE FIELD_ABORT_MODULE
 
+   ${ft.type}$, POINTER, INTENT(INOUT) :: HST(${ft.shape}$)
+   LOGICAL, INTENT (IN) :: PINNED
+   TYPE(C_PTR) :: DATA
+   INTEGER :: ISTAT
+
+  
    DATA = C_LOC (HST (${ ', '.join (map (lambda i: 'LBOUND (HST, ' + str (i) + ')', range (1, ft.rank+1))) }$))
+
+   IF (PINNED) THEN
+     ISTAT = CUDAHOSTUNREGISTER (DATA)
+     IF(ISTAT /= 0)THEN
+         CALL FIELD_ABORT ("${ft.name}$_OWNER: FAILED TO UNREGISTER PAGE-LOCKED MEMORY")
+     ENDIF
+   ENDIF
+
    NULLIFY(HST)
+
    CALL C_FREE(DATA)
+
 END SUBROUTINE ${ft.name}$_HOST_DEALLOC
 
 #:endfor

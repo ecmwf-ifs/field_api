@@ -22,11 +22,12 @@ CONTAINS
 #:set ftn = ft.name
 
 #:for d in range (0, ft.rank+1)
-  SUBROUTINE ${ftn}$_COPY_DIM${d}$_CONTIGUOUS (HST, DEV, KDIR, QUEUE)
+  SUBROUTINE ${ftn}$_COPY_DIM${d}$_CONTIGUOUS (HST, DEV, MAP_DEVPTR, KDIR, QUEUE)
 #ifdef _OPENACC
   USE OPENACC
 #endif
     ${ft.type}$ :: HST (${ft.shape}$), DEV (${ft.shape}$)
+    LOGICAL,                       INTENT (IN) :: MAP_DEVPTR
     INTEGER (KIND=JPIM),           INTENT (IN) :: KDIR
     INTEGER (KIND=JPIM), OPTIONAL, INTENT (IN) :: QUEUE
     INTEGER (KIND=JPIM) :: ISIZE
@@ -41,7 +42,7 @@ CONTAINS
   #:set ar = ', '.join ([':'] * d  + list (map (lambda i: 'J' + str (i+1), range (d, ft.rank))))
   #:set indent = '  ' * (ft.rank - e)
 #ifdef _OPENACC
-    ${indent}$  IF(SELF%MAP_DEVPTR)THEN
+    ${indent}$  IF(MAP_DEVPTR)THEN
     ${indent}$    DEVPTR = ACC_DEVICEPTR(DEV (${ar}$))
     ${indent}$  ELSE
   #:if defined('CUDA')

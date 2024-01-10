@@ -158,7 +158,7 @@ CONTAINS
     ENDIF
 #:if not defined('CUDA')
     IF(.NOT. SELF%MAP_DEVPTR)THEN
-       CALL ABOR1("${ftn}$_OWNER_INIT: CUDA backend needed to disable host-mapped device-pointer")
+       CALL FIELD_ABORT ("${ftn}$_OWNER_INIT: CUDA backend needed to disable host-mapped device-pointer")
     ENDIF
 #:endif
 
@@ -171,6 +171,8 @@ CONTAINS
   END SUBROUTINE ${ftn}$_WRAPPER_INIT
 
   SUBROUTINE ${ftn}$_OWNER_INIT (SELF, LBOUNDS, UBOUNDS, PERSISTENT, DELAYED, INIT_VALUE, PINNED, MAP_DEVPTR)
+    USE FIELD_ABORT_MODULE 
+
     CLASS(${ftn}$_OWNER) :: SELF
     INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: LBOUNDS(${ft.rank}$)
     INTEGER(KIND=JPIM), INTENT(IN) :: UBOUNDS(${ft.rank}$)
@@ -200,7 +202,7 @@ CONTAINS
     ENDIF
 #:if not defined('CUDA')
     IF(.NOT. SELF%MAP_DEVPTR)THEN
-       CALL ABOR1("${ftn}$_OWNER_INIT: CUDA backend needed to disable host-mapped device-pointer")
+       CALL FIELD_ABORT ("${ftn}$_OWNER_INIT: CUDA backend needed to disable host-mapped device-pointer")
     ENDIF
 #:endif
 
@@ -309,7 +311,7 @@ CONTAINS
     CLASS(${ftn}$_OWNER) :: SELF
 
     IF(ASSOCIATED(SELF%PTR))THEN
-       CALL HOST_DEALLOC(SELF%PTR)
+       CALL HOST_DEALLOC (SELF%PTR, SELF%PINNED)
     ENDIF
 
     CALL SELF%${ftn}$_FINAL
@@ -376,7 +378,7 @@ CONTAINS
   SELECT CASE (SELF%LAST_CONTIGUOUS_DIMENSION)
 #:for d in range (ft.rank + 1)
     CASE (${d}$)
-      CALL ${ftn}$_COPY_DIM${d}$_CONTIGUOUS (SELF%PTR, SELF%DEVPTR, KDIR, QUEUE)
+      CALL ${ftn}$_COPY_DIM${d}$_CONTIGUOUS (SELF%PTR, SELF%DEVPTR, SELF%MAP_DEVPTR, KDIR, QUEUE)
 #:endfor
   END SELECT
   CALL CPU_TIME(FINISH)
