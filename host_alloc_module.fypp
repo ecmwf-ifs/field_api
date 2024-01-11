@@ -84,11 +84,22 @@ SUBROUTINE ${ft.name}$_HOST_ALLOC (HST, LBOUNDS, UBOUNDS, PINNED)
    HST(${', '.join(map(lambda r: 'LBOUNDS('+str(r+1)+'):', range(0, ft.rank)))}$) => PTR
 END SUBROUTINE ${ft.name}$_HOST_ALLOC
 
-SUBROUTINE ${ft.name}$_HOST_DEALLOC(HST)
+SUBROUTINE ${ft.name}$_HOST_DEALLOC(HST, PINNED)
    ${ft.type}$, POINTER, INTENT(INOUT) :: HST(${ft.shape}$)
+   LOGICAL, INTENT (IN) :: PINNED
+   INTEGER :: ISTAT
+
    TYPE(C_PTR) :: DATA
 
    DATA = C_LOC (HST (${ ', '.join (map (lambda i: 'LBOUND (HST, ' + str (i) + ')', range (1, ft.rank+1))) }$))
+
+   IF (PINNED) THEN
+     ISTAT = CUDAHOSTUNREGISTER (DATA)
+     IF(ISTAT /= 0)THEN
+       CALL ABOR1 ("${ft.name}$_OWNER: FAILED TO UNREGISTER PAGE-LOCKED MEMORY")
+     ENDIF
+   ENDIF
+
    NULLIFY(HST)
    CALL C_FREE(DATA)
 END SUBROUTINE ${ft.name}$_HOST_DEALLOC
