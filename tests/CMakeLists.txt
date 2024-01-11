@@ -25,6 +25,7 @@ target_compile_definitions( main.x PRIVATE $<${HAVE_CUDA}:_CUDA> )
 
 ## Unit tests
 list(APPEND TEST_FILES
+        test_pinned.F90
 	async_host.F90
 	cpu_to_gpu.F90
 	cpu_to_gpu_delayed_init_value.F90
