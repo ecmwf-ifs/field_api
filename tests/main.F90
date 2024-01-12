@@ -7,11 +7,15 @@
 ! granted to it by virtue of its status as an intergovernmental organisation
 ! nor does it submit to any jurisdiction.
 
+PROGRAM MAIN
+
 USE FIELD_MODULE
 USE PARKIND1
 
+IMPLICIT NONE
 
 INTEGER (KIND=JPIM) :: NFLEVG, NPROMA, NGPBLKS
+INTEGER (KIND=JPIM) :: JBLK,JLEV,JLON,I
 
 REAL (KIND=JPRB), ALLOCATABLE :: ZDATA3 (:,:,:)
 TYPE (FIELD_3RB_WRAPPER), POINTER :: YLF3
@@ -105,4 +109,4 @@ PRINT *, Z4 (1,:,1,1)
 
 CALL YLF4%FINAL
 
-END
+END PROGRAM
