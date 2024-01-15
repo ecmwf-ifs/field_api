@@ -99,12 +99,14 @@ SUBROUTINE ${ft.name}$_HOST_DEALLOC(HST, PINNED)
   
    DATA = C_LOC (HST (${ ', '.join (map (lambda i: 'LBOUND (HST, ' + str (i) + ')', range (1, ft.rank+1))) }$))
 
+#:if defined('CUDA')
    IF (PINNED) THEN
      ISTAT = CUDAHOSTUNREGISTER (DATA)
      IF (ISTAT /= 0) THEN
        CALL FIELD_ABORT ("${ft.name}$_OWNER: FAILED TO UNREGISTER PAGE-LOCKED MEMORY")
      ENDIF
    ENDIF
+#:endif
 
    NULLIFY(HST)
 
