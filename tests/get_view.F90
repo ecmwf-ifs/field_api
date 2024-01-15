@@ -10,6 +10,7 @@
 PROGRAM GET_VIEW
         USE FIELD_MODULE
         USE FIELD_FACTORY_MODULE
+        USE FIELD_ABORT_MODULE
         USE OMP_LIB
         USE PARKIND1
 
@@ -33,7 +34,7 @@ PROGRAM GET_VIEW
         !$OMP END DO
         !$OMP END PARALLEL
         IF (.NOT. ALL(D == 7)) THEN
-                ERROR STOP
+                CALL FIELD_ABORT ("ERROR")
         END IF
         CALL FIELD_DELETE(W)
 END PROGRAM GET_VIEW

@@ -1,0 +1,123 @@
+#! (C) Copyright 2022- ECMWF.
+#! (C) Copyright 2022- Meteo-France.
+#!
+#! This software is licensed under the terms of the Apache Licence Version 2.0
+#! which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
+#! In applying this licence, ECMWF does not waive the privileges and immunities
+#! granted to it by virtue of its status as an intergovernmental organisation
+#! nor does it submit to any jurisdiction.
+
+MODULE FIELD_${RANK}$${SUFF}$_DATA_MODULE
+
+#:set fieldTypeList = fieldType.getFieldTypeList (ranks=[RANK], kinds=['JP' + str (SUFF)])
+
+USE FIELD_CONSTANTS_MODULE
+${fieldType.useParkind1 ()}$
+
+IMPLICIT NONE
+
+CONTAINS
+
+#:for ft in fieldTypeList
+#:set ftn = ft.name
+
+#:for d in range (0, ft.rank+1)
+  SUBROUTINE ${ftn}$_COPY_DIM${d}$_CONTIGUOUS (HST, DEV, MAP_DEVPTR, KDIR, QUEUE)
+#ifdef _OPENACC
+  USE OPENACC
+#endif
+    ${ft.type}$ :: HST (${ft.shape}$), DEV (${ft.shape}$)
+    LOGICAL,                       INTENT (IN) :: MAP_DEVPTR
+    INTEGER (KIND=JPIM),           INTENT (IN) :: KDIR
+    INTEGER (KIND=JPIM), OPTIONAL, INTENT (IN) :: QUEUE
+    INTEGER (KIND=JPIM) :: ISIZE
+    INTEGER :: ${', '.join (['J'] + list (map (lambda i: 'J' + str (i+1), range (d, ft.rank))))}$
+#ifdef _OPENACC
+    TYPE(C_DEVPTR) :: DEVPTR
+#endif
+
+  #:for e in range (ft.rank, d, -1)
+    ${'  ' * (ft.rank - e)}$DO J${e}$ = LBOUND (HST, ${e}$), UBOUND (HST, ${e}$)
+  #:endfor
+  #:set ar = ', '.join ([':'] * d  + list (map (lambda i: 'J' + str (i+1), range (d, ft.rank))))
+  #:set indent = '  ' * (ft.rank - e)
+#ifdef _OPENACC
+    ${indent}$  IF(MAP_DEVPTR)THEN
+    ${indent}$    DEVPTR = ACC_DEVICEPTR(DEV (${ar}$))
+    ${indent}$  ELSE
+  #:if defined('CUDA')
+  !$acc data deviceptr(DEVPTR, DEV)
+    ${indent}$    DEVPTR = C_DEVLOC(DEV (${ar}$))
+  !$acc end data
+  #:endif
+    ${indent}$  ENDIF
+#endif
+    #:if d == 0
+    ${indent}$  ISIZE = KIND (HST)
+    #:else
+    ${indent}$  ISIZE = KIND (HST) * SIZE (HST (${ar}$))
+    #:endif
+    ${indent}$  IF (KDIR == NH2D) THEN
+#ifdef _OPENACC
+    ${indent}$    IF(PRESENT(QUEUE))THEN
+    ${indent}$      CALL ACC_MEMCPY_TO_DEVICE_ASYNC (DEVPTR , HST (${ar}$), ISIZE, QUEUE)
+    ${indent}$    ELSE
+    ${indent}$      CALL ACC_MEMCPY_TO_DEVICE (DEVPTR , HST (${ar}$), ISIZE)
+    ${indent}$    ENDIF
+#else
+    ${indent}$    DEV (${ar}$) = HST (${ar}$)
+#endif
+    ${indent}$  ELSEIF (KDIR == ND2H) THEN
+#ifdef _OPENACC
+    ${indent}$    IF(PRESENT(QUEUE))THEN
+    ${indent}$      CALL ACC_MEMCPY_FROM_DEVICE_ASYNC (HST (${ar}$), DEVPTR, ISIZE, QUEUE)
+    ${indent}$    ELSE
+    ${indent}$      CALL ACC_MEMCPY_FROM_DEVICE (HST (${ar}$), DEVPTR, ISIZE)
+    ${indent}$    ENDIF
+#else
+    ${indent}$    HST (${ar}$) = DEV (${ar}$)
+#endif
+    ${indent}$  ENDIF
+  #:for e in range (d, ft.rank)
+    ${'  ' * (ft.rank - e - 1)}$ENDDO
+  #:endfor
+    END SUBROUTINE
+
+#:endfor
+
+#:endfor
+
+#:for ft in fieldTypeList
+#:set ftn = ft.name
+  INTEGER (KIND=JPIM) FUNCTION ${ftn}$_GET_LAST_CONTIGUOUS_DIMENSION (PTR) RESULT (JDIM)
+  ${ft.type}$, POINTER :: PTR (${ft.shape}$)
+  INTEGER*8 :: ISTRIDE (${ft.rank}$)
+  INTEGER (KIND=JPIM) :: J, LB(${ft.rank}$)
+
+  LB = LBOUND(PTR)
+  ISTRIDE (1) = KIND (PTR)
+  DO J = 2, ${ft.rank}$
+    ISTRIDE (J) = ISTRIDE (J-1) * SIZE (PTR, J-1)
+  ENDDO
+
+  JDIM = 0
+#:for d in range (1, ft.rank+1)
+  #:set ind0 = ""
+  #:set ind1 = ""
+  #:for i in range(1,ft.rank+1)
+    #:set ind0 = ind0 + "LB({}), ".format(i)
+    #:set ind1 = ind1 + "LB({}){}, ".format(i,"+1"*(i==d))
+  #:endfor
+  #:set ind0 = ind0[:-2]
+  #:set ind1 = ind1[:-2]
+  IF (LOC (PTR (${ind1}$)) - LOC (PTR (${ind0}$)) /= ISTRIDE (${d}$)) THEN
+    RETURN
+  ENDIF
+
+  JDIM = ${d}$
+
+#:endfor
+  END FUNCTION ${ftn}$_GET_LAST_CONTIGUOUS_DIMENSION
+#:endfor
+
+END MODULE FIELD_${RANK}$${SUFF}$_DATA_MODULE
