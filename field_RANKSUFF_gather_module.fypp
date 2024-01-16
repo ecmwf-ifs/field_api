@@ -9,7 +9,7 @@
 
 MODULE FIELD_${RANK}$${SUFF}$_GATHER_MODULE
 
-#:set fieldTypeList = fieldType.getFieldTypeList (ranks=[RANK], kinds=['JP' + str (SUFF)])
+#:set fieldTypeList = fieldType.getFieldTypeList (ranks=[RANK], kinds=['JP' + str (SUFF)], hasView=True)
 
 USE FIELD_MODULE
 USE FIELD_ACCESS_MODULE

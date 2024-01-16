@@ -8,7 +8,7 @@
 #! nor does it submit to any jurisdiction.
 MODULE FIELD_${RANK}$${SUFF}$_ARRAY_UTIL_MODULE
 
-#:set fieldTypeList = fieldType.getFieldTypeList (ranks=[RANK], kinds=['JP' + SUFF])
+#:set fieldTypeList = fieldType.getFieldTypeList (ranks=[RANK], kinds=['JP' + SUFF], hasView=True)
 
 USE FIELD_ARRAY_MODULE
 ${fieldType.useParkind1 ()}$
@@ -27,6 +27,7 @@ END INTERFACE
 CONTAINS
 
 #:for ft in fieldTypeList
+
 SUBROUTINE LOAD_${ft.name}$_ARRAY (KLUN, YD)
 
 USE FIELD_UTIL_MODULE, ONLY : LOAD

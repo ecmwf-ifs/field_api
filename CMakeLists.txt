@@ -116,7 +116,7 @@ endif()
 ## preprocess fypp files
 foreach (SUFF IN ITEMS IM RM RB RD LM)
   string (TOLOWER ${SUFF} suff)
-  foreach (RANK RANGE 2 5)
+  foreach (RANK RANGE 1 5)
     foreach (FUNC IN ITEMS "" _gathscat _access _util _array_util _gang _factory _gather _data)
       add_custom_command (OUTPUT field_${RANK}${suff}${FUNC}_module.F90
 	      COMMAND ${FYPP} -DRANK=${RANK} -DSUFF='${SUFF}' ${fypp_defines} -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType 

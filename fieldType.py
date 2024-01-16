@@ -28,13 +28,33 @@ class fieldType (object):
     self.viewRank = self.rank-1
     self.viewShape = ','.join ([':'] * (self.rank-1))
     self.lbptr = ', '.join (list (map (lambda i: "LBOUNDS(" + str (i+1) + "):", range (0, self.rank))))
+    self.hasView = self.rank > 1
+    self.ganged = self.rank > 2
 
 
 kinds = ['JPRM', 'JPRB', 'JPRD', 'JPIM', 'JPLM']
 
+def eqv (a, b):
+  if (a) and (b):
+    return True
+  if (not a) and (not b):
+    return True
+  return False
 
-def getFieldTypeList (ranks=[2,3,4,5], kinds=kinds):
-  return [fieldType (kind=kind, rank=rank) for (kind) in kinds for rank in ranks]
+def getFieldTypeList (ranks=[1,2,3,4,5], kinds=kinds, hasView=None, alias=None, ganged=None):
+  
+  l = [fieldType (kind=kind, rank=rank) for (kind) in kinds for rank in ranks]
+
+  if not (hasView is None):
+    l = list (filter (lambda ft: eqv (ft.hasView, hasView), l))
+  
+  if not (alias is None):
+    l = list (filter (lambda ft: eqv (ft.alias, alias), l))
+  
+  if not (ganged is None):
+    l = list (filter (lambda ft: eqv (ft.ganged, ganged), l))
+  
+  return l
 
 def useParkind1 (kinds=kinds):
   return 'USE PARKIND1, ONLY : ' + ', '.join (kinds)

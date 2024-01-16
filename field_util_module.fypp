@@ -9,7 +9,7 @@
 
 MODULE FIELD_UTIL_MODULE
 
-#:set fieldTypeList = fieldType.getFieldTypeList ()
+#:set fieldTypeList = fieldType.getFieldTypeList (hasView=True)
 
 #:for ft in fieldTypeList
 USE ${ft.name}$_UTIL_MODULE

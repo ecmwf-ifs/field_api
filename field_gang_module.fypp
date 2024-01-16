@@ -9,7 +9,7 @@
 
 MODULE FIELD_GANG_MODULE
 
-#:set fieldTypeList = fieldType.getFieldTypeList ()
+#:set fieldTypeList = fieldType.getFieldTypeList (ganged=True)
 
 #:for ft in fieldTypeList
 USE ${ft.name}$_GANG_MODULE
@@ -22,10 +22,8 @@ IMPLICIT NONE
 PRIVATE
 
 #:for ft in fieldTypeList
-#:if ft.rank > 2
 PUBLIC :: ${ft.name}$_GANG_WRAPPER
 PUBLIC :: ${ft.name}$_GANG_OWNER
-#:endif
 #:endfor
 
 END MODULE FIELD_GANG_MODULE

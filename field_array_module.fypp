@@ -9,7 +9,7 @@
 
 MODULE FIELD_ARRAY_MODULE
 
-#:set fieldTypeList = fieldType.getFieldTypeList ()
+#:set fieldTypeList = fieldType.getFieldTypeList (hasView=True)
 
 USE FIELD_MODULE
 USE FIELD_FACTORY_MODULE
@@ -26,7 +26,9 @@ TYPE ${ft.name}$_ARRAY
 CONTAINS
   PROCEDURE :: INIT => INIT_${ft.name}$_ARRAY
   PROCEDURE :: FINAL => FINAL_${ft.name}$_ARRAY
+#:if ft.hasView
   PROCEDURE :: UPDATE_VIEW => UPDATE_VIEW_${ft.name}$_ARRAY
+#:endif
 END TYPE
 
 PUBLIC :: ${ft.name}$_ARRAY
