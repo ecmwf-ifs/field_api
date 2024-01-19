@@ -45,38 +45,23 @@ CONTAINS
     LAST_CONTIG_DIM = ${ftn}$_GET_LAST_CONTIGUOUS_DIMENSION (HST, 0)
     NEXT_CONTIG_DIM = ${ftn}$_GET_LAST_CONTIGUOUS_DIMENSION (HST, LAST_CONTIG_DIM+1)
 
-    IF (MAP_DEVPTR) THEN
-
-      SELECT CASE (LAST_CONTIG_DIM)
+    SELECT CASE (LAST_CONTIG_DIM)
 #:for d1 in range (ft.rank)
-        CASE (${d1}$)
-          SELECT CASE (NEXT_CONTIG_DIM)
-            #:for d2 in range (d1+1, ft.rank+1)
-            CASE (${d2}$)
-              CALL ${ftn}$_COPY_2D_DIM${d1}$_${d2}$_CONTIGUOUS (HST, DEV, KDIR, QUEUE)
-            #:endfor
-            CASE DEFAULT
-              CALL FIELD_ABORT ('INTERNAL ERROR: UNEXPECTED NEXT_CONTIG_DIM')
-          END SELECT
+      CASE (${d1}$)
+        SELECT CASE (NEXT_CONTIG_DIM)
+          #:for d2 in range (d1+1, ft.rank+1)
+          CASE (${d2}$)
+            CALL ${ftn}$_COPY_2D_DIM${d1}$_${d2}$_CONTIGUOUS (HST, DEV, MAP_DEVPTR, KDIR, QUEUE)
+          #:endfor
+          CASE DEFAULT
+            CALL FIELD_ABORT ('INTERNAL ERROR: UNEXPECTED NEXT_CONTIG_DIM')
+        END SELECT
 #:endfor
-        CASE (${ft.rank}$)
-          CALL ${ftn}$_COPY_DIM${ft.rank}$_CONTIGUOUS (HST, DEV, MAP_DEVPTR, KDIR, QUEUE)
-        CASE DEFAULT
-          CALL FIELD_ABORT ('INTERNAL ERROR: UNEXPECTED LAST_CONTIG_DIM')
-      END SELECT
-
-    ELSE
-
-      SELECT CASE (LAST_CONTIG_DIM)
-#:for d in range (ft.rank + 1)
-        CASE (${d}$)
-          CALL ${ftn}$_COPY_DIM${d}$_CONTIGUOUS (HST, DEV, MAP_DEVPTR, KDIR, QUEUE)
-#:endfor
-        CASE DEFAULT
-          CALL FIELD_ABORT ('INTERNAL ERROR: UNEXPECTED LAST_CONTIG_DIM')
-      END SELECT
-
-    ENDIF
+      CASE (${ft.rank}$)
+        CALL ${ftn}$_COPY_DIM${ft.rank}$_CONTIGUOUS (HST, DEV, MAP_DEVPTR, KDIR, QUEUE)
+      CASE DEFAULT
+        CALL FIELD_ABORT ('INTERNAL ERROR: UNEXPECTED LAST_CONTIG_DIM')
+    END SELECT
 
   END SUBROUTINE
 
@@ -146,13 +131,14 @@ CONTAINS
 
 #:for d1 in range (0, ft.rank)
 #:for d2 in range (d1+1, ft.rank+1)
-    SUBROUTINE ${ftn}$_COPY_2D_DIM${d1}$_${d2}$_CONTIGUOUS (HST, DEV, KDIR, QUEUE)
+    SUBROUTINE ${ftn}$_COPY_2D_DIM${d1}$_${d2}$_CONTIGUOUS (HST, DEV, MAP_DEVPTR, KDIR, QUEUE)
 #ifdef _OPENACC
     USE OPENACC
     USE CUDAFOR
 #endif
     ${ft.type}$, POINTER :: HST (${ft.shape}$), DEV (${ft.shape}$)
     INTEGER (KIND=JPIM),           INTENT (IN) :: KDIR
+    LOGICAL,                       INTENT (IN) :: MAP_DEVPTR
     INTEGER (KIND=JPIM), OPTIONAL, INTENT (IN) :: QUEUE
 #ifdef _OPENACC
     INTEGER (KIND=JPIM) :: IHST_PITCH, IDEV_PITCH, IRET
@@ -161,52 +147,60 @@ CONTAINS
     INTEGER :: ${', '.join (list (map (lambda i: 'J' + str (i+1), range (d2, ft.rank))))}$
   #:endif
     INTEGER(KIND=CUDA_STREAM_KIND) :: STREAM
+    TYPE(C_PTR) :: HSTPTR
+    TYPE(C_DEVPTR) :: DEVPTR
 
     ISHP(1) = 1
     ISHP(2:) = SHAPE(HST)
-    IWIDTH = PRODUCT(ISHP(1:${d1+1}$))
+    IWIDTH = PRODUCT(ISHP(1:${d1+1}$)) * KIND(HST)
     IHEIGHT = PRODUCT(ISHP(${d1+2}$:${d2+1}$))
 
 #:set lb = lambda arr, i: f'LBOUND({arr}, {i+1})'
 #:set lbnds = lambda arr, start, end: [lb(arr, i) for i in range(start, end)]
 #:set this_slice = lambda arr: ', '.join(lbnds(arr, 0, ft.rank))
 #:set next_slice = lambda arr: ', '.join(lbnds(arr, 0, d1) + [lb(arr, d1)+'+1'] + lbnds(arr, d1+1, ft.rank))
-    IHST_PITCH = (LOC (HST(${next_slice('HST')}$)) - LOC (HST (${this_slice('HST')}$)))/KIND(HST)
-    IDEV_PITCH = (LOC (DEV(${next_slice('DEV')}$)) - LOC (DEV (${this_slice('DEV')}$)))/KIND(DEV)
+    IHST_PITCH = LOC (HST(${next_slice('HST')}$)) - LOC (HST (${this_slice('HST')}$))
+    IDEV_PITCH = LOC (DEV(${next_slice('DEV')}$)) - LOC (DEV (${this_slice('DEV')}$))
 
   #:for e in range (ft.rank, d2, -1)
     ${'  ' * (ft.rank - e)}$DO J${e}$ = LBOUND (HST, ${e}$), UBOUND (HST, ${e}$)
   #:endfor
   #:set indent = '  ' * (ft.rank - d2 - 1)
   #:set ar = lambda arr: ', '.join(lbnds(arr, 0, d2) + [f'J{i+1}' for i in range(d2, ft.rank)])
+    ${indent}$  HSTPTR = C_LOC(HST (${ar('HST')}$))
+    ${indent}$  IF (MAP_DEVPTR) THEN
+    ${indent}$     !$acc host_data use_device(DEV)
+    ${indent}$     DEVPTR = C_DEVLOC(DEV (${ar('DEV')}$))
+    ${indent}$     !$acc end host_data
+    ${indent}$  ELSE
+    ${indent}$     !$acc data deviceptr(DEVPTR,DEV)
+    ${indent}$     DEVPTR = C_DEVLOC(DEV (${ar('DEV')}$))
+    ${indent}$     !$acc end data
+    ${indent}$  ENDIF
     ${indent}$  IF (KDIR == NH2D) THEN
-    ${indent}$    !$acc host_data use_device (DEV)
     ${indent}$    IF(PRESENT(QUEUE)) THEN
     ${indent}$      CALL ACC_SET_CUDA_STREAM(QUEUE, STREAM)
-    ${indent}$      IRET = CUDAMEMCPY2DASYNC (DEV (${ar('DEV')}$), IDEV_PITCH, &
-    ${indent}$                              & HST (${ar('HST')}$), IHST_PITCH, &
+    ${indent}$      IRET = CUDAMEMCPY2DASYNC (DEVPTR, IDEV_PITCH, &
+    ${indent}$                              & HSTPTR, IHST_PITCH, &
     ${indent}$                              & IWIDTH, IHEIGHT, &
     ${indent}$                              & STREAM=STREAM)
     ${indent}$    ELSE
-    ${indent}$      IRET = CUDAMEMCPY2D (DEV (${ar('DEV')}$), IDEV_PITCH, &
-    ${indent}$                         & HST (${ar('HST')}$), IHST_PITCH, &
+    ${indent}$      IRET = CUDAMEMCPY2D (DEVPTR, IDEV_PITCH, &
+    ${indent}$                         & HSTPTR, IHST_PITCH, &
     ${indent}$                         & IWIDTH, IHEIGHT)
     ${indent}$    ENDIF
-    ${indent}$    !$acc end host_data
     ${indent}$  ELSEIF (KDIR == ND2H) THEN
-    ${indent}$    !$acc host_data use_device (DEV)
     ${indent}$    IF(PRESENT(QUEUE)) THEN
     ${indent}$      CALL ACC_SET_CUDA_STREAM(QUEUE, STREAM)
-    ${indent}$      IRET = CUDAMEMCPY2DASYNC (HST (${ar('HST')}$), IHST_PITCH, &
-    ${indent}$                              & DEV (${ar('DEV')}$), IDEV_PITCH, &
+    ${indent}$      IRET = CUDAMEMCPY2DASYNC (HSTPTR, IHST_PITCH, &
+    ${indent}$                              & DEVPTR, IDEV_PITCH, &
     ${indent}$                              & IWIDTH, IHEIGHT, &
     ${indent}$                              & STREAM=STREAM)
     ${indent}$    ELSE
-    ${indent}$      IRET = CUDAMEMCPY2D (HST (${ar('HST')}$), IHST_PITCH, &
-    ${indent}$                         & DEV (${ar('DEV')}$), IDEV_PITCH, &
+    ${indent}$      IRET = CUDAMEMCPY2D (HSTPTR, IHST_PITCH, &
+    ${indent}$                         & DEVPTR, IDEV_PITCH, &
     ${indent}$                         & IWIDTH, IHEIGHT)
     ${indent}$    ENDIF
-    ${indent}$    !$acc end host_data
     ${indent}$    IF (IRET /= CUDASUCCESS) STOP 1
     ${indent}$  ENDIF
   #:for e in range (d2, ft.rank)
