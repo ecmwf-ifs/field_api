@@ -112,6 +112,9 @@ endif()
 if(HAVE_CUDA)
   list( APPEND fypp_defines "-DCUDA")
 endif()
+if(CMAKE_BUILD_TYPE MATCHES "Debug")
+  list( APPEND fypp_defines "-DDEBUG")
+endif()
 
 ## preprocess fypp files
 foreach (SUFF IN ITEMS IM RM RB RD LM)
