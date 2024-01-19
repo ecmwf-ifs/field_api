@@ -23,7 +23,7 @@ INTERFACE FIELD_NEW
 #:for ft in fieldTypeList
   MODULE PROCEDURE ${ft.name}$_NEW_OWNER
   MODULE PROCEDURE ${ft.name}$_NEW_WRAPPER
-#:if ft.rank > 2
+#:if ft.ganged
   MODULE PROCEDURE ${ft.name}$_NEW_GANG_WRAPPER
   MODULE PROCEDURE ${ft.name}$_NEW_GANG_OWNER
 #:endif
@@ -89,7 +89,7 @@ FIELD_PTR => FIELD_WRAPPER
 
 END SUBROUTINE
 
-#:if ft.rank > 2
+#:if ft.ganged
 SUBROUTINE ${ft.name}$_NEW_GANG_WRAPPER (FIELD_PTR, CHILDREN, LBOUNDS, PERSISTENT, DATA)
 
 #:set fieldTypeList1 = fieldType.getFieldTypeList (ranks=[ft.rank-1], kinds=[ft.kind])

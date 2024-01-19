@@ -28,7 +28,9 @@ PUBLIC :: ${ft.name}$
 PUBLIC :: ${ft.name}$_OWNER
 PUBLIC :: ${ft.name}$_WRAPPER
 PUBLIC :: ${ft.name}$_PTR
+#:if ft.hasView
 PUBLIC :: ${ft.name}$_VIEW
+#:endif
 #:endfor
 
 PUBLIC :: WAIT_FOR_ASYNC_QUEUE

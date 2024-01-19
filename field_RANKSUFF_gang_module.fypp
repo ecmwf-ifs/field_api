@@ -9,19 +9,19 @@
 
 MODULE FIELD_${RANK}$${SUFF}$_GANG_MODULE
 
-#:set fieldTypeList = fieldType.getFieldTypeList (ranks=[RANK], kinds=['JP' + str (SUFF)])
-#:set ft = fieldTypeList[0]
-
-#:if ft.rank > 2
-
-#:set fieldTypeList = fieldType.getFieldTypeList (ranks=[RANK-1], kinds=['JP' + str (SUFF)])
-#:set ft1 = fieldTypeList[0]
-
 USE FIELD_BASIC_MODULE
-USE ${ft.name}$_MODULE
-USE ${ft1.name}$_MODULE
 USE FIELD_CONSTANTS_MODULE
 USE DEV_ALLOC_MODULE
+
+#:set fieldTypeList = fieldType.getFieldTypeList (ranks=[RANK], kinds=['JP' + str (SUFF)], ganged=True)
+
+#:for ft in fieldTypeList
+
+#:set fieldTypeList1 = fieldType.getFieldTypeList (ranks=[RANK-1], kinds=['JP' + str (SUFF)])
+#:set ft1 = fieldTypeList1[0]
+
+USE ${ft.name}$_MODULE
+USE ${ft1.name}$_MODULE
 
 ${fieldType.useParkind1 ()}$
 
@@ -256,6 +256,6 @@ CONTAINS
 
 #:endfor
 
-#:endif
+#:endfor
 
 END MODULE FIELD_${RANK}$${SUFF}$_GANG_MODULE

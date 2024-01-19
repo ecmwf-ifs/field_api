@@ -9,7 +9,7 @@
 
 MODULE DEV_ALLOC_MODULE
 
-#:set fieldTypeList = list (filter (lambda ft: not ft.alias, fieldType.getFieldTypeList ([1,2,3,4,5])))
+#:set fieldTypeList = list (filter (lambda ft: not ft.alias, fieldType.getFieldTypeList ()))
 
 ${fieldType.useParkind1 ()}$
 
