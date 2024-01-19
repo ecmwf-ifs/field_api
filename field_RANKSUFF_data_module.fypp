@@ -26,7 +26,7 @@ CONTAINS
 #ifdef _OPENACC
   USE OPENACC
 #endif
-    ${ft.type}$ :: HST (${ft.shape}$), DEV (${ft.shape}$)
+    ${ft.type}$, POINTER :: HST (${ft.shape}$), DEV (${ft.shape}$)
     LOGICAL,                       INTENT (IN) :: MAP_DEVPTR
     INTEGER (KIND=JPIM),           INTENT (IN) :: KDIR
     INTEGER (KIND=JPIM), OPTIONAL, INTENT (IN) :: QUEUE
