@@ -185,8 +185,8 @@ CONTAINS
     ${indent}$      CALL ACC_SET_CUDA_STREAM(QUEUE, STREAM)
     ${indent}$      IRET = CUDAMEMCPY2DASYNC (DEV (${ar('DEV')}$), IDEV_PITCH, &
     ${indent}$                              & HST (${ar('HST')}$), IHST_PITCH, &
-    ${indent}$                              & IWIDTH, IHEIGHT, CUDAMEMCPYHOSTTODEVICE, &
-    ${indent}$                              & STREAM)
+    ${indent}$                              & IWIDTH, IHEIGHT, &
+    ${indent}$                              & STREAM=STREAM)
     ${indent}$    ELSE
     ${indent}$      IRET = CUDAMEMCPY2D (DEV (${ar('DEV')}$), IDEV_PITCH, &
     ${indent}$                         & HST (${ar('HST')}$), IHST_PITCH, &
@@ -199,8 +199,8 @@ CONTAINS
     ${indent}$      CALL ACC_SET_CUDA_STREAM(QUEUE, STREAM)
     ${indent}$      IRET = CUDAMEMCPY2DASYNC (HST (${ar('HST')}$), IHST_PITCH, &
     ${indent}$                              & DEV (${ar('DEV')}$), IDEV_PITCH, &
-    ${indent}$                              & IWIDTH, IHEIGHT, CUDAMEMCPYDEVICETOHOST, &
-    ${indent}$                              & STREAM)
+    ${indent}$                              & IWIDTH, IHEIGHT, &
+    ${indent}$                              & STREAM=STREAM)
     ${indent}$    ELSE
     ${indent}$      IRET = CUDAMEMCPY2D (HST (${ar('HST')}$), IHST_PITCH, &
     ${indent}$                         & DEV (${ar('DEV')}$), IDEV_PITCH, &
