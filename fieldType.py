@@ -46,13 +46,13 @@ def getFieldTypeList (ranks=[1,2,3,4,5], kinds=kinds, hasView=None, alias=None, 
   l = [fieldType (kind=kind, rank=rank) for (kind) in kinds for rank in ranks]
 
   if not (hasView is None):
-    l = list (filter (lambda ft: eqv (ft.hasView, hasView), l))
+    l = [ft for ft in l if eqv (ft.hasView, hasView)]
   
   if not (alias is None):
-    l = list (filter (lambda ft: eqv (ft.alias, alias), l))
+    l = [ft for ft in l if eqv (ft.alias, alias)] 
   
   if not (ganged is None):
-    l = list (filter (lambda ft: eqv (ft.ganged, ganged), l))
+    l = [ft for ft in l if eqv (ft.ganged, ganged)]
   
   return l
 
