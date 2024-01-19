@@ -10,11 +10,8 @@
 if(CMAKE_Fortran_COMPILER_ID MATCHES PGI|NVIDIA|NVHPC)
   ecbuild_add_fortran_flags("-Mlarge_arrays")
   ecbuild_add_fortran_flags("-gopt")
-  if(HAVE_ACC)
-    list(APPEND CMAKE_REQUIRED_LINK_OPTIONS "-cuda")
-    ecbuild_add_fortran_flags("-cuda")
-    ecbuild_add_fortran_flags("-Minfo=accel,all,ccff" BUILD DEBUG)
-  endif()
+
+  ecbuild_add_fortran_flags("-Minfo=accel,all,ccff" BUILD DEBUG)
 
 # These are architecture/compiler/offload-library specific options 
 # that should really be coming from external input
