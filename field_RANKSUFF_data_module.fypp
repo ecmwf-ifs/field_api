@@ -46,6 +46,7 @@ CONTAINS
     NEXT_CONTIG_DIM = ${ftn}$_GET_LAST_CONTIGUOUS_DIMENSION (HST, LAST_CONTIG_DIM+1)
 
     SELECT CASE (LAST_CONTIG_DIM)
+#:if defined('CUDA')
 #:for d1 in range (ft.rank)
       CASE (${d1}$)
         SELECT CASE (NEXT_CONTIG_DIM)
@@ -59,6 +60,12 @@ CONTAINS
 #:endfor
       CASE (${ft.rank}$)
         CALL ${ftn}$_COPY_DIM${ft.rank}$_CONTIGUOUS (HST, DEV, MAP_DEVPTR, KDIR, QUEUE)
+#:else
+#:for d in range (ft.rank + 1)
+      CASE (${d}$)
+        CALL ${ftn}$_COPY_DIM${d}$_CONTIGUOUS (HST, DEV, MAP_DEVPTR, KDIR, QUEUE)
+#:endfor
+#:endif
       CASE DEFAULT
         CALL FIELD_ABORT ('INTERNAL ERROR: UNEXPECTED LAST_CONTIG_DIM')
     END SELECT
@@ -129,18 +136,17 @@ CONTAINS
 
 #:endfor
 
+#:if defined('CUDA')
 #:for d1 in range (0, ft.rank)
 #:for d2 in range (d1+1, ft.rank+1)
     SUBROUTINE ${ftn}$_COPY_2D_DIM${d1}$_${d2}$_CONTIGUOUS (HST, DEV, MAP_DEVPTR, KDIR, QUEUE)
-#ifdef _OPENACC
     USE OPENACC
     USE CUDAFOR
-#endif
+
     ${ft.type}$, POINTER :: HST (${ft.shape}$), DEV (${ft.shape}$)
     INTEGER (KIND=JPIM),           INTENT (IN) :: KDIR
     LOGICAL,                       INTENT (IN) :: MAP_DEVPTR
     INTEGER (KIND=JPIM), OPTIONAL, INTENT (IN) :: QUEUE
-#ifdef _OPENACC
     INTEGER (KIND=JPIM) :: IHST_PITCH, IDEV_PITCH, IRET
     INTEGER (KIND=JPIM) :: IWIDTH, IHEIGHT, ISHP(${ft.rank+1}$)
   #:if d2 < ft.rank
@@ -206,16 +212,10 @@ CONTAINS
   #:for e in range (d2, ft.rank)
     ${'  ' * (ft.rank - e - 1)}$ENDDO
   #:endfor
-#else
-    IF (KDIR == NH2D) THEN
-      DEV = HST
-    ELSE
-      HST = DEV
-    ENDIF
-#endif
     END SUBROUTINE
 #:endfor
 #:endfor
+#:endif
 
 #:endfor
 
