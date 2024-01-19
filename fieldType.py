@@ -34,25 +34,18 @@ class fieldType (object):
 
 kinds = ['JPRM', 'JPRB', 'JPRD', 'JPIM', 'JPLM']
 
-def eqv (a, b):
-  if (a) and (b):
-    return True
-  if (not a) and (not b):
-    return True
-  return False
-
 def getFieldTypeList (ranks=[1,2,3,4,5], kinds=kinds, hasView=None, alias=None, ganged=None):
   
   l = [fieldType (kind=kind, rank=rank) for (kind) in kinds for rank in ranks]
 
-  if not (hasView is None):
-    l = [ft for ft in l if eqv (ft.hasView, hasView)]
+  if hasView != None:
+    l = [ft for ft in l if ft.hasView == hasView]
   
-  if not (alias is None):
-    l = [ft for ft in l if eqv (ft.alias, alias)] 
+  if alias != None:
+    l = [ft for ft in l if ft.alias == alias] 
   
-  if not (ganged is None):
-    l = [ft for ft in l if eqv (ft.ganged, ganged)]
+  if ganged != None:
+    l = [ft for ft in l if ft.ganged == ganged]
   
   return l
 
