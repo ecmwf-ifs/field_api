@@ -142,9 +142,7 @@ CONTAINS
     SUBROUTINE ${ftn}$_COPY_2D_DIM${d1}$_${d2}$_CONTIGUOUS (HST, DEV, MAP_DEVPTR, KDIR, QUEUE)
     USE OPENACC
     USE CUDAFOR
-#:if defined('DEBUG')
     USE FIELD_ABORT_MODULE
-#:endif
 
     ${ft.type}$, POINTER :: HST (${ft.shape}$), DEV (${ft.shape}$)
     INTEGER (KIND=JPIM),           INTENT (IN) :: KDIR
