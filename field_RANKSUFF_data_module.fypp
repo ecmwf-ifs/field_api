@@ -198,11 +198,9 @@ CONTAINS
     ${indent}$                         & HSTPTR, IHST_PITCH, &
     ${indent}$                         & IWIDTH, IHEIGHT)
     ${indent}$    ENDIF
-#:if defined('DEBUG')
     ${indent}$    IF (IRET /= CUDASUCCESS) THEN
     ${indent}$       CALL FIELD_ABORT ("${ftn}$_COPY_2D_DIM${d1}$_${d2}$_CONTIGUOUS: HOST-TO-DEVICE TRANSFER FAILED")
     ${indent}$    ENDIF
-#:endif
     ${indent}$  ELSEIF (KDIR == ND2H) THEN
     ${indent}$    IF(PRESENT(QUEUE)) THEN
     ${indent}$      CALL ACC_SET_CUDA_STREAM(QUEUE, STREAM)
@@ -215,11 +213,9 @@ CONTAINS
     ${indent}$                         & DEVPTR, IDEV_PITCH, &
     ${indent}$                         & IWIDTH, IHEIGHT)
     ${indent}$    ENDIF
-#:if defined('DEBUG')
     ${indent}$    IF (IRET /= CUDASUCCESS) THEN
     ${indent}$       CALL FIELD_ABORT ("${ftn}$_COPY_2D_DIM${d1}$_${d2}$_CONTIGUOUS: DEVICE-TO-HOST TRANSFER FAILED")
     ${indent}$    ENDIF
-#:endif
     ${indent}$  ENDIF
   #:for e in range (d2, ft.rank)
     ${'  ' * (ft.rank - e - 1)}$ENDDO
