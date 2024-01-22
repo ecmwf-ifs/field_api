@@ -1,5 +1,6 @@
 #! (C) Copyright 2022- ECMWF.
 #! (C) Copyright 2022- Meteo-France.
+#! (C) Copyright 2023- NVIDIA
 #!
 #! This software is licensed under the terms of the Apache Licence Version 2.0
 #! which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
@@ -231,8 +232,6 @@ CONTAINS
     ! By default we allocate thread-local temporaries
     SELF%THREAD_BUFFER = .TRUE.
 
-    SELF%LAST_CONTIGUOUS_DIMENSION = ${ft.rank}$
-
     IF (PRESENT(PERSISTENT)) THEN
       IF (PERSISTENT) THEN
         SELF%THREAD_BUFFER = .FALSE.
@@ -390,15 +389,8 @@ CONTAINS
   INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN) :: QUEUE
   REAL :: START, FINISH
 
-  SELF%LAST_CONTIGUOUS_DIMENSION = ${ftn}$_GET_LAST_CONTIGUOUS_DIMENSION (SELF%PTR)
-
   CALL CPU_TIME(START)
-  SELECT CASE (SELF%LAST_CONTIGUOUS_DIMENSION)
-#:for d in range (ft.rank + 1)
-    CASE (${d}$)
-      CALL ${ftn}$_COPY_DIM${d}$_CONTIGUOUS (SELF%PTR, SELF%DEVPTR, SELF%MAP_DEVPTR, KDIR, QUEUE)
-#:endfor
-  END SELECT
+  CALL ${ftn}$_COPY (SELF%PTR, SELF%DEVPTR, SELF%MAP_DEVPTR, KDIR, QUEUE)
   CALL CPU_TIME(FINISH)
   IF (KDIR == NH2D) THEN
     CALL SELF%STATS%INC_CPU_TO_GPU_TRANSFER(START, FINISH)
