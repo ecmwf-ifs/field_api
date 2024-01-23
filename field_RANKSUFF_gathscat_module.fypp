@@ -66,10 +66,10 @@ CONTAINS
 #:for what in ['DEVICE', 'HOST']
 #:for mode in ['RDONLY', 'RDWR']
 
-FUNCTION PAIR_${ft.name}$_GATHER_${what}$_DATA_${mode}$ (YDPAIR, LDNULL, LDFULL, KGPBLKS, YDFINDS, YLF) RESULT (PTR)
+FUNCTION PAIR_${ft.name}$_GATHER_${what}$_DATA_${mode}$ (YDPAIR, LDNULL, LDFULL, KLON, KGPBLKS, YDFINDS, YLF) RESULT (PTR)
 TYPE (${ft.name}$_GATHSCAT_PAIR), POINTER              :: YDPAIR
 LOGICAL,                                   INTENT (IN) :: LDNULL, LDFULL
-INTEGER (KIND=JPIM),                       INTENT (IN) :: KGPBLKS
+INTEGER (KIND=JPIM),                       INTENT (IN) :: KLON, KGPBLKS
 CLASS (FIELD_3IM),                POINTER              :: YDFINDS 
 CLASS (${ft.name}$),              POINTER, INTENT (IN) :: YLF
 
@@ -104,6 +104,7 @@ ELSE
 
   ILBOUNDS = LBOUND (PTR)
   IUBOUNDS = UBOUND (PTR)
+  IUBOUNDS (1) = KLON
   IUBOUNDS (${ft.rank}$) = KGPBLKS
   CALL FIELD_NEW (YLPAIR%YLGATH, LBOUNDS=ILBOUNDS, UBOUNDS=IUBOUNDS, PERSISTENT=.TRUE.)
 
