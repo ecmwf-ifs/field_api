@@ -168,7 +168,7 @@ CONTAINS
     ENDIF
 #:if not defined('CUDA')
     IF(.NOT. SELF%MAP_DEVPTR)THEN
-       CALL FIELD_ABORT ("${ftn}$_OWNER_INIT: CUDA backend needed to disable host-mapped device-pointer")
+       CALL FIELD_ABORT ("${ftn}$_WRAPPER_INIT: CUDA backend needed to disable host-mapped device-pointer")
     ENDIF
 #:endif
 
@@ -212,6 +212,7 @@ CONTAINS
       SELF%PINNED = PINNED
     ENDIF
 
+    SELF%MAP_DEVPTR = INIT_MAP_DEVPTR
     IF(PRESENT(MAP_DEVPTR))THEN
       SELF%MAP_DEVPTR = MAP_DEVPTR
     ENDIF
