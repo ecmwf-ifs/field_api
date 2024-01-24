@@ -94,13 +94,13 @@ CONTAINS
   #:set indent = '  ' * (ft.rank - e)
 #ifdef _OPENACC
     ${indent}$  IF(MAP_DEVPTR)THEN
-    ${indent}$    DEVPTR = ACC_DEVICEPTR(DEV (${ar}$))
-    ${indent}$  ELSE
-  #:if defined('CUDA')
-  !$acc data deviceptr(DEVPTR, DEV)
+    ${indent}$    !$acc host_data use_device(DEV)
     ${indent}$    DEVPTR = C_DEVLOC(DEV (${ar}$))
-  !$acc end data
-  #:endif
+    ${indent}$    !$acc end host_data
+    ${indent}$  ELSE
+    ${indent}$    !$acc data deviceptr(DEVPTR, DEV)
+    ${indent}$    DEVPTR = C_DEVLOC(DEV (${ar}$))
+    ${indent}$    !$acc end data
     ${indent}$  ENDIF
 #endif
     #:if d == 0
