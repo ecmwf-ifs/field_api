@@ -47,6 +47,8 @@ CONTAINS
 
     SELECT CASE (LAST_CONTIG_DIM)
 #:if defined('CUDA')
+      CASE (${ft.rank}$)
+        CALL ${ftn}$_COPY_DIM${ft.rank}$_CONTIGUOUS (HST, DEV, MAP_DEVPTR, KDIR, QUEUE)
 #:for d1 in range (ft.rank)
       CASE (${d1}$)
         SELECT CASE (NEXT_CONTIG_DIM)
@@ -58,8 +60,6 @@ CONTAINS
             CALL FIELD_ABORT ('INTERNAL ERROR: UNEXPECTED NEXT_CONTIG_DIM')
         END SELECT
 #:endfor
-      CASE (${ft.rank}$)
-        CALL ${ftn}$_COPY_DIM${ft.rank}$_CONTIGUOUS (HST, DEV, MAP_DEVPTR, KDIR, QUEUE)
 #:else
 #:for d in range (ft.rank + 1)
       CASE (${d}$)
