@@ -1,4 +1,4 @@
-name: FieldAPI_Tests
+name: FieldAPI_GNU
 
 on: [push, pull_request]
 
