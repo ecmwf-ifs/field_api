@@ -25,9 +25,9 @@ target_compile_definitions( main.x PRIVATE $<${HAVE_CUDA}:_CUDA> )
 
 ## Unit tests
 list(APPEND TEST_FILES
-        test_wrappernosynconfinal.F90
-        test_field1d.F90
-        test_pinned.F90
+	test_wrappernosynconfinal.F90
+	test_field1d.F90
+	test_pinned.F90
 	async_host.F90
 	cpu_to_gpu.F90
 	cpu_to_gpu_delayed_init_value.F90
@@ -45,6 +45,7 @@ list(APPEND TEST_FILES
 	get_view_when_uninitialized.F90
 	init_owner.F90
 	init_owner2.F90
+	init_owner_0_size.F90
 	init_owner_delayed.F90
 	init_owner_delayed_gpu.F90
 	init_owner_delayed_init_debug_value.F90
@@ -70,7 +71,7 @@ list(APPEND TEST_FILES
 	sync_host.F90
 	test_crc64.F90
 	wrapper_modify_gpu.F90
-        test_gang.F90
+	test_gang.F90
 	)
 
 #Place-holder for failing tests

@@ -51,13 +51,14 @@ PUBLIC :: HOST_DEALLOC
 CONTAINS
 
 #:for ft in fieldTypeList
-SUBROUTINE ${ft.name}$_HOST_ALLOC (HST, LBOUNDS, UBOUNDS, PINNED)
+SUBROUTINE ${ft.name}$_HOST_ALLOC (HST, LBOUNDS, UBOUNDS, PINNED, SAFE_ALLOC)
    USE FIELD_ABORT_MODULE
 
    ${ft.type}$, POINTER, INTENT(OUT) :: HST(${ft.shape}$)
    INTEGER(KIND=JPIM), INTENT(IN) :: LBOUNDS(${ft.rank}$)
    INTEGER(KIND=JPIM), INTENT(IN) :: UBOUNDS(${ft.rank}$)
    LOGICAL, INTENT(IN) :: PINNED
+   LOGICAL, INTENT(OUT) :: SAFE_ALLOC
 
    ${ft.type}$, POINTER :: PTR(${ft.shape}$)
    TYPE(C_PTR) :: DATA
@@ -71,46 +72,56 @@ SUBROUTINE ${ft.name}$_HOST_ALLOC (HST, LBOUNDS, UBOUNDS, PINNED)
    ARR_SIZE = ARR_SIZE * ISHAPE(${r+1}$)
 #:endfor
 
-   CALL C_MALLOC(ARR_SIZE, DATA)
+   IF(ARR_SIZE > 0)THEN
+      CALL C_MALLOC(ARR_SIZE, DATA)
+   
+   #:if defined('CUDA')
+      IF(PINNED)THEN
+        ISTAT = CUDAHOSTREGISTER (DATA, ARR_SIZE, CUDAHOSTREGISTERMAPPED)
+        IF (ISTAT /= 0) THEN
+          CALL FIELD_ABORT ("${ft.name}$_OWNER: FAILED TO REGISTER IN PAGE-LOCKED MEMORY")
+        ENDIF
+      ENDIF
+   #:endif
+   
+      CALL C_F_POINTER(DATA, PTR, SHAPE=ISHAPE)
+      HST(${', '.join(map(lambda r: 'LBOUNDS('+str(r+1)+'):', range(0, ft.rank)))}$) => PTR
+  ELSE
 
-#:if defined('CUDA')
-   IF(PINNED)THEN
-     ISTAT = CUDAHOSTREGISTER (DATA, ARR_SIZE, CUDAHOSTREGISTERMAPPED)
-     IF (ISTAT /= 0) THEN
-       CALL FIELD_ABORT ("${ft.name}$_OWNER: FAILED TO REGISTER IN PAGE-LOCKED MEMORY")
-     ENDIF
-   ENDIF
-#:endif
-
-   CALL C_F_POINTER(DATA, PTR, SHAPE=ISHAPE)
-   HST(${', '.join(map(lambda r: 'LBOUNDS('+str(r+1)+'):', range(0, ft.rank)))}$) => PTR
+   SAFE_ALLOC = .TRUE.
+   ALLOCATE(HST(${','.join([f'LBOUNDS({r}):UBOUNDS({r})' for r in range(1,ft.rank+1)])}$))
+  ENDIF
 
 END SUBROUTINE ${ft.name}$_HOST_ALLOC
 
-SUBROUTINE ${ft.name}$_HOST_DEALLOC(HST, PINNED)
+SUBROUTINE ${ft.name}$_HOST_DEALLOC(HST, PINNED, SAFE_ALLOC)
 
    USE FIELD_ABORT_MODULE
 
    ${ft.type}$, POINTER, INTENT(INOUT) :: HST(${ft.shape}$)
-   LOGICAL, INTENT (IN) :: PINNED
+   LOGICAL, INTENT (IN) :: PINNED, SAFE_ALLOC
 
    TYPE(C_PTR) :: DATA
    INTEGER :: ISTAT
   
-   DATA = C_LOC (HST (${ ', '.join (map (lambda i: 'LBOUND (HST, ' + str (i) + ')', range (1, ft.rank+1))) }$))
-
-#:if defined('CUDA')
-   IF (PINNED) THEN
-     ISTAT = CUDAHOSTUNREGISTER (DATA)
-     IF (ISTAT /= 0) THEN
-       CALL FIELD_ABORT ("${ft.name}$_OWNER: FAILED TO UNREGISTER PAGE-LOCKED MEMORY")
+   IF(SAFE_ALLOC)THEN
+      DEALLOCATE(HST)
+   ELSE
+     DATA = C_LOC (HST (${ ', '.join (map (lambda i: 'LBOUND (HST, ' + str (i) + ')', range (1, ft.rank+1))) }$))
+  
+  #:if defined('CUDA')
+     IF (PINNED) THEN
+       ISTAT = CUDAHOSTUNREGISTER (DATA)
+       IF (ISTAT /= 0) THEN
+         CALL FIELD_ABORT ("${ft.name}$_OWNER: FAILED TO UNREGISTER PAGE-LOCKED MEMORY")
+       ENDIF
      ENDIF
+  #:endif
+  
+     NULLIFY(HST)
+  
+     CALL C_FREE(DATA)
    ENDIF
-#:endif
-
-   NULLIFY(HST)
-
-   CALL C_FREE(DATA)
 
 END SUBROUTINE ${ft.name}$_HOST_DEALLOC
 
