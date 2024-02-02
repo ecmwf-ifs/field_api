@@ -1,0 +1,135 @@
+! (C) Copyright 2022- ECMWF.
+! (C) Copyright 2022- Meteo-France.
+!
+! This software is licensed under the terms of the Apache Licence Version 2.0
+! which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
+! In applying this licence, ECMWF does not waive the privileges and immunities
+! granted to it by virtue of its status as an intergovernmental organisation
+! nor does it submit to any jurisdiction.
+
+PROGRAM TEST_WRAPPERNOSYNCONFINAL
+
+USE FIELD_MODULE
+USE FIELD_FACTORY_MODULE
+USE FIELD_ACCESS_MODULE
+USE PARKIND1
+USE FIELD_ABORT_MODULE
+IMPLICIT NONE
+
+
+CALL TEST_FIELD
+CALL TEST_GANG
+
+CONTAINS
+
+SUBROUTINE TEST_FIELD
+
+CLASS(FIELD_2RB), POINTER :: W => NULL()
+REAL(KIND=JPRB), ALLOCATABLE :: D(:,:)
+REAL(KIND=JPRB), POINTER :: DD(:,:)
+
+ALLOCATE(D(10,4))
+
+D=7
+
+CALL FIELD_NEW (W, DATA=D, SYNC_ON_FINAL=.FALSE.)
+
+DD => GET_DEVICE_DATA_RDWR (W)
+
+!$acc serial present (DD)
+DD = 22
+!$acc end serial
+
+CALL FIELD_DELETE (W)
+
+IF (ANY (D /= 7)) THEN
+  CALL FIELD_ABORT ('UNEXPECTED VALUES')
+  WRITE (*, *) D
+ENDIF
+
+DEALLOCATE (D)
+
+ALLOCATE(D(10,4))
+
+D=7
+
+CALL FIELD_NEW (W, DATA=D, SYNC_ON_FINAL=.TRUE.)
+
+DD => GET_DEVICE_DATA_RDWR (W)
+
+!$acc serial present (DD)
+DD = 22
+!$acc end serial
+
+CALL FIELD_DELETE (W)
+
+IF (ANY (D /= 22)) THEN
+  CALL FIELD_ABORT ('UNEXPECTED VALUES')
+  WRITE (*, *) D
+ENDIF
+
+END SUBROUTINE
+
+SUBROUTINE TEST_GANG
+
+CLASS(FIELD_4RD), POINTER :: YLF4
+TYPE(FIELD_3RD_PTR), ALLOCATABLE :: YLF3L (:)
+
+REAL (KIND=JPRD), ALLOCATABLE :: ZDATA4 (:,:,:,:)
+REAL (KIND=JPRD), POINTER :: ZD4 (:,:,:,:), ZD3 (:,:,:), ZH4 (:,:,:,:), ZH3 (:,:,:)
+
+ALLOCATE (ZDATA4 (8,2,3,4))
+
+ZDATA4 = 123._JPRD
+
+CALL FIELD_NEW (YLF4, CHILDREN=YLF3L, PERSISTENT=.TRUE., DATA=ZDATA4, SYNC_ON_FINAL=.FALSE.)
+
+ZD4 => GET_DEVICE_DATA_RDWR (YLF4)
+
+!$acc serial present (ZD4)
+ZD4 = 456._JPRD
+!$acc end serial
+
+ZD3 => GET_DEVICE_DATA_RDWR (YLF3L (1)%PTR)
+
+!$acc serial present (ZD3)
+ZD3 = 789._JPRD
+!$acc end serial
+
+DEALLOCATE (YLF3L)
+CALL FIELD_DELETE (YLF4)
+
+IF (ANY (ZDATA4 /= 123._JPRD)) THEN
+  CALL FIELD_ABORT ('UNEXPECTED VALUES')
+  WRITE (*, *) ZDATA4 
+ENDIF
+
+DEALLOCATE (ZDATA4)
+
+
+ALLOCATE (ZDATA4 (8,2,3,4))
+
+ZDATA4 = 123._JPRD
+
+CALL FIELD_NEW (YLF4, CHILDREN=YLF3L, PERSISTENT=.TRUE., DATA=ZDATA4, SYNC_ON_FINAL=.TRUE.)
+
+ZD4 => GET_DEVICE_DATA_RDWR (YLF4)
+
+!$acc serial present (ZD4)
+ZD4 = 456._JPRD
+!$acc end serial
+
+DEALLOCATE (YLF3L)
+CALL FIELD_DELETE (YLF4)
+
+IF (ANY (ZDATA4 /= 456._JPRD)) THEN
+  CALL FIELD_ABORT ('UNEXPECTED VALUES')
+  WRITE (*, *) ZDATA4 
+ENDIF
+
+DEALLOCATE (ZDATA4)
+
+
+END SUBROUTINE
+
+END PROGRAM 
