@@ -18,7 +18,6 @@ USE FIELD_GATHSCAT_TYPE_MODULE
 ${fieldType.useParkind1 ()}$
 
 #:for ft in fieldTypeList
-USE ${ft.name}$_GATHSCAT_MODULE
 USE ${ft.name}$_GATHER_MODULE
 #:endfor
 
