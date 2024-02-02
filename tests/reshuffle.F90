@@ -108,7 +108,9 @@ DO JPASS = 1, 2
     DO JLEV = 1, NFLEVG
       DO JLON = 1, NPROMA1
         IF (D1 (JLON, JLEV, JBLK) /= (JPASS + 1) * FUNC (JLON, JBLK)) THEN
-          PRINT *, " JPASS = ", JPASS, " JLON = ", JLON, " JLEV = ", JLEV, " JBLK = ", JBLK, " D1 = ", D1 (JLON, JLEV, JBLK), (JPASS + 1) * FUNC (JLON, JBLK)
+          PRINT *, " JPASS = ", JPASS, " JLON = ", JLON, " JLEV = ", JLEV, &
+        & " JBLK = ", JBLK, " D1 = ", D1 (JLON, JLEV, JBLK), &
+        & (JPASS + 1) * FUNC (JLON, JBLK)
           CALL FIELD_ABORT ('VALUE ERROR')
         ENDIF
       ENDDO
