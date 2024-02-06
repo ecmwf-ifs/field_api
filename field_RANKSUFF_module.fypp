@@ -110,6 +110,9 @@ TYPE, EXTENDS(${ftn}$) :: ${ftn}$_OWNER
   LOGICAL :: HAS_INIT_VALUE = .FALSE.
   LOGICAL :: PINNED = .FALSE.
   ${ft.type}$ :: INIT_VALUE
+#:if defined('CUDA')
+  ${ft.type}$, PINNED, ALLOCATABLE, PRIVATE :: DATA(${ft.shape}$)
+#:endif
 CONTAINS
   PROCEDURE :: INIT => ${ftn}$_OWNER_INIT
   PROCEDURE :: FINAL => ${ftn}$_OWNER_FINAL
@@ -217,6 +220,8 @@ CONTAINS
 #:if defined('CUDA')
     ! In the presence of CUDA we pin by default
     SELF%PINNED = INIT_PINNED_VALUE
+#:else
+    SELF%PINNED = .FALSE.
 #:endif
     IF(PRESENT(PINNED))THEN
       SELF%PINNED = PINNED
@@ -275,7 +280,12 @@ CONTAINS
     ! Create FIELD object by explicitly allocating new data
     CLASS(${ftn}$_OWNER) :: SELF
 
+#:if defined('CUDA')
+    CALL HOST_ALLOC(SELF%PTR, SELF%LBOUNDS, SELF%UBOUNDS, SELF%PINNED, SELF%DATA)
+#:else
     CALL HOST_ALLOC(SELF%PTR, SELF%LBOUNDS, SELF%UBOUNDS, SELF%PINNED)
+#:endif
+
     CALL SELF%SET_STATUS (UNINITIALIZED)
   END SUBROUTINE ${ftn}$_CREATE_HOST_DATA
 
@@ -342,7 +352,7 @@ CONTAINS
     CLASS(${ftn}$_OWNER) :: SELF
 
     IF(ASSOCIATED(SELF%PTR))THEN
-       CALL HOST_DEALLOC (SELF%PTR, SELF%PINNED)
+       CALL HOST_DEALLOC (SELF%PTR, SELF%PINNED, SELF%DATA)
     ENDIF
 
     CALL SELF%${ftn}$_FINAL
