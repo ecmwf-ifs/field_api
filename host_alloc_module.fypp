@@ -71,19 +71,23 @@ SUBROUTINE ${ft.name}$_HOST_ALLOC (HST, LBOUNDS, UBOUNDS, PINNED)
    ARR_SIZE = ARR_SIZE * ISHAPE(${r+1}$)
 #:endfor
 
-   CALL C_MALLOC(ARR_SIZE, DATA)
+   IF(ARR_SIZE > 0)THEN
+     CALL C_MALLOC(ARR_SIZE, DATA)
 
 #:if defined('CUDA')
-   IF(PINNED)THEN
-     ISTAT = CUDAHOSTREGISTER (DATA, ARR_SIZE, CUDAHOSTREGISTERMAPPED)
-     IF (ISTAT /= 0) THEN
-       CALL FIELD_ABORT ("${ft.name}$_OWNER: FAILED TO REGISTER IN PAGE-LOCKED MEMORY")
+     IF(PINNED)THEN
+       ISTAT = CUDAHOSTREGISTER (DATA, ARR_SIZE, CUDAHOSTREGISTERMAPPED)
+       IF (ISTAT /= 0) THEN
+         CALL FIELD_ABORT ("${ft.name}$_OWNER: FAILED TO REGISTER IN PAGE-LOCKED MEMORY")
+       ENDIF
      ENDIF
-   ENDIF
 #:endif
 
-   CALL C_F_POINTER(DATA, PTR, SHAPE=ISHAPE)
-   HST(${', '.join(map(lambda r: 'LBOUNDS('+str(r+1)+'):', range(0, ft.rank)))}$) => PTR
+     CALL C_F_POINTER(DATA, PTR, SHAPE=ISHAPE)
+     HST(${', '.join(map(lambda r: 'LBOUNDS('+str(r+1)+'):', range(0, ft.rank)))}$) => PTR
+   ELSE
+     ALLOCATE(HST(${','.join([f'LBOUNDS({r+1}):UBOUNDS({r+1})' for r in range(ft.rank)])}$))
+   ENDIF
 
 END SUBROUTINE ${ft.name}$_HOST_ALLOC
 
@@ -97,20 +101,24 @@ SUBROUTINE ${ft.name}$_HOST_DEALLOC(HST, PINNED)
    TYPE(C_PTR) :: DATA
    INTEGER :: ISTAT
   
-   DATA = C_LOC (HST (${ ', '.join (map (lambda i: 'LBOUND (HST, ' + str (i) + ')', range (1, ft.rank+1))) }$))
+   IF(SIZE(HST) > 0)THEN
+     DATA = C_LOC (HST (${ ', '.join (map (lambda i: 'LBOUND (HST, ' + str (i) + ')', range (1, ft.rank+1))) }$))
 
 #:if defined('CUDA')
-   IF (PINNED) THEN
-     ISTAT = CUDAHOSTUNREGISTER (DATA)
-     IF (ISTAT /= 0) THEN
-       CALL FIELD_ABORT ("${ft.name}$_OWNER: FAILED TO UNREGISTER PAGE-LOCKED MEMORY")
+     IF (PINNED) THEN
+       ISTAT = CUDAHOSTUNREGISTER (DATA)
+       IF (ISTAT /= 0) THEN
+         CALL FIELD_ABORT ("${ft.name}$_OWNER: FAILED TO UNREGISTER PAGE-LOCKED MEMORY")
+       ENDIF
      ENDIF
-   ENDIF
 #:endif
 
-   NULLIFY(HST)
+     CALL C_FREE(DATA)
+   ELSE
+     DEALLOCATE(HST)
+   ENDIF
 
-   CALL C_FREE(DATA)
+   NULLIFY(HST)
 
 END SUBROUTINE ${ft.name}$_HOST_DEALLOC
 
