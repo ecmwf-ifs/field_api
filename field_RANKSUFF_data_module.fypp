@@ -23,13 +23,70 @@ PRIVATE
 #:set ftn = ft.name
 
 PUBLIC :: ${ftn}$_COPY
+PUBLIC :: ${ftn}$_COPY_FUNC
+PUBLIC :: ${ftn}$_COPY_INTF
 
+ABSTRACT INTERFACE
+  SUBROUTINE ${ftn}$_COPY_INTF (HST, DEV, MAP_DEVPTR, KDIR, QUEUE)
+    IMPORT :: JPIM, ${ft.kind}$
+    ${ft.type}$, POINTER :: HST (${ft.shape}$), DEV (${ft.shape}$)
+    LOGICAL,                       INTENT (IN) :: MAP_DEVPTR
+    INTEGER (KIND=JPIM),           INTENT (IN) :: KDIR
+    INTEGER (KIND=JPIM), OPTIONAL, INTENT (IN) :: QUEUE
+  END SUBROUTINE
+END INTERFACE
 #:endfor
 
 CONTAINS
 
 #:for ft in fieldTypeList
 #:set ftn = ft.name
+
+  FUNCTION ${ftn}$_COPY_FUNC (HST, DEV) RESULT (FUNC)
+
+    USE FIELD_ABORT_MODULE
+
+    PROCEDURE (${ftn}$_COPY_INTF), POINTER :: FUNC 
+
+    ${ft.type}$, POINTER, OPTIONAL :: HST (${ft.shape}$), DEV (${ft.shape}$)
+
+    INTEGER :: LAST_CONTIG_DIM
+    INTEGER :: NEXT_CONTIG_DIM
+
+    IF (PRESENT (HST)) THEN
+      LAST_CONTIG_DIM = ${ftn}$_GET_LAST_CONTIGUOUS_DIMENSION (HST, 0)
+      NEXT_CONTIG_DIM = ${ftn}$_GET_LAST_CONTIGUOUS_DIMENSION (HST, LAST_CONTIG_DIM+1)
+    ELSE
+      LAST_CONTIG_DIM = ${ft.rank}$
+      NEXT_CONTIG_DIM = ${ft.rank}$
+    ENDIF
+
+    SELECT CASE (LAST_CONTIG_DIM)
+#:if defined('CUDA')
+      CASE (${ft.rank}$)
+        FUNC => ${ftn}$_COPY_DIM${ft.rank}$_CONTIGUOUS 
+#:for d1 in range (ft.rank)
+      CASE (${d1}$)
+        SELECT CASE (NEXT_CONTIG_DIM)
+          #:for d2 in range (d1+1, ft.rank+1)
+          CASE (${d2}$)
+            FUNC => ${ftn}$_COPY_2D_DIM${d1}$_${d2}$_CONTIGUOUS 
+          #:endfor
+          CASE DEFAULT
+            CALL FIELD_ABORT ('INTERNAL ERROR: UNEXPECTED NEXT_CONTIG_DIM')
+        END SELECT
+#:endfor
+#:else
+#:for d in range (ft.rank + 1)
+      CASE (${d}$)
+        FUNC => ${ftn}$_COPY_DIM${d}$_CONTIGUOUS 
+#:endfor
+#:endif
+      CASE DEFAULT
+        CALL FIELD_ABORT ('INTERNAL ERROR: UNEXPECTED LAST_CONTIG_DIM')
+    END SELECT
+
+  END FUNCTION
 
   SUBROUTINE ${ftn}$_COPY (HST, DEV, MAP_DEVPTR, KDIR, QUEUE)
 
@@ -39,36 +96,12 @@ CONTAINS
     LOGICAL,                       INTENT (IN) :: MAP_DEVPTR
     INTEGER (KIND=JPIM),           INTENT (IN) :: KDIR
     INTEGER (KIND=JPIM), OPTIONAL, INTENT (IN) :: QUEUE
-    INTEGER :: LAST_CONTIG_DIM
-    INTEGER :: NEXT_CONTIG_DIM
 
-    LAST_CONTIG_DIM = ${ftn}$_GET_LAST_CONTIGUOUS_DIMENSION (HST, 0)
-    NEXT_CONTIG_DIM = ${ftn}$_GET_LAST_CONTIGUOUS_DIMENSION (HST, LAST_CONTIG_DIM+1)
+    PROCEDURE (${ftn}$_COPY_INTF), POINTER :: FUNC 
 
-    SELECT CASE (LAST_CONTIG_DIM)
-#:if defined('CUDA')
-#:for d1 in range (ft.rank)
-      CASE (${d1}$)
-        SELECT CASE (NEXT_CONTIG_DIM)
-          #:for d2 in range (d1+1, ft.rank+1)
-          CASE (${d2}$)
-            CALL ${ftn}$_COPY_2D_DIM${d1}$_${d2}$_CONTIGUOUS (HST, DEV, MAP_DEVPTR, KDIR, QUEUE)
-          #:endfor
-          CASE DEFAULT
-            CALL FIELD_ABORT ('INTERNAL ERROR: UNEXPECTED NEXT_CONTIG_DIM')
-        END SELECT
-#:endfor
-      CASE (${ft.rank}$)
-        CALL ${ftn}$_COPY_DIM${ft.rank}$_CONTIGUOUS (HST, DEV, MAP_DEVPTR, KDIR, QUEUE)
-#:else
-#:for d in range (ft.rank + 1)
-      CASE (${d}$)
-        CALL ${ftn}$_COPY_DIM${d}$_CONTIGUOUS (HST, DEV, MAP_DEVPTR, KDIR, QUEUE)
-#:endfor
-#:endif
-      CASE DEFAULT
-        CALL FIELD_ABORT ('INTERNAL ERROR: UNEXPECTED LAST_CONTIG_DIM')
-    END SELECT
+    FUNC => ${ftn}$_COPY_FUNC (HST, DEV) 
+
+    CALL FUNC (HST, DEV, MAP_DEVPTR, KDIR, QUEUE)
 
   END SUBROUTINE
 
@@ -77,11 +110,12 @@ CONTAINS
 #ifdef _OPENACC
   USE OPENACC
 #endif
+  USE, INTRINSIC :: ISO_FORTRAN_ENV, ONLY : INT64
     ${ft.type}$, POINTER :: HST (${ft.shape}$), DEV (${ft.shape}$)
     LOGICAL,                       INTENT (IN) :: MAP_DEVPTR
     INTEGER (KIND=JPIM),           INTENT (IN) :: KDIR
     INTEGER (KIND=JPIM), OPTIONAL, INTENT (IN) :: QUEUE
-    INTEGER (KIND=JPIM) :: ISIZE
+    INTEGER (KIND=INT64)                       :: ISIZE
     INTEGER :: ${', '.join (['J'] + list (map (lambda i: 'J' + str (i+1), range (d, ft.rank))))}$
 #ifdef _OPENACC
     TYPE(C_DEVPTR) :: DEVPTR
@@ -94,19 +128,19 @@ CONTAINS
   #:set indent = '  ' * (ft.rank - e)
 #ifdef _OPENACC
     ${indent}$  IF(MAP_DEVPTR)THEN
-    ${indent}$    DEVPTR = ACC_DEVICEPTR(DEV (${ar}$))
-    ${indent}$  ELSE
-  #:if defined('CUDA')
-  !$acc data deviceptr(DEVPTR, DEV)
+    ${indent}$    !$acc host_data use_device(DEV)
     ${indent}$    DEVPTR = C_DEVLOC(DEV (${ar}$))
-  !$acc end data
-  #:endif
+    ${indent}$    !$acc end host_data
+    ${indent}$  ELSE
+    ${indent}$    !$acc data deviceptr(DEVPTR, DEV)
+    ${indent}$    DEVPTR = C_DEVLOC(DEV (${ar}$))
+    ${indent}$    !$acc end data
     ${indent}$  ENDIF
 #endif
     #:if d == 0
     ${indent}$  ISIZE = KIND (HST)
     #:else
-    ${indent}$  ISIZE = KIND (HST) * SIZE (HST (${ar}$))
+    ${indent}$  ISIZE = SIZEOF (HST)
     #:endif
     ${indent}$  IF (KDIR == NH2D) THEN
 #ifdef _OPENACC
