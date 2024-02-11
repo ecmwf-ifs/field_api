@@ -9,7 +9,7 @@
 
 MODULE FIELD_${RANK}$${SUFF}$_UTIL_MODULE
 
-#:set fieldTypeList = fieldType.getFieldTypeList (ranks=[RANK], kinds=['JP' + SUFF], hasView=True)
+#:set fieldTypeList = fieldType.getFieldTypeList (ranks=[RANK], kinds=['JP' + SUFF])
 
 USE FIELD_MODULE
 USE FIELD_ACCESS_MODULE
@@ -22,7 +22,9 @@ INTERFACE ${method}$
   MODULE PROCEDURE ${method}$_${ft.name}$
 #:if method not in ['DIFF', 'CRC64']
   MODULE PROCEDURE ${method}$_${ft.name}$_PTR
+#:if ft.hasView
   MODULE PROCEDURE ${method}$_${ft.name}$_VIEW
+#:endif
 #:endif
 #:endfor
 END INTERFACE
@@ -110,6 +112,8 @@ CALL SELF%SYNC_HOST_RDWR ()
 
 END SUBROUTINE 
 
+#:if ft.hasView
+
 SUBROUTINE LOAD_${ft.name}$_VIEW (KLUN, YD)
 INTEGER (KIND=JPIM), INTENT (IN) :: KLUN
 CLASS (${ft.name}$_VIEW) :: YD
@@ -138,6 +142,8 @@ SUBROUTINE HOST_${ft.name}$_VIEW (SELF)
 CLASS (${ft.name}$_VIEW) :: SELF
 ! Do nothing
 END SUBROUTINE 
+
+#:endif
 
 SUBROUTINE LOAD_${ft.name}$_PTR (KLUN, YD)
 
