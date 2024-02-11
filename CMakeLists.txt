@@ -117,7 +117,7 @@ endif()
 foreach (SUFF IN ITEMS IM RM RB RD LM)
   string (TOLOWER ${SUFF} suff)
   foreach (RANK RANGE 1 5)
-    foreach (FUNC IN ITEMS "" _gathscat _access _util _array_util _gang _factory _gather _data)
+    foreach (FUNC IN ITEMS "" _shuffle _access _util _array_util _gang _factory _gather _data)
       add_custom_command (OUTPUT field_${RANK}${suff}${FUNC}_module.F90
 	      COMMAND ${FYPP} -DRANK=${RANK} -DSUFF='${SUFF}' ${fypp_defines} -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType 
         ${CMAKE_CURRENT_SOURCE_DIR}/field_RANKSUFF${FUNC}_module.fypp > field_${RANK}${suff}${FUNC}_module.F90
@@ -130,7 +130,8 @@ foreach (SUFF IN ITEMS IM RM RB RD LM)
 endforeach ()
 
 foreach (SRC IN ITEMS dev_alloc_module field_factory_module field_access_module field_gang_module field_array_module field_module 
-                      field_gathscat_module field_util_module field_array_util_module field_gathscat_type_module host_alloc_module)
+                      field_shuffle_module field_util_module field_array_util_module field_shuffle_type_module host_alloc_module
+                      field_gathscat_module field_gathscat_type_module)
   add_custom_command (OUTPUT ${SRC}.F90
 	  COMMAND ${FYPP} -m os ${fypp_defines} -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/${SRC}.fypp > ${SRC}.F90
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${SRC}.fypp

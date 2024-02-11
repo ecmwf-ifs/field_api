@@ -7,7 +7,7 @@
 #! granted to it by virtue of its status as an intergovernmental organisation
 #! nor does it submit to any jurisdiction.
 
-MODULE FIELD_${RANK}$${SUFF}$_GATHSCAT_MODULE
+MODULE FIELD_${RANK}$${SUFF}$_SHUFFLE_MODULE
 
 #:set fieldTypeList = fieldType.getFieldTypeList (ranks=[RANK], kinds=['JP' + SUFF], hasView=True)
 
@@ -44,15 +44,15 @@ END INTERFACE PAIR_SCATTER_DATA
 PUBLIC :: PAIR_SCATTER_DATA
 
 #:for ft in fieldTypeList
-TYPE ${ft.name}$_GATHSCAT_PAIR
+TYPE ${ft.name}$_SHUFFLE_PAIR
   INTEGER (KIND=JPIM) :: IMODE = -1
   INTEGER (KIND=JPIM) :: IWHAT = -1
   CLASS (${ft.name}$), POINTER :: YLSCAT => NULL ()
   CLASS (${ft.name}$), POINTER :: YLGATH => NULL ()
-  TYPE (${ft.name}$_GATHSCAT_PAIR), POINTER :: NEXT => NULL ()
-END TYPE ${ft.name}$_GATHSCAT_PAIR
+  TYPE (${ft.name}$_SHUFFLE_PAIR), POINTER :: NEXT => NULL ()
+END TYPE ${ft.name}$_SHUFFLE_PAIR
 
-PUBLIC :: ${ft.name}$_GATHSCAT_PAIR
+PUBLIC :: ${ft.name}$_SHUFFLE_PAIR
 
 #:endfor
 
@@ -66,16 +66,16 @@ CONTAINS
 #:for what in ['DEVICE', 'HOST']
 #:for mode in ['RDONLY', 'RDWR']
 
-FUNCTION PAIR_${ft.name}$_GATHER_${what}$_DATA_${mode}$ (YDPAIR, LDNULL, LDFULL, KGPBLKS, YDFINDS, YLF) RESULT (PTR)
-TYPE (${ft.name}$_GATHSCAT_PAIR), POINTER              :: YDPAIR
+FUNCTION PAIR_${ft.name}$_GATHER_${what}$_DATA_${mode}$ (YDPAIR, LDNULL, LDFULL, KLON, KGPBLKS, YDFINDS, YLF) RESULT (PTR)
+TYPE (${ft.name}$_SHUFFLE_PAIR), POINTER              :: YDPAIR
 LOGICAL,                                   INTENT (IN) :: LDNULL, LDFULL
-INTEGER (KIND=JPIM),                       INTENT (IN) :: KGPBLKS
+INTEGER (KIND=JPIM),                       INTENT (IN) :: KLON, KGPBLKS
 CLASS (FIELD_3IM),                POINTER              :: YDFINDS 
 CLASS (${ft.name}$),              POINTER, INTENT (IN) :: YLF
 
 ${ft.type}$, POINTER :: PTR(${ft.shape}$), ZTRG(${ft.shape}$), ZTRS(${ft.shape}$)
 ${ft.type}$, POINTER :: PTR1(${ft.shape}$)
-TYPE (${ft.name}$_GATHSCAT_PAIR), POINTER :: YLPAIR
+TYPE (${ft.name}$_SHUFFLE_PAIR), POINTER :: YLPAIR
 CLASS (${ft.name}$), POINTER :: YLGATH_DUMM
 INTEGER (KIND=JPIM) :: ILBOUNDS (${ft.rank}$), IUBOUNDS (${ft.rank}$)
 INTEGER (KIND=JPIM), POINTER :: INDS (:,:,:)
@@ -104,6 +104,7 @@ ELSE
 
   ILBOUNDS = LBOUND (PTR)
   IUBOUNDS = UBOUND (PTR)
+  IUBOUNDS (1) = KLON
   IUBOUNDS (${ft.rank}$) = KGPBLKS
   CALL FIELD_NEW (YLPAIR%YLGATH, LBOUNDS=ILBOUNDS, UBOUNDS=IUBOUNDS, PERSISTENT=.TRUE.)
 
@@ -159,10 +160,10 @@ END FUNCTION PAIR_${ft.name}$_GATHER_${what}$_DATA_${mode}$
 #:for ft in fieldTypeList
 
 SUBROUTINE PAIR_${ft.name}$_SCATTER_DATA (YDPAIR, YDFINDS)
-TYPE (${ft.name}$_GATHSCAT_PAIR), POINTER              :: YDPAIR
+TYPE (${ft.name}$_SHUFFLE_PAIR), POINTER              :: YDPAIR
 CLASS (FIELD_3IM),                POINTER              :: YDFINDS 
 
-TYPE (${ft.name}$_GATHSCAT_PAIR), POINTER :: YLPAIR
+TYPE (${ft.name}$_SHUFFLE_PAIR), POINTER :: YLPAIR
 ${ft.type}$, POINTER :: PTRG(${ft.shape}$), PTRS(${ft.shape}$)
 INTEGER (KIND=JPIM), POINTER :: INDS (:,:,:)
 
@@ -233,4 +234,4 @@ END SUBROUTINE PAIR_${ft.name}$_SCATTER_DATA
 
 #:endfor
 
-END MODULE FIELD_${RANK}$${SUFF}$_GATHSCAT_MODULE
+END MODULE FIELD_${RANK}$${SUFF}$_SHUFFLE_MODULE

@@ -14,11 +14,11 @@ MODULE FIELD_${RANK}$${SUFF}$_GATHER_MODULE
 USE FIELD_MODULE
 USE FIELD_ACCESS_MODULE
 USE FIELD_FACTORY_MODULE
-USE FIELD_GATHSCAT_TYPE_MODULE
+USE FIELD_SHUFFLE_TYPE_MODULE
 ${fieldType.useParkind1 ()}$
 
 #:for ft in fieldTypeList
-USE ${ft.name}$_GATHSCAT_MODULE
+USE ${ft.name}$_SHUFFLE_MODULE
 #:endfor
 
 
@@ -26,7 +26,7 @@ IMPLICIT NONE
 
 PRIVATE
 
-PUBLIC :: FIELD_GATHSCAT
+PUBLIC :: FIELD_SHUFFLE
 
 #:for what in ['DEVICE', 'HOST']
 #:for mode in ['RDONLY', 'RDWR']
@@ -48,12 +48,12 @@ CONTAINS
 #:for ft in fieldTypeList
 FUNCTION ${ft.name}$_GATHER_${what}$_DATA_${mode}$ (SELF, YLF) RESULT (PTR)
 
-CLASS (FIELD_GATHSCAT)                      :: SELF
+CLASS (FIELD_SHUFFLE)                      :: SELF
 CLASS (${ft.name}$),   POINTER, INTENT (IN) :: YLF
 
 ${ft.type}$, POINTER :: PTR(${ft.shape}$)
 
-PTR => PAIR_GATHER_${what}$_DATA_${mode}$ (SELF%${ft.name}$_LIST, SELF%LNULL, SELF%LFULL, SELF%KGPBLKS, SELF%YLFINDS, YLF)
+PTR => PAIR_GATHER_${what}$_DATA_${mode}$ (SELF%${ft.name}$_LIST, SELF%LNULL, SELF%LFULL, SELF%KLON_G, SELF%KGPBLKS_G, SELF%YLFINDS, YLF)
 
 END FUNCTION ${ft.name}$_GATHER_${what}$_DATA_${mode}$
 

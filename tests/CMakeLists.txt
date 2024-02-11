@@ -25,6 +25,7 @@ target_compile_definitions( main.x PRIVATE $<${HAVE_CUDA}:_CUDA> )
 
 ## Unit tests
 list(APPEND TEST_FILES
+        reshuffle.F90
 	test_wrappernosynconfinal.F90
 	test_field1d.F90
 	test_pinned.F90
