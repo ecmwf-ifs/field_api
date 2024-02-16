@@ -15,6 +15,7 @@ ${fieldType.useParkind1 ()}$
 
 IMPLICIT NONE
 
+#:if len (fieldTypeList) > 0
 #:for method in ['LOAD', 'SAVE', 'COPY', 'WIPE', 'HOST']
 INTERFACE ${method}$
 #:for ft in fieldTypeList
@@ -23,6 +24,7 @@ INTERFACE ${method}$
 END INTERFACE
 
 #:endfor
+#:endif
 
 CONTAINS
 
