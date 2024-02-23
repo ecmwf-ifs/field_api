@@ -141,9 +141,14 @@ endforeach ()
 set_source_files_properties("dev_alloc_module.F90" PROPERTIES COMPILE_OPTIONS $<${HAVE_CUDA}:-cuda>)
 set_source_files_properties("host_alloc_module.F90" PROPERTIES COMPILE_OPTIONS $<${HAVE_CUDA}:-cuda>)
 
-## set lib type
+## determine lib type
+ecbuild_add_option( FEATURE SHARED_LIBS
+    DESCRIPTION "Link field_api dynamically"
+    DEFAULT ON
+    CONDITION NOT HAVE_ACC
+)
 set(LIB_TYPE SHARED)
-if( HAVE_ACC )
+if( NOT HAVE_SHARED_LIBS )
   set(LIB_TYPE STATIC)
 endif()
 
