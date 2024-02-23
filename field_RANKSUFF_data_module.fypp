@@ -284,19 +284,22 @@ CONTAINS
   #:endfor
   #:set ind0 = ind0[:-2]
   #:set ind1 = ind1[:-2]
-  ITHIS_STRIDE = LOC (PTR (${ind1}$)) - LOC (PTR (${ind0}$))
   IF (AFTER < ${d}$) THEN
    #:if d == 1
     ISIZE = 1
    #:else
     ISIZE = SIZE(PTR, ${d-1}$)
    #:endif
-    IF (SIZE(PTR, ${d}$) /= 1 .AND. IPREVIOUS_STRIDE * ISIZE /= ITHIS_STRIDE) THEN
-      JDIM = ${d-1}$
-      RETURN
+    IF (SIZE(PTR, ${d}$) /= 1) THEN
+      ITHIS_STRIDE = LOC (PTR (${ind1}$)) - LOC (PTR (${ind0}$))
+      IF (IPREVIOUS_STRIDE * ISIZE /= ITHIS_STRIDE) THEN
+        JDIM = ${d-1}$
+        RETURN
+      ENDIF
     ENDIF
     IPREVIOUS_STRIDE = IPREVIOUS_STRIDE * ISIZE
   ELSE IF (AFTER == ${d}$) THEN
+    ITHIS_STRIDE = LOC (PTR (${ind1}$)) - LOC (PTR (${ind0}$))
     IPREVIOUS_STRIDE = ITHIS_STRIDE
   ENDIF
 
