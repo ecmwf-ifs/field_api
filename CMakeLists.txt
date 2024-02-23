@@ -141,10 +141,16 @@ endforeach ()
 set_source_files_properties("dev_alloc_module.F90" PROPERTIES COMPILE_OPTIONS $<${HAVE_CUDA}:-cuda>)
 set_source_files_properties("host_alloc_module.F90" PROPERTIES COMPILE_OPTIONS $<${HAVE_CUDA}:-cuda>)
 
+## set lib type
+set(LIB_TYPE SHARED)
+if( HAVE_ACC )
+  set(LIB_TYPE STATIC)
+endif()
+
 foreach(prec ${precisions})
   ## add field_api target
   ecbuild_add_library(
-      TYPE STATIC
+      TYPE ${LIB_TYPE}
       TARGET ${LIBNAME}_${prec}
       SOURCES ${srcs}
       DEFINITIONS $<$<NOT:${fiat_FOUND}>:${FIELD_API_DEFINITIONS}>
