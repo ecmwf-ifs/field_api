@@ -141,10 +141,15 @@ endforeach ()
 set_source_files_properties("dev_alloc_module.F90" PROPERTIES COMPILE_OPTIONS $<${HAVE_CUDA}:-cuda>)
 set_source_files_properties("host_alloc_module.F90" PROPERTIES COMPILE_OPTIONS $<${HAVE_CUDA}:-cuda>)
 
+## determine lib type
+cmake_dependent_option(BUILD_SHARED_LIBS "Dynamically link field_api" ON "NOT HAVE_ACC" OFF)
+if( HAVE_ACC )
+  ecbuild_warn("OpenACC builds force static linking.")
+endif()
+
 foreach(prec ${precisions})
   ## add field_api target
   ecbuild_add_library(
-      TYPE STATIC
       TARGET ${LIBNAME}_${prec}
       SOURCES ${srcs}
       DEFINITIONS $<$<NOT:${fiat_FOUND}>:${FIELD_API_DEFINITIONS}>
