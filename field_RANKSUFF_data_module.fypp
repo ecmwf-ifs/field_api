@@ -140,7 +140,7 @@ CONTAINS
     #:if d == 0
     ${indent}$  ISIZE = KIND (HST)
     #:else
-    ${indent}$  ISIZE = SIZEOF (HST)
+    ${indent}$  ISIZE = SIZEOF ( HST(${ar}$) )
     #:endif
     ${indent}$  IF (KDIR == NH2D) THEN
 #ifdef _OPENACC
