@@ -62,7 +62,7 @@ CONTAINS
     ENDIF
 
     SELECT CASE (LAST_CONTIG_DIM)
-#:if defined('CUDA')
+#:if False and defined('CUDA')
       CASE (${ft.rank}$)
         FUNC => ${ftn}$_COPY_DIM${ft.rank}$_CONTIGUOUS 
 #:for d1 in range (ft.rank)
@@ -141,6 +141,7 @@ CONTAINS
     ${indent}$  ISIZE = KIND (HST)
     #:else
     ${indent}$  ISIZE = SIZEOF (HST)
+!   ${indent}$  ISIZE = SIZEOF (HST(${ar}$))
     #:endif
     ${indent}$  IF (KDIR == NH2D) THEN
 #ifdef _OPENACC
