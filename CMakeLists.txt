@@ -21,7 +21,7 @@ if( DEFINED ENV{ECBUILD_TOOLCHAIN} AND NOT CMAKE_TOOLCHAIN_FILE)
 endif()
 
 ## define project and field_api target name
-project(field_api VERSION 0.2.2 LANGUAGES Fortran)
+project(field_api VERSION 0.3.0 LANGUAGES Fortran)
 set(LIBNAME field_api)
 
 ## find required packages
