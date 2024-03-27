@@ -13,8 +13,14 @@ PROGRAM CHECK_GPU_NUM
 #ifdef _OPENACC
         USE OPENACC
 #endif
+        USE, INTRINSIC :: ISO_FORTRAN_ENV, ONLY : INT64
         IMPLICIT NONE
-        INTEGER :: DEV_TYPE, NUM_GPUS = 0
+#ifdef _CRAYFTN
+        INTEGER(KIND=INT64) :: DEV_TYPE
+#else
+        INTEGER :: DEV_TYPE
+#endif
+        INTEGER :: NUM_GPUS = 0
 
 #ifdef _OPENACC
         DEV_TYPE = ACC_GET_DEVICE_TYPE()
