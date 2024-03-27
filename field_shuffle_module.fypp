@@ -17,9 +17,9 @@ USE FIELD_FACTORY_MODULE
 USE FIELD_SHUFFLE_TYPE_MODULE
 ${fieldType.useParkind1 ()}$
 
+USE FIELD_GATHSCAT_MODULE
 #:for ft in fieldTypeList
 USE ${ft.name}$_SHUFFLE_MODULE
-USE ${ft.name}$_GATHER_MODULE
 #:endfor
 
 

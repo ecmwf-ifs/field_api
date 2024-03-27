@@ -9,16 +9,17 @@
 
 MODULE FIELD_GATHSCAT_MODULE
 
-#:set fieldTypeList = fieldType.getFieldTypeList ()
+#:set fieldTypeList = [ft for ft in fieldType.getFieldTypeList () if ft.hasView]
 
 USE FIELD_MODULE
 USE FIELD_ACCESS_MODULE
 USE FIELD_FACTORY_MODULE
 USE FIELD_GATHSCAT_TYPE_MODULE
+USE FIELD_SHUFFLE_TYPE_MODULE
 ${fieldType.useParkind1 ()}$
 
 #:for ft in fieldTypeList
-USE ${ft.name}$_GATHER_MODULE
+USE ${ft.name}$_SHUFFLE_MODULE
 #:endfor
 
 
@@ -26,13 +27,39 @@ IMPLICIT NONE
 
 PRIVATE
 
+PUBLIC :: FIELD_SHUFFLE
 PUBLIC :: FIELD_GATHSCAT
 
 #:for what in ['DEVICE', 'HOST']
 #:for mode in ['RDONLY', 'RDWR']
+INTERFACE GATHER_${what}$_DATA_${mode}$
+#:for ft in fieldTypeList
+  MODULE PROCEDURE :: ${ft.name}$_GATHER_${what}$_DATA_${mode}$
+#:endfor
+END INTERFACE
 
 PUBLIC :: GATHER_${what}$_DATA_${mode}$
 
+#:endfor
+#:endfor
+
+CONTAINS
+
+#:for what in ['DEVICE', 'HOST']
+#:for mode in ['RDONLY', 'RDWR']
+#:for ft in fieldTypeList
+FUNCTION ${ft.name}$_GATHER_${what}$_DATA_${mode}$ (SELF, YLF) RESULT (PTR)
+
+CLASS (FIELD_SHUFFLE)                      :: SELF
+CLASS (${ft.name}$),   POINTER, INTENT (IN) :: YLF
+
+${ft.type}$, POINTER :: PTR(${ft.shape}$)
+
+PTR => PAIR_GATHER_${what}$_DATA_${mode}$ (SELF%${ft.name}$_LIST, SELF%LNULL, SELF%LFULL, SELF%KLON_G, SELF%KGPBLKS_G, SELF%YLFINDS, YLF)
+
+END FUNCTION ${ft.name}$_GATHER_${what}$_DATA_${mode}$
+
+#:endfor
 #:endfor
 #:endfor
 
