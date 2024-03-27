@@ -39,6 +39,7 @@ set( OpenACC_Fortran_FLAGS "-hacc" CACHE STRING "" )
 # General Flags (add to default)
 set(ECBUILD_Fortran_FLAGS "-hsystem_alloc")
 set(ECBUILD_Fortran_FLAGS "${ECBUILD_Fortran_FLAGS} -hbyteswapio")
+set(ECBUILD_Fortran_FLAGS "${ECBUILD_Fortran_FLAGS} -h acc_model=auto_async_none")
 set(ECBUILD_Fortran_FLAGS "${ECBUILD_Fortran_FLAGS} -Wl, --as-needed")
 
 set(ECBUILD_Fortran_FLAGS_BIT "-O3 -hfp1 -hscalar3 -hvector3 -G2 -haggress -DNDEBUG")
