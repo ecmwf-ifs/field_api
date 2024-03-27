@@ -9,6 +9,9 @@
 
 set(LIBNAME_PREC ${LIBNAME}_${DEFAULT_PRECISION})
 
+# set DEV_ALLOC_SIZE for tests
+set(dev_alloc_size "268435456") # 1GB
+
 ## Host-device ping-pong runner
 ecbuild_add_test(
     TARGET main.x
@@ -20,6 +23,7 @@ ecbuild_add_test(
         OpenMP::OpenMP_Fortran
         $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
     LINKER_LANGUAGE Fortran
+	ENVIRONMENT "DEV_ALLOC_SIZE=${dev_alloc_size}"
 )
 target_link_options( main.x PRIVATE $<${HAVE_CUDA}:-gpu=pinned> )
 target_compile_definitions( main.x PRIVATE $<${HAVE_CUDA}:_CUDA> )
@@ -119,6 +123,7 @@ foreach(TEST_FILE ${TEST_FILES})
            $<${HAVE_FIELD_GANG}:HAVE_FIELD_GANG>
         LINKER_LANGUAGE Fortran
         OMP ${omp_num_threads}
+		ENVIRONMENT "DEV_ALLOC_SIZE=${dev_alloc_size}"
     )
 
     set_target_properties(${TEST_NAME}.x
@@ -142,7 +147,7 @@ foreach(FAILING_TEST_FILE ${FAILING_TEST_FILES})
     set_target_properties(${FAILING_TEST_NAME}.x PROPERTIES LINKER_LANGUAGE Fortran)
     add_test(NAME ${FAILING_TEST_NAME} COMMAND ${FAILING_TEST_NAME}.x)
     set_property(TEST ${FAILING_TEST_NAME} PROPERTY WILL_FAIL TRUE)
-    set_property(TEST ${FAILING_TEST_NAME} PROPERTY ENVIRONMENT "OMP_NUM_THREADS=${omp_num_threads}")
+    set_property(TEST ${FAILING_TEST_NAME} PROPERTY ENVIRONMENT "OMP_NUM_THREADS=${omp_num_threads};DEV_ALLOC_SIZE=${dev_alloc_size}")
     target_link_options( ${FAILING_TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:-gpu=pinned> )
     target_compile_definitions( ${FAILING_TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:_CUDA> )
 endforeach()
@@ -155,7 +160,7 @@ foreach(ABOR1_TEST_FILE ${ABOR1_TEST_FILES})
     target_link_libraries(${ABOR1_TEST_NAME}.x PRIVATE $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>)
     set_target_properties(${ABOR1_TEST_NAME}.x PROPERTIES LINKER_LANGUAGE Fortran)
     add_test(NAME ${ABOR1_TEST_NAME} COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/abor1catcher.sh "./${ABOR1_TEST_NAME}.x")
-    set_property(TEST ${ABOR1_TEST_NAME} PROPERTY ENVIRONMENT "OMP_NUM_THREADS=${omp_num_threads}")
+    set_property(TEST ${ABOR1_TEST_NAME} PROPERTY ENVIRONMENT "OMP_NUM_THREADS=${omp_num_threads};DEV_ALLOC_SIZE=${dev_alloc_size}")
     target_link_options( ${ABOR1_TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:-gpu=pinned> )
     target_compile_definitions( ${ABOR1_TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:_CUDA> )
 endforeach()
