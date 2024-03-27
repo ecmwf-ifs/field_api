@@ -95,6 +95,11 @@ set(ABOR1_TEST_FILES
 #Set OMP_NUM_THREADS for tests
 set(omp_num_threads 8)
 
+#Remove incompatible tests
+if ( CMAKE_Fortran_COMPILER_ID MATCHES Cray)
+  list(REMOVE_ITEM TEST_FILES async_host.F90 test_gang.F90)
+endif()
+
 foreach(TEST_FILE ${TEST_FILES})
 	get_filename_component(TEST_NAME ${TEST_FILE} NAME_WE)
 
