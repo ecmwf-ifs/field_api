@@ -40,7 +40,7 @@ PRIVATE
 #:set ftn = ft.name
 TYPE, ABSTRACT, EXTENDS (FIELD_BASIC) :: ${ftn}$
   ${ft.type}$, POINTER :: PTR(${ft.shape}$) => NULL()
-  ${ft.type}$, POINTER, CONTIGUOUS :: DEVPTR(${ft.shape}$) => NULL()
+  ${ft.type}$, POINTER :: DEVPTR(${ft.shape}$) => NULL()
   PROCEDURE (${ftn}$_COPY_INTF), POINTER, NOPASS :: COPY_FUNC => NULL ()
 CONTAINS
 
