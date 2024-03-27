@@ -25,9 +25,9 @@ target_compile_definitions( main.x PRIVATE $<${HAVE_CUDA}:_CUDA> )
 
 ## Unit tests
 list(APPEND TEST_FILES
-        test_sizeof.F90
-        test_bc.F90
-        reshuffle.F90
+	test_sizeof.F90
+	test_bc.F90
+	reshuffle.F90
 	test_wrappernosynconfinal.F90
 	test_field1d.F90
 	test_pinned.F90
@@ -93,9 +93,16 @@ set(omp_num_threads 8)
 
 foreach(TEST_FILE ${TEST_FILES})
 	get_filename_component(TEST_NAME ${TEST_FILE} NAME_WE)
+
+	if(TEST_NAME MATCHES "test_gang")
+	   set(test_srcs "test_gang.F90;test_gang_abort_mod.F90")
+	else()
+	   set(test_srcs ${TEST_FILE})
+	endif()
+
     ecbuild_add_test(
         TARGET ${TEST_NAME}.x
-        SOURCES ${TEST_FILE}
+        SOURCES ${test_srcs}
         LIBS
            ${LIBNAME_PREC}
            parkind_${DEFAULT_PRECISION}
