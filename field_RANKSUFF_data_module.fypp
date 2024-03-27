@@ -114,15 +114,25 @@ CONTAINS
 #ifdef _OPENACC
   USE OPENACC
 #endif
+#ifdef _CRAYFTN
+  USE, INTRINSIC :: ISO_C_BINDING
+#endif
   USE, INTRINSIC :: ISO_FORTRAN_ENV, ONLY : INT64
     ${ft.type}$, POINTER :: HST (${ft.shape}$), DEV (${ft.shape}$)
     LOGICAL,                       INTENT (IN) :: MAP_DEVPTR
     INTEGER (KIND=JPIM),           INTENT (IN) :: KDIR
     INTEGER (KIND=JPIM), OPTIONAL, INTENT (IN) :: QUEUE
     INTEGER (KIND=INT64)                       :: ISIZE
+#ifdef _CRAYFTN
+    TYPE (C_PTR)                               :: RET_PTR
+#endif
     INTEGER :: ${', '.join (['J'] + list (map (lambda i: 'J' + str (i+1), range (d, ft.rank))))}$
 #ifdef _OPENACC
+#ifdef _CRAYFTN
+    TYPE(C_PTR) :: DEVPTR
+#else
     TYPE(C_DEVPTR) :: DEVPTR
+#endif
 #endif
 
   #:for e in range (ft.rank, d, -1)
@@ -131,6 +141,11 @@ CONTAINS
   #:set ar = ', '.join ([':'] * d  + list (map (lambda i: 'J' + str (i+1), range (d, ft.rank))))
   #:set indent = '  ' * (ft.rank - e)
 #ifdef _OPENACC
+#ifdef _CRAYFTN
+    ${indent}$  !$acc host_data use_device(DEV)
+    ${indent}$  DEVPTR = C_LOC(DEV (${ar}$))
+    ${indent}$  !$acc end host_data
+#else
     ${indent}$  IF(MAP_DEVPTR)THEN
     ${indent}$    !$acc host_data use_device(DEV)
     ${indent}$    DEVPTR = C_DEVLOC(DEV (${ar}$))
@@ -141,6 +156,7 @@ CONTAINS
     ${indent}$    !$acc end data
     ${indent}$  ENDIF
 #endif
+#endif
     #:if d == 0
     ${indent}$  ISIZE = KIND (HST)
     #:else
@@ -149,7 +165,9 @@ CONTAINS
     ${indent}$  IF (KDIR == NH2D) THEN
 #ifdef _OPENACC
     ${indent}$    IF(PRESENT(QUEUE))THEN
+#ifndef _CRAYFTN
     ${indent}$      CALL ACC_MEMCPY_TO_DEVICE_ASYNC (DEVPTR , HST (${ar}$), ISIZE, QUEUE)
+#endif
     ${indent}$    ELSE
     ${indent}$      CALL ACC_MEMCPY_TO_DEVICE (DEVPTR , HST (${ar}$), ISIZE)
     ${indent}$    ENDIF
@@ -158,11 +176,15 @@ CONTAINS
 #endif
     ${indent}$  ELSEIF (KDIR == ND2H) THEN
 #ifdef _OPENACC
+#ifdef _CRAYFTN
+    ${indent}$    RET_PTR = ACC_MEMCPY_FROM_DEVICE (HST (${ar}$), DEVPTR, ISIZE)
+#else
     ${indent}$    IF(PRESENT(QUEUE))THEN
     ${indent}$      CALL ACC_MEMCPY_FROM_DEVICE_ASYNC (HST (${ar}$), DEVPTR, ISIZE, QUEUE)
     ${indent}$    ELSE
     ${indent}$      CALL ACC_MEMCPY_FROM_DEVICE (HST (${ar}$), DEVPTR, ISIZE)
     ${indent}$    ENDIF
+#endif
 #else
     ${indent}$    HST (${ar}$) = DEV (${ar}$)
 #endif
