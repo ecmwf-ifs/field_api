@@ -156,6 +156,7 @@ CONTAINS
     LOGICAL, INTENT(IN), OPTIONAL :: SYNC_ON_FINAL
     
     LOGICAL :: LLPERSISTENT
+
 #include "abor1.intfb.h"
 
     LLPERSISTENT = .TRUE.
@@ -166,7 +167,9 @@ CONTAINS
     ELSE
       SELF%PTR => DATA
     ENDIF
+
     SELF%THREAD_BUFFER = .NOT. LLPERSISTENT
+
     CALL SELF%SET_STATUS (NHSTFRESH)
 
     SELF%MAP_DEVPTR = INIT_MAP_DEVPTR
@@ -207,12 +210,17 @@ CONTAINS
     LOGICAL, OPTIONAL,  INTENT(IN) :: MAP_DEVPTR
     ${ft.type}$, OPTIONAL, INTENT(IN) :: INIT_VALUE
     LOGICAL :: IS_DELAYED
+    LOGICAL :: LLPERSISTENT
+
 #include "abor1.intfb.h"
 
     IS_DELAYED = .FALSE.
     IF(PRESENT(DELAYED))THEN
       IS_DELAYED = DELAYED
     ENDIF
+
+    LLPERSISTENT = .FALSE.
+    IF (PRESENT (PERSISTENT)) LLPERSISTENT = PERSISTENT
 
 #:if defined('CUDA')
     ! In the presence of CUDA we pin by default
@@ -237,19 +245,15 @@ CONTAINS
     ELSE
       SELF%LBOUNDS=1
     ENDIF
+
     SELF%UBOUNDS=UBOUNDS
-    SELF%UBOUNDS(${ft.rank}$) = OML_MAX_THREADS ()
 
-    ! By default we allocate thread-local temporaries
-    SELF%THREAD_BUFFER = .TRUE.
+    SELF%THREAD_BUFFER = .NOT. LLPERSISTENT
 
-    IF (PRESENT(PERSISTENT)) THEN
-      IF (PERSISTENT) THEN
-        SELF%THREAD_BUFFER = .FALSE.
-        SELF%LBOUNDS(${ft.rank}$) = 1
-        SELF%UBOUNDS(${ft.rank}$) = UBOUNDS(${ft.rank}$)
-      END IF
-    END IF
+    IF (.NOT. LLPERSISTENT) THEN
+      SELF%LBOUNDS(${ft.rank}$) = 1
+      SELF%UBOUNDS(${ft.rank}$) = OML_MAX_THREADS ()
+    ENDIF
 
     CALL SELF%SET_STATUS (UNALLOCATED)
     IF (PRESENT(INIT_VALUE)) THEN
