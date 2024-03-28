@@ -91,6 +91,9 @@ ELSEIF (LDFULL) THEN
   ! Return pointer on packed array
   PTR => GET_${what}$_DATA_${mode}$ (YLF)
 
+  ! Set last lbound to 1
+  PTR (${','.join (list (map (lambda i: "LBOUND(PTR," + str (i) + "):", range (1, ft.rank))))}$, 1:) => PTR
+
 ELSE
 
   PTR => GET_${what}$_DATA_RDONLY (YLF)
@@ -104,8 +107,13 @@ ELSE
 
   ILBOUNDS = LBOUND (PTR)
   IUBOUNDS = UBOUND (PTR)
+
+  ILBOUNDS (1) = 1
   IUBOUNDS (1) = KLON
+
+  ILBOUNDS (${ft.rank}$) = 1
   IUBOUNDS (${ft.rank}$) = KGPBLKS
+
   CALL FIELD_NEW (YLPAIR%YLGATH, LBOUNDS=ILBOUNDS, UBOUNDS=IUBOUNDS, PERSISTENT=.TRUE.)
 
   INDS => GET_${what}$_DATA_RDONLY (YDFINDS)
@@ -124,8 +132,8 @@ CONTAINS
 
 SUBROUTINE PAIR_${ft.name}$_${what}$_${mode}$ (KNDS, PTRG, PTRS)
 
-${ft.type}$, INTENT (OUT) :: PTRG(${ft.shape}$)
-${ft.type}$, INTENT (IN)  :: PTRS(${ft.shape}$)
+${ft.type}$, INTENT (INOUT) :: PTRG(${ft.shape}$)
+${ft.type}$, INTENT (IN)    :: PTRS(${ft.shape}$)
 INTEGER (KIND=JPIM), INTENT (IN)  :: KNDS (:,:,:)
 INTEGER (KIND=JPIM) :: JLONS, JBLKS, JLONG, JBLKG
 
@@ -161,7 +169,7 @@ END FUNCTION PAIR_${ft.name}$_GATHER_${what}$_DATA_${mode}$
 
 SUBROUTINE PAIR_${ft.name}$_SCATTER_DATA (YDPAIR, YDFINDS)
 TYPE (${ft.name}$_SHUFFLE_PAIR), POINTER              :: YDPAIR
-CLASS (FIELD_3IM),                POINTER              :: YDFINDS 
+CLASS (FIELD_3IM),               POINTER              :: YDFINDS 
 
 TYPE (${ft.name}$_SHUFFLE_PAIR), POINTER :: YLPAIR
 ${ft.type}$, POINTER :: PTRG(${ft.shape}$), PTRS(${ft.shape}$)
@@ -178,6 +186,7 @@ DO WHILE (ASSOCIATED (YDPAIR))
       INDS => GET_DEVICE_DATA_RDONLY (YDFINDS)
       PTRG => GET_DEVICE_DATA_RDONLY (YDPAIR%YLGATH)
       PTRS => GET_DEVICE_DATA_RDWR   (YDPAIR%YLSCAT)
+
       CALL ${ft.name}$_SCATTER_DEVICE_KERNEL (INDS, PTRG, PTRS)
 
     ELSEIF (YDPAIR%IWHAT == NHOST) THEN
@@ -185,6 +194,7 @@ DO WHILE (ASSOCIATED (YDPAIR))
       INDS => GET_HOST_DATA_RDONLY (YDFINDS)
       PTRG => GET_HOST_DATA_RDONLY (YDPAIR%YLGATH)
       PTRS => GET_HOST_DATA_RDWR   (YDPAIR%YLSCAT)
+
       CALL ${ft.name}$_SCATTER_HOST_KERNEL (INDS, PTRG, PTRS)
 
     ENDIF
@@ -202,10 +212,12 @@ CONTAINS
 #:for what in ['DEVICE', 'HOST']
 SUBROUTINE ${ft.name}$_SCATTER_${what}$_KERNEL (KNDS, PTRG, PTRS)
 
-${ft.type}$, INTENT (IN)  :: PTRG(${ft.shape}$)
-${ft.type}$, INTENT (OUT) :: PTRS(${ft.shape}$)
+${ft.type}$, INTENT (IN)    :: PTRG(${ft.shape}$)
+${ft.type}$, INTENT (INOUT) :: PTRS(${ft.shape}$)
 INTEGER (KIND=JPIM), INTENT (IN) :: KNDS (:,:,:)
-INTEGER (KIND=JPIM) :: JLONS, JBLKS, JLONG, JBLKG
+INTEGER (KIND=JPIM) :: JLONS, JBLKS, JLONG, JBLKG, JBOFF
+
+JBOFF = LBOUND (PTRG, ${ft.rank}$)-1
 
 #:set dc = ', ' + (':, ' * (ft.rank-2))
 
@@ -214,13 +226,13 @@ INTEGER (KIND=JPIM) :: JLONS, JBLKS, JLONG, JBLKG
 #:elif what == 'HOST'
 !$OMP PARALLEL DO PRIVATE (JBLKG, JLONG, JBLKS, JLONS)
 #:endif
-DO JBLKG = 1, SIZE (KNDS, 3)
+DO JBLKG = LBOUND (PTRG, ${ft.rank}$), UBOUND (PTRG, ${ft.rank}$)
 #:if what == 'DEVICE'
 !$acc loop vector private (JLONG, JBLKS, JLONS) 
 #:endif
-  DO JLONG = 1, SIZE (KNDS, 2)
-    JLONS = KNDS (NLONDIM, JLONG, JBLKG)
-    JBLKS = KNDS (NBLKDIM, JLONG, JBLKG)
+  DO JLONG = 1, SIZE (PTRG, 1)
+    JLONS = KNDS (NLONDIM, JLONG, JBLKG-JBOFF)
+    JBLKS = KNDS (NBLKDIM, JLONG, JBLKG-JBOFF)
     IF (JLONS > 0) THEN
       PTRS (JLONS${dc}$JBLKS) = PTRG (JLONG${dc}$JBLKG) 
     ENDIF
