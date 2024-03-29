@@ -53,6 +53,8 @@ CONTAINS
 #:for ft in fieldTypeList
 SUBROUTINE ${ft.name}$_NEW_OWNER (FIELD_PTR, UBOUNDS, LBOUNDS, PERSISTENT, DELAYED, INIT_VALUE, PINNED, MAP_DEVPTR)
 
+#include "field_statistics.h"
+
 CLASS(${ft.name}$), POINTER :: FIELD_PTR
 TYPE(${ft.name}$_OWNER), POINTER :: FIELD_OWNER
 INTEGER(KIND=JPIM), INTENT(IN) :: UBOUNDS (${ft.rank}$)
@@ -70,9 +72,13 @@ CALL FIELD_OWNER%INIT (LBOUNDS=LBOUNDS, UBOUNDS=UBOUNDS, PERSISTENT=PERSISTENT, 
 
 FIELD_PTR => FIELD_OWNER
 
+field_statistics_new ()
+
 END SUBROUTINE
 
 SUBROUTINE ${ft.name}$_NEW_WRAPPER (FIELD_PTR, LBOUNDS, PERSISTENT, DATA, MAP_DEVPTR, SYNC_ON_FINAL)
+
+#include "field_statistics.h"
 
 CLASS(${ft.name}$), POINTER :: FIELD_PTR
 ${ft.type}$, TARGET, INTENT (IN) :: DATA (${ft.shape}$)
@@ -88,10 +94,14 @@ CALL FIELD_WRAPPER%INIT (DATA, LBOUNDS=LBOUNDS, PERSISTENT=PERSISTENT, MAP_DEVPT
 
 FIELD_PTR => FIELD_WRAPPER
 
+field_statistics_new ()
+
 END SUBROUTINE
 
 #:if ft.ganged
 SUBROUTINE ${ft.name}$_NEW_GANG_WRAPPER (FIELD_PTR, CHILDREN, LBOUNDS, PERSISTENT, DATA, SYNC_ON_FINAL)
+
+#include "field_statistics.h"
 
 #:set fieldTypeList1 = fieldType.getFieldTypeList (ranks=[ft.rank-1], kinds=[ft.kind])
 #:set ft1 = fieldTypeList1[0]
@@ -119,9 +129,13 @@ DO JFLD = 1, SIZE (CHILDREN)
   FIELD_GANG%CHILDREN (JFLD)%PTR%PARENT => FIELD_PTR
 ENDDO
 
+field_statistics_new ()
+
 END SUBROUTINE
 
 SUBROUTINE ${ft.name}$_NEW_GANG_OWNER (FIELD_PTR, CHILDREN, UBOUNDS, LBOUNDS, PERSISTENT, DELAYED, INIT_VALUE)
+
+#include "field_statistics.h"
 
 #:set fieldTypeList1 = fieldType.getFieldTypeList (ranks=[ft.rank-1], kinds=[ft.kind])
 #:set ft1 = fieldTypeList1[0]
@@ -150,13 +164,19 @@ DO JFLD = 1, SIZE (CHILDREN)
   FIELD_GANG%CHILDREN (JFLD)%PTR%PARENT => FIELD_PTR
 ENDDO
 
+field_statistics_new ()
+
 END SUBROUTINE
 
 #:endif
 
 SUBROUTINE ${ft.name}$_DELETE (FIELD_PTR)
 
+#include "field_statistics.h"
+
 CLASS(${ft.name}$), POINTER :: FIELD_PTR
+
+field_statistics_delete ()
 
 CALL FIELD_PTR%FINAL ()
 DEALLOCATE (FIELD_PTR)

@@ -53,7 +53,7 @@ CONTAINS
 #:for ft in fieldTypeList
 SUBROUTINE ${ft.name}$_HOST_ALLOC (HST, LBOUNDS, UBOUNDS, PINNED)
 
-#include "field_stat.h"
+#include "field_statistics.h"
 
    USE FIELD_ABORT_MODULE
 
@@ -92,13 +92,13 @@ SUBROUTINE ${ft.name}$_HOST_ALLOC (HST, LBOUNDS, UBOUNDS, PINNED)
      ALLOCATE(HST(${','.join([f'LBOUNDS({r+1}):UBOUNDS({r+1})' for r in range(ft.rank)])}$))
    ENDIF
 
-   field_stat_host_allocate (HST)
+   field_statistics_host_allocate (HST)
 
 END SUBROUTINE ${ft.name}$_HOST_ALLOC
 
 SUBROUTINE ${ft.name}$_HOST_DEALLOC(HST, PINNED)
 
-#include "field_stat.h"
+#include "field_statistics.h"
 
    USE FIELD_ABORT_MODULE
 
@@ -108,7 +108,7 @@ SUBROUTINE ${ft.name}$_HOST_DEALLOC(HST, PINNED)
    TYPE(C_PTR) :: DATA
    INTEGER :: ISTAT
   
-   field_stat_host_deallocate (HST)
+   field_statistics_host_deallocate (HST)
 
    IF(SIZE(HST) > 0)THEN
      DATA = C_LOC (HST (${ ', '.join (map (lambda i: 'LBOUND (HST, ' + str (i) + ')', range (1, ft.rank+1))) }$))
