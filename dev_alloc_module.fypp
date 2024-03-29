@@ -98,6 +98,8 @@ END SUBROUTINE ${ft.name}$_DEV_ALLOCATE_HST
 
 SUBROUTINE ${ft.name}$_DEV_ALLOCATE_DIM (DEV, UBOUNDS, LBOUNDS, MAP_DEVPTR)
 
+#include "field_stat.h"
+
 ${ft.type}$, POINTER :: DEV(${ft.shape}$)
 INTEGER (KIND=JPIM), INTENT (IN) :: UBOUNDS (${ft.rank}$)
 INTEGER (KIND=JPIM), INTENT (IN), OPTIONAL :: LBOUNDS (${ft.rank}$)
@@ -134,9 +136,13 @@ IF(MAP_DEVPTR)THEN
 !$acc enter data create (DEV)
 ENDIF
 
+field_stat_device_allocate (DEV)
+
 END SUBROUTINE ${ft.name}$_DEV_ALLOCATE_DIM
 
 SUBROUTINE ${ft.name}$_DEV_DEALLOCATE (DEV, MAP_DEVPTR)
+
+#include "field_stat.h"
 
 ${ft.type}$, POINTER :: DEV(${ft.shape}$)
 LOGICAL, INTENT(IN) :: MAP_DEVPTR
@@ -146,6 +152,9 @@ INTEGER :: ISTAT
 #:endif
 
 IF (ASSOCIATED (DEV)) THEN
+
+  field_stat_device_deallocate (DEV)
+
   PTR = C_LOC (DEV (${ ', '.join (map (lambda i: 'LBOUND (DEV, ' + str (i) + ')', range (1, ft.rank+1))) }$))
   
   IF(MAP_DEVPTR)THEN
@@ -180,6 +189,8 @@ ALLOCATE (DEV, MOLD=HST)
 
 !$acc enter data create (DEV)
 
+field_stat_device_allocate (DEV)
+
 END SUBROUTINE ${ft.name}$_DEV_ALLOCATE_HST
 
 SUBROUTINE ${ft.name}$_DEV_DEALLOCATE (DEV, MAP_DEVPTR)
@@ -188,6 +199,9 @@ ${ft.type}$, POINTER :: DEV(${ft.shape}$)
 LOGICAL, INTENT(IN) :: MAP_DEVPTR
 
 IF (ASSOCIATED (DEV)) THEN
+
+  field_stat_device_deallocate (DEV)
+
   !$acc exit data delete (DEV)
   DEALLOCATE (DEV)
   NULLIFY (DEV)
