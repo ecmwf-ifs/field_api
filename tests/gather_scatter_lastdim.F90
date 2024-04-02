@@ -26,16 +26,18 @@ INTEGER, PARAMETER :: NPROMA = 10, NFLEVG = 5, JBLKA = 2, JBLKB = 5, NGPBLKS = J
 
 LOGICAL :: TRIG (NPROMA,JBLKA:JBLKB)
 
-INTEGER :: I, J, JPASS
+INTEGER :: I, J, JPASS, JBOFF
+INTEGER :: JBLKL, JBLKU, JBLK
 
 INTEGER (KIND=JPIM), ALLOCATABLE :: D (:,:,:)
 CLASS (FIELD_3IM), POINTER :: FD => NULL()
 
 INTEGER (KIND=JPIM), POINTER :: FILTERED_D(:,:,:) => NULL()
 
+DO JBOFF = 1, 2
 DO JPASS = 1, 3
 
-  WRITE (0, '("===========> ",A4," <===========")') CLTYPE (JPASS)
+  WRITE (0, '("===========> PASS = ",A4,", JBOFF ",I0," <===========")') CLTYPE (JPASS), JBOFF
 
   !CREATE A FILTER TO USE WITH THE GATHSCAT
   
@@ -53,15 +55,25 @@ DO JPASS = 1, 3
     CASE (3)
       TRIG = .TRUE.
   END SELECT
+
+  IF (JBOFF == 1) THEN
+    JBLKL = JBLKA
+    JBLKU = JBLKB
+  ELSEIF (JBOFF == 2) THEN
+    JBLKL = 1
+    JBLKU = 7
+  ELSE
+    CALL FIELD_ABORT ('UNEXPECTED JBOFF')
+  ENDIF
   
   CALL FIELD_NEW (FTRIG, DATA=TRIG, LBOUNDS=[1,JBLKA])
   
   !CREATE THE FIELD TO BE FILTERED BY GATHSCAT
-  ALLOCATE (D (NPROMA, 0:NFLEVG, JBLKA:JBLKB))
+  ALLOCATE (D (NPROMA, 0:NFLEVG, JBLKL:JBLKU))
   
   D = 1
   
-  CALL FIELD_NEW (FD, DATA=D, LBOUNDS=[1,0,JBLKA])
+  CALL FIELD_NEW (FD, DATA=D, LBOUNDS=[1,0,JBLKL])
   
   WRITE (0, *) " LBOUND (D) = ", LBOUND (D)
   WRITE (0, *) " UBOUND (D) = ", UBOUND (D)
@@ -71,7 +83,7 @@ DO JPASS = 1, 3
   CALL FGS%INIT (FTRIG, NPROMA*NGPBLKS)
   
   FILTERED_D => GATHER_HOST_DATA_RDWR (FGS, FD)
-  FILTERED_D = 2 !NOT ALL OF D WILL BE MODIFIED, ONLY THE FILTERED DATA
+  FILTERED_D (:,:,:) = 2 !NOT ALL OF D WILL BE MODIFIED, ONLY THE FILTERED DATA
   
   WRITE (0, *) " LBOUND (FILTERED_D) = ", LBOUND (FILTERED_D)
   WRITE (0, *) " UBOUND (FILTERED_D) = ", UBOUND (FILTERED_D)
@@ -87,33 +99,50 @@ DO JPASS = 1, 3
   
   CALL FGS%SCATTER ()
   
-  SELECT CASE (JPASS)
-    CASE (1)
-      DO I = 1, NPROMA
-        IF (MOD (I,2) == 0)THEN
-          IF (.NOT. ALL(D(I,:,:)==2)) THEN
-            CALL FIELD_ABORT ("ERROR")
-          ENDIF
+  DO JBLK = JBLKL, JBLKU
+    SELECT CASE (JPASS)
+      CASE (1)
+        IF ((JBLKA <= JBLK) .AND. (JBLK <= JBLKB)) THEN
+          DO I = 1, NPROMA
+            IF (MOD (I, 2) == 0)THEN
+              IF (ANY (D (I,:,JBLK) /= 2)) THEN
+                CALL FIELD_ABORT ("ERROR")
+              ENDIF
+            ELSE
+              IF (ANY (D (I,:,JBLK) /= 1)) THEN
+                CALL FIELD_ABORT ("ERROR")
+              ENDIF
+            ENDIF
+          ENDDO
         ELSE
-          IF (.NOT. ALL(D(I,:,:)==1)) THEN
+          IF (ANY (D (:,:,JBLK) /= 1)) THEN
             CALL FIELD_ABORT ("ERROR")
           ENDIF
         ENDIF
-      ENDDO
-    CASE (2)
-      IF (.NOT. ALL (D == 1)) THEN
-        CALL FIELD_ABORT ("ERROR")
-      ENDIF
-    CASE (3)
-      IF (.NOT. ALL (D == 2)) THEN
-        CALL FIELD_ABORT ("ERROR")
-      ENDIF
-  END SELECT
+      CASE (2)
+! Nothing has been touched
+        IF (ANY (D (:,:,JBLK) /= 1)) THEN
+          CALL FIELD_ABORT ("ERROR")
+        ENDIF
+      CASE (3)
+! All blocks between JBLKA and JBLKB have changed
+        IF ((JBLKA <= JBLK) .AND. (JBLK <= JBLKB)) THEN
+          IF (ANY (D (:,:,JBLK) /= 2)) THEN
+            CALL FIELD_ABORT ("ERROR")
+          ENDIF
+        ELSE
+          IF (ANY (D (:,:,JBLK) /= 1)) THEN
+            CALL FIELD_ABORT ("ERROR")
+          ENDIF
+        ENDIF
+    END SELECT
+  ENDDO
 
   DEALLOCATE (D)
   
   CALL FIELD_DELETE (FTRIG)
 
+ENDDO
 ENDDO
 
 END PROGRAM

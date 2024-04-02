@@ -55,7 +55,7 @@ DO JPASS = 1, 2
 
   ALLOCATE (D1 (NPROMA1, 0:NFLEVG, JBLK1L:JBLK1U))
   
-  PRINT *, " NPROMA1 = ", NPROMA2
+  PRINT *, " NPROMA1 = ", NPROMA1
   PRINT *, " LBOUND (D1) = ", LBOUND (D1)
   PRINT *, " UBOUND (D1) = ", UBOUND (D1)
   
@@ -73,7 +73,7 @@ DO JPASS = 1, 2
   
   ! Reshuffle on NPROMA2 arrays
   
-  CALL FGS%INIT (KGPTOT=NPROMA1*NGPBLKS1, KLON_S=NPROMA1, KLON_G=NPROMA2, KBLKOFF=JBLK1A-JBLK1L)
+  CALL FGS%INIT (KGPTOT=NPROMA1*NGPBLKS1, KLON_S=NPROMA1, KLON_G=NPROMA2, KBLKOFF=JBLK1A)
   
   IF (JPASS == 1) THEN
     Z2 => GATHER_HOST_DATA_RDWR (FGS, FD)
@@ -126,14 +126,23 @@ DO JPASS = 1, 2
     WRITE (*, '(20I12)') D1 (:, 1, JBLK)
   ENDDO
   
-  DO JBLK = JBLK1A, JBLK1B
+  DO JBLK = JBLK1L, JBLK1U
     DO JLEV = 0, NFLEVG
       DO JLON = 1, NPROMA1
-        IF (D1 (JLON, JLEV, JBLK) /= (JPASS + 1) * FUNC (JLON, JBLK)) THEN
-          PRINT *, " JPASS = ", JPASS, " JLON = ", JLON, " JLEV = ", JLEV, &
-        & " JBLK = ", JBLK, " D1 = ", D1 (JLON, JLEV, JBLK), &
-        & (JPASS + 1) * FUNC (JLON, JBLK)
-          CALL FIELD_ABORT ('VALUE ERROR')
+        IF ((JBLK1A .LE. JBLK) .AND. (JBLK .LE. JBLK1B)) THEN
+          IF (D1 (JLON, JLEV, JBLK) /= (JPASS + 1) * FUNC (JLON, JBLK)) THEN
+            PRINT *, " JPASS = ", JPASS, " JLON = ", JLON, " JLEV = ", JLEV, &
+          & " JBLK = ", JBLK, " D1 = ", D1 (JLON, JLEV, JBLK), &
+          & (JPASS + 1) * FUNC (JLON, JBLK)
+            CALL FIELD_ABORT ('VALUE ERROR')
+          ENDIF
+        ELSE
+          IF (D1 (JLON, JLEV, JBLK) /= FUNC (JLON, JBLK)) THEN
+            PRINT *, " JPASS = ", JPASS, " JLON = ", JLON, " JLEV = ", JLEV, &
+          & " JBLK = ", JBLK, " D1 = ", D1 (JLON, JLEV, JBLK), &
+          & FUNC (JLON, JBLK)
+            CALL FIELD_ABORT ('VALUE ERROR')
+          ENDIF
         ENDIF
       ENDDO
     ENDDO

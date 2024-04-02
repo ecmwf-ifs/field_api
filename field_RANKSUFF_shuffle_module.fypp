@@ -132,8 +132,8 @@ CONTAINS
 
 SUBROUTINE PAIR_${ft.name}$_${what}$_${mode}$ (KNDS, PTRG, PTRS)
 
-${ft.type}$, INTENT (INOUT) :: PTRG(${ft.shape}$)
-${ft.type}$, INTENT (IN)    :: PTRS(${ft.shape}$)
+${ft.type}$, POINTER :: PTRG(${ft.shape}$)
+${ft.type}$, POINTER :: PTRS(${ft.shape}$)
 INTEGER (KIND=JPIM), INTENT (IN)  :: KNDS (:,:,:)
 INTEGER (KIND=JPIM) :: JLONS, JBLKS, JLONG, JBLKG
 
@@ -212,8 +212,8 @@ CONTAINS
 #:for what in ['DEVICE', 'HOST']
 SUBROUTINE ${ft.name}$_SCATTER_${what}$_KERNEL (KNDS, PTRG, PTRS)
 
-${ft.type}$, INTENT (IN)    :: PTRG(${ft.shape}$)
-${ft.type}$, INTENT (INOUT) :: PTRS(${ft.shape}$)
+${ft.type}$, POINTER :: PTRG(${ft.shape}$)
+${ft.type}$, POINTER :: PTRS(${ft.shape}$)
 INTEGER (KIND=JPIM), INTENT (IN) :: KNDS (:,:,:)
 INTEGER (KIND=JPIM) :: JLONS, JBLKS, JLONG, JBLKG
 
@@ -224,11 +224,11 @@ INTEGER (KIND=JPIM) :: JLONS, JBLKS, JLONG, JBLKG
 #:elif what == 'HOST'
 !$OMP PARALLEL DO PRIVATE (JBLKG, JLONG, JBLKS, JLONS)
 #:endif
-DO JBLKG = LBOUND (PTRG, ${ft.rank}$), UBOUND (PTRG, ${ft.rank}$)
+DO JBLKG = 1, SIZE (KNDS, 3)
 #:if what == 'DEVICE'
 !$acc loop vector private (JLONG, JBLKS, JLONS) 
 #:endif
-  DO JLONG = 1, SIZE (PTRG, 1)
+  DO JLONG = 1, SIZE (KNDS, 2)
     JLONS = KNDS (NLONDIM, JLONG, JBLKG)
     JBLKS = KNDS (NBLKDIM, JLONG, JBLKG)
     IF (JLONS > 0) THEN
