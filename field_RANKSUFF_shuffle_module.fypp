@@ -215,9 +215,7 @@ SUBROUTINE ${ft.name}$_SCATTER_${what}$_KERNEL (KNDS, PTRG, PTRS)
 ${ft.type}$, INTENT (IN)    :: PTRG(${ft.shape}$)
 ${ft.type}$, INTENT (INOUT) :: PTRS(${ft.shape}$)
 INTEGER (KIND=JPIM), INTENT (IN) :: KNDS (:,:,:)
-INTEGER (KIND=JPIM) :: JLONS, JBLKS, JLONG, JBLKG, JBOFF
-
-JBOFF = LBOUND (PTRG, ${ft.rank}$)-1
+INTEGER (KIND=JPIM) :: JLONS, JBLKS, JLONG, JBLKG
 
 #:set dc = ', ' + (':, ' * (ft.rank-2))
 
@@ -231,8 +229,8 @@ DO JBLKG = LBOUND (PTRG, ${ft.rank}$), UBOUND (PTRG, ${ft.rank}$)
 !$acc loop vector private (JLONG, JBLKS, JLONS) 
 #:endif
   DO JLONG = 1, SIZE (PTRG, 1)
-    JLONS = KNDS (NLONDIM, JLONG, JBLKG-JBOFF)
-    JBLKS = KNDS (NBLKDIM, JLONG, JBLKG-JBOFF)
+    JLONS = KNDS (NLONDIM, JLONG, JBLKG)
+    JBLKS = KNDS (NBLKDIM, JLONG, JBLKG)
     IF (JLONS > 0) THEN
       PTRS (JLONS${dc}$JBLKS) = PTRG (JLONG${dc}$JBLKG) 
     ENDIF
