@@ -66,12 +66,14 @@ CONTAINS
 #:for what in ['DEVICE', 'HOST']
 #:for mode in ['RDONLY', 'RDWR']
 
-FUNCTION PAIR_${ft.name}$_GATHER_${what}$_DATA_${mode}$ (YDPAIR, LDNULL, LDFULL, KLON, KGPBLKS, YDFINDS, YLF) RESULT (PTR)
+FUNCTION PAIR_${ft.name}$_GATHER_${what}$_DATA_${mode}$ (YDPAIR, LDNULL, LDFULL, KLON, KGPBLKS, YDFINDS, YLF, KBLKMIN, KBLKMAX) RESULT (PTR)
 TYPE (${ft.name}$_SHUFFLE_PAIR), POINTER              :: YDPAIR
 LOGICAL,                                   INTENT (IN) :: LDNULL, LDFULL
 INTEGER (KIND=JPIM),                       INTENT (IN) :: KLON, KGPBLKS
 CLASS (FIELD_3IM),                POINTER              :: YDFINDS 
 CLASS (${ft.name}$),              POINTER, INTENT (IN) :: YLF
+INTEGER (KIND=JPIM),                       INTENT (IN) :: KBLKMIN
+INTEGER (KIND=JPIM),                       INTENT (IN) :: KBLKMAX
 
 ${ft.type}$, POINTER :: PTR(${ft.shape}$), ZTRG(${ft.shape}$), ZTRS(${ft.shape}$)
 ${ft.type}$, POINTER :: PTR1(${ft.shape}$)
@@ -92,7 +94,12 @@ ELSEIF (LDFULL) THEN
   PTR => GET_${what}$_DATA_${mode}$ (YLF)
 
   ! Set last lbound to 1
-  PTR (${','.join (list (map (lambda i: "LBOUND(PTR," + str (i) + "):", range (1, ft.rank))))}$, 1:) => PTR
+
+  ILBOUNDS = LBOUND (PTR)
+
+  PTR1 => PTR (${','.join ([':'] * (ft.rank-1))}$, KBLKMIN:KBLKMAX)
+
+  PTR (${','.join (list (map (lambda i: "ILBOUNDS(" + str (i) + "):", range (1, ft.rank))))}$, 1:) => PTR1
 
 ELSE
 
