@@ -144,22 +144,32 @@ ${ft.type}$, POINTER :: PTRS(${ft.shape}$)
 INTEGER (KIND=JPIM), INTENT (IN)  :: KNDS (:,:,:)
 INTEGER (KIND=JPIM) :: JLONS, JBLKS, JLONG, JBLKG
 
-#:set dc = ', ' + (':, ' * (ft.rank-2))
+#:set ind = ', '.join (map (lambda i: "J" + str (i), range (2, ft.rank)))
+#:if ft.rank > 2
+INTEGER (KIND=JPIM) :: ${ind}$
+#:set ind = ind + ', '
+#:endif
 
 #:if what == 'DEVICE'
 !$acc parallel loop gang present (PTRG, PTRS, KNDS)
 #:elif what == 'HOST'
-!$OMP PARALLEL DO PRIVATE (JBLKG, JLONG, JBLKS, JLONS)
+!$OMP PARALLEL DO PRIVATE (${ind}$JBLKG, JLONG, JBLKS, JLONS)
 #:endif
 DO JBLKG = 1, SIZE (KNDS, 3)
 #:if what == 'DEVICE'
-!$acc loop vector private (JLONG, JBLKS, JLONS) 
+!$acc loop vector private (${ind}$JLONG, JBLKS, JLONS) 
 #:endif
   DO JLONG = 1, SIZE (KNDS, 2)
     JLONS = KNDS (NLONDIM, JLONG, JBLKG)
     JBLKS = KNDS (NBLKDIM, JLONG, JBLKG)
     IF (JLONS > 0) THEN
-      PTRG (JLONG${dc}$JBLKG) = PTRS (JLONS${dc}$JBLKS)
+#:for i in reversed (range (2, ft.rank))
+      DO J${i}$ = LBOUND (PTRG, ${i}$), UBOUND (PTRG, ${i}$)
+#:endfor
+        PTRG (JLONG, ${ind}$JBLKG) = PTRS (JLONS, ${ind}$JBLKS)
+#:for i in (range (2, ft.rank))
+      ENDDO
+#:endfor
     ENDIF
   ENDDO
 ENDDO
@@ -224,22 +234,32 @@ ${ft.type}$, POINTER :: PTRS(${ft.shape}$)
 INTEGER (KIND=JPIM), INTENT (IN) :: KNDS (:,:,:)
 INTEGER (KIND=JPIM) :: JLONS, JBLKS, JLONG, JBLKG
 
-#:set dc = ', ' + (':, ' * (ft.rank-2))
+#:set ind = ', '.join (map (lambda i: "J" + str (i), range (2, ft.rank)))
+#:if ft.rank > 2
+INTEGER (KIND=JPIM) :: ${ind}$
+#:set ind = ind + ', '
+#:endif
 
 #:if what == 'DEVICE'
 !$acc parallel loop gang present (PTRG, PTRS, KNDS)
 #:elif what == 'HOST'
-!$OMP PARALLEL DO PRIVATE (JBLKG, JLONG, JBLKS, JLONS)
+!$OMP PARALLEL DO PRIVATE (${ind}$JBLKG, JLONG, JBLKS, JLONS)
 #:endif
 DO JBLKG = 1, SIZE (KNDS, 3)
 #:if what == 'DEVICE'
-!$acc loop vector private (JLONG, JBLKS, JLONS) 
+!$acc loop vector private (${ind}$JLONG, JBLKS, JLONS) 
 #:endif
   DO JLONG = 1, SIZE (KNDS, 2)
     JLONS = KNDS (NLONDIM, JLONG, JBLKG)
     JBLKS = KNDS (NBLKDIM, JLONG, JBLKG)
     IF (JLONS > 0) THEN
-      PTRS (JLONS${dc}$JBLKS) = PTRG (JLONG${dc}$JBLKG) 
+#:for i in reversed (range (2, ft.rank))
+      DO J${i}$ = LBOUND (PTRG, ${i}$), UBOUND (PTRG, ${i}$)
+#:endfor
+        PTRS (JLONS, ${ind}$JBLKS) = PTRG (JLONG, ${ind}$JBLKG) 
+#:for i in (range (2, ft.rank))
+      ENDDO
+#:endfor
     ENDIF
   ENDDO
 ENDDO
