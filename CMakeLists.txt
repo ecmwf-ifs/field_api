@@ -90,7 +90,7 @@ if( NOT fiat_FOUND )
   list(APPEND srcs ${ABOR1_PATH} ${OML_PATH} ${PARKIND1_PATH})
 endif()
 
-list(APPEND srcs field_basic_module.F90 field_defaults_module.F90 dev_alloc.c c_malloc.c field_constants_module.F90 field_abort_module.F90)
+list(APPEND srcs field_basic_module.F90 field_defaults_module.F90 dev_alloc.c c_malloc.c field_constants_module.F90 field_abort_module.F90 field_statistics_module.F90)
 
 ## check for CUDA
 include(CheckLanguage)
