@@ -53,7 +53,8 @@ CLASS (${ft.name}$),   POINTER, INTENT (IN) :: YLF
 
 ${ft.type}$, POINTER :: PTR(${ft.shape}$)
 
-PTR => PAIR_GATHER_${what}$_DATA_${mode}$ (SELF%${ft.name}$_LIST, SELF%LNULL, SELF%LFULL, SELF%KLON_G, SELF%KGPBLKS_G, SELF%YLFINDS, YLF)
+PTR => PAIR_GATHER_${what}$_DATA_${mode}$ (SELF%${ft.name}$_LIST, SELF%LNULL, SELF%LFULL, &
+& SELF%KLON_G, SELF%KGPBLKS_G, SELF%YLFINDS, YLF, SELF%KBLKMIN, SELF%KBLKMAX)
 
 END FUNCTION ${ft.name}$_GATHER_${what}$_DATA_${mode}$
 

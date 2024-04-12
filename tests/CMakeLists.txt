@@ -25,6 +25,9 @@ target_compile_definitions( main.x PRIVATE $<${HAVE_CUDA}:_CUDA> )
 
 ## Unit tests
 list(APPEND TEST_FILES
+        gather_scatter_lastdim.F90
+        reshuffle_lastdim.F90
+        test_lastdim.F90
         test_statistics.F90
         test_sizeof.F90
         test_bc.F90

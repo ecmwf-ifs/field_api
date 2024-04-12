@@ -1,0 +1,148 @@
+! (C) Copyright 2022- ECMWF.
+! (C) Copyright 2022- Meteo-France.
+!
+! This software is licensed under the terms of the Apache Licence Version 2.0
+! which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
+! In applying this licence, ECMWF does not waive the privileges and immunities
+! granted to it by virtue of its status as an intergovernmental organisation
+! nor does it submit to any jurisdiction.
+
+PROGRAM GATHER_SCATTER
+!TEST THAT FIELD_GATHSCAT ONLY MODIFY VALUES THAT HAVE BEEN FILTERED
+USE FIELD_MODULE
+USE FIELD_FACTORY_MODULE
+USE FIELD_ACCESS_MODULE
+USE FIELD_GATHSCAT_MODULE
+USE PARKIND1
+USE FIELD_ABORT_MODULE
+IMPLICIT NONE
+
+TYPE (FIELD_GATHSCAT):: FGS
+CLASS (FIELD_2LM), POINTER :: FTRIG => NULL()
+
+CHARACTER*4, PARAMETER :: CLTYPE (3) = ['PART', 'NULL', 'FULL']
+
+INTEGER, PARAMETER :: NPROMA = 10, NFLEVG = 5, JBLKA = 2, JBLKB = 5, NGPBLKS = JBLKB - JBLKA + 1
+
+LOGICAL :: TRIG (NPROMA,JBLKA:JBLKB)
+
+INTEGER :: I, J, JPASS, JBOFF
+INTEGER :: JBLKL, JBLKU, JBLK
+
+INTEGER (KIND=JPIM), ALLOCATABLE :: D (:,:,:)
+CLASS (FIELD_3IM), POINTER :: FD => NULL()
+
+INTEGER (KIND=JPIM), POINTER :: FILTERED_D(:,:,:) => NULL()
+
+DO JBOFF = 1, 2
+DO JPASS = 1, 3
+
+  WRITE (0, '("===========> PASS = ",A4,", JBOFF ",I0," <===========")') CLTYPE (JPASS), JBOFF
+
+  !CREATE A FILTER TO USE WITH THE GATHSCAT
+  
+  TRIG=.FALSE.
+  
+  SELECT CASE (JPASS)
+    CASE (1)
+      DO I =1,NPROMA
+        IF (MOD (I,2) == 0) THEN !ONLY MODIFY BLOCKS
+          TRIG (I, :)=.TRUE.
+        ENDIF
+      ENDDO
+    CASE (2)
+      TRIG = .FALSE.
+    CASE (3)
+      TRIG = .TRUE.
+  END SELECT
+
+  IF (JBOFF == 1) THEN
+    JBLKL = JBLKA
+    JBLKU = JBLKB
+  ELSEIF (JBOFF == 2) THEN
+    JBLKL = 1
+    JBLKU = 7
+  ELSE
+    CALL FIELD_ABORT ('UNEXPECTED JBOFF')
+  ENDIF
+  
+  CALL FIELD_NEW (FTRIG, DATA=TRIG, LBOUNDS=[1,JBLKA])
+  
+  !CREATE THE FIELD TO BE FILTERED BY GATHSCAT
+  ALLOCATE (D (NPROMA, 0:NFLEVG, JBLKL:JBLKU))
+  
+  D = 1
+  
+  CALL FIELD_NEW (FD, DATA=D, LBOUNDS=[1,0,JBLKL])
+  
+  WRITE (0, *) " LBOUND (D) = ", LBOUND (D)
+  WRITE (0, *) " UBOUND (D) = ", UBOUND (D)
+
+  !FILTER DATA, WE GET A POINTER TO A CONTIGUOUS ARRAY CONTAINING ONLY THE FILTERED DATA
+  
+  CALL FGS%INIT (FTRIG, NPROMA*NGPBLKS)
+  
+  FILTERED_D => GATHER_HOST_DATA_RDWR (FGS, FD)
+  FILTERED_D (:,:,:) = 2 !NOT ALL OF D WILL BE MODIFIED, ONLY THE FILTERED DATA
+  
+  WRITE (0, *) " LBOUND (FILTERED_D) = ", LBOUND (FILTERED_D)
+  WRITE (0, *) " UBOUND (FILTERED_D) = ", UBOUND (FILTERED_D)
+
+  IF (CLTYPE (JPASS) /= 'NULL') THEN
+    IF (SIZE (FILTERED_D, 1) /= NPROMA) CALL FIELD_ABORT ('NPROMA MISMATCH')
+    IF (LBOUND (FILTERED_D, 1) /= 1) CALL FIELD_ABORT ('LBOUND MISMATCH')
+    IF (LBOUND (FILTERED_D, 2) /= 0) CALL FIELD_ABORT ('LBOUND MISMATCH')
+    IF (UBOUND (FILTERED_D, 2) /= NFLEVG) CALL FIELD_ABORT ('UBOUND MISMATCH')
+  ENDIF
+  
+  !ACTUALLY UPDATE THE D ARRAY WITH THE MODIFIED DATA
+  
+  CALL FGS%SCATTER ()
+  
+  DO JBLK = JBLKL, JBLKU
+    SELECT CASE (JPASS)
+      CASE (1)
+        IF ((JBLKA <= JBLK) .AND. (JBLK <= JBLKB)) THEN
+          DO I = 1, NPROMA
+            IF (MOD (I, 2) == 0)THEN
+              IF (ANY (D (I,:,JBLK) /= 2)) THEN
+                CALL FIELD_ABORT ("ERROR")
+              ENDIF
+            ELSE
+              IF (ANY (D (I,:,JBLK) /= 1)) THEN
+                CALL FIELD_ABORT ("ERROR")
+              ENDIF
+            ENDIF
+          ENDDO
+        ELSE
+          IF (ANY (D (:,:,JBLK) /= 1)) THEN
+            CALL FIELD_ABORT ("ERROR")
+          ENDIF
+        ENDIF
+      CASE (2)
+! Nothing has been touched
+        IF (ANY (D (:,:,JBLK) /= 1)) THEN
+          CALL FIELD_ABORT ("ERROR")
+        ENDIF
+      CASE (3)
+! All blocks between JBLKA and JBLKB have changed
+        IF ((JBLKA <= JBLK) .AND. (JBLK <= JBLKB)) THEN
+          IF (ANY (D (:,:,JBLK) /= 2)) THEN
+            CALL FIELD_ABORT ("ERROR")
+          ENDIF
+        ELSE
+          IF (ANY (D (:,:,JBLK) /= 1)) THEN
+            CALL FIELD_ABORT ("ERROR")
+          ENDIF
+        ENDIF
+    END SELECT
+  ENDDO
+
+  DEALLOCATE (D)
+  
+  CALL FIELD_DELETE (FTRIG)
+
+ENDDO
+ENDDO
+
+END PROGRAM
