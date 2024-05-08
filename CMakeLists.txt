@@ -28,11 +28,14 @@ set(LIBNAME field_api)
 ecbuild_find_package(OpenMP COMPONENTS Fortran REQUIRED)
 
 ## find fypp
-find_program(FYPP fypp HINTS ${fypp_ROOT})
-if( NOT FYPP)
+ecbuild_find_package( fckit )
+find_program( FYPP fypp )
+
+if( fckit_FOUND AND fckit_HAVE_FCKIT_VENV )
+  set( FYPP ${FCKIT_VENV_EXE} -m fypp )
+elseif( NOT fypp_FOUND )
   include(cmake/field_api_fetchcontent_fypp.cmake)
   set(FYPP ${fypp_SOURCE_DIR}/bin/fypp)
-  set(fypp_ROOT ${fypp_SOURCE_DIR}/bin PARENT_SCOPE)
   ecbuild_info("fypp downloaded to: ${FYPP}")
 endif()
 

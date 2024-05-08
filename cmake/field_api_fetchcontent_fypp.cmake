@@ -14,4 +14,5 @@ FetchContent_Declare(
    GIT_REPOSITORY https://github.com/aradi/fypp
    GIT_TAG 3.1
 )
-FetchContent_Populate(fypp)
+
+FetchContent_MakeAvailable(fypp)
