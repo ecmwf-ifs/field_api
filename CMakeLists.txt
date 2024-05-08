@@ -163,7 +163,7 @@ foreach(prec ${precisions})
   target_include_directories( ${LIBNAME}_${prec} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
   set_property(TARGET ${LIBNAME}_${prec} PROPERTY C_STANDARD 99)
   set_target_properties( ${LIBNAME}_${prec} PROPERTIES Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/include/${LIBNAME}_${prec} )
-  target_link_options( ${LIBNAME}_${prec} PRIVATE $<${HAVE_CUDA}:-cuda> )
+  target_link_options( ${LIBNAME}_${prec} PUBLIC $<${HAVE_CUDA}:-cuda> )
 
   # export target usage interface
   target_include_directories( ${LIBNAME}_${prec}
