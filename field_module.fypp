@@ -10,11 +10,53 @@
 MODULE FIELD_MODULE
 
 #:set fieldTypeList = fieldType.getFieldTypeList ()
+#:set fieldTypeListRD = fieldType.getFieldTypeList (kinds=['JPRD'])
+#:set fieldTypeListRM = fieldType.getFieldTypeList (kinds=['JPRM'])
 
 USE DEV_ALLOC_MODULE
 
+#ifdef PARKIND1_SINGLE
+
+#:for ft in fieldTypeListRM
+#:set ftn = "FIELD_" + str (ft.rank) + "RB"
+USE ${ft.name}$_MODULE, ONLY : &
+      & ${ftn}$      => ${ft.name}$,      &
+      & ${ftn}$_PTR  => ${ft.name}$_PTR,  &
+      & ${ft.name}$,                      &
+      & ${ft.name}$_PTR,                  &
+      & ${ft.name}$_OWNER,                &
+      & ${ft.name}$_WRAPPER
+#:if ft.hasView
+USE ${ft.name}$_MODULE, ONLY : &
+      & ${ftn}$_VIEW => ${ft.name}$_VIEW, &
+      & ${ft.name}$_VIEW
+#:endif
+#:endfor
+
+#else
+
+#:for ft in fieldTypeListRD
+#:set ftn = "FIELD_" + str (ft.rank) + "RB"
+USE ${ft.name}$_MODULE, ONLY : &
+      & ${ftn}$      => ${ft.name}$,      &
+      & ${ftn}$_PTR  => ${ft.name}$_PTR,  &
+      & ${ft.name}$,                      &
+      & ${ft.name}$_PTR,                  &
+      & ${ft.name}$_OWNER,                &
+      & ${ft.name}$_WRAPPER
+#:if ft.hasView
+USE ${ft.name}$_MODULE, ONLY : &
+      & ${ftn}$_VIEW => ${ft.name}$_VIEW, &
+      & ${ft.name}$_VIEW
+#:endif
+#:endfor
+
+#endif
+
 #:for ft in fieldTypeList
+#:if ft.kind != 'JPRB' and ft.kind != 'JPRD'
 USE ${ft.name}$_MODULE
+#:endif
 #:endfor
 
 ${fieldType.useParkind1 ()}$
@@ -25,11 +67,21 @@ PRIVATE
 
 #:for ft in fieldTypeList
 PUBLIC :: ${ft.name}$
-PUBLIC :: ${ft.name}$_OWNER
-PUBLIC :: ${ft.name}$_WRAPPER
 PUBLIC :: ${ft.name}$_PTR
 #:if ft.hasView
 PUBLIC :: ${ft.name}$_VIEW
+#:endif
+PUBLIC :: ${ft.name}$_OWNER
+PUBLIC :: ${ft.name}$_WRAPPER
+#:endfor
+
+
+#:for ft in fieldTypeListRD
+#:set ftn = "FIELD_" + str (ft.rank) + "RB"
+PUBLIC :: ${ftn}$
+PUBLIC :: ${ftn}$_PTR
+#:if ft.hasView
+PUBLIC :: ${ftn}$_VIEW
 #:endif
 #:endfor
 
@@ -37,10 +89,10 @@ PUBLIC :: WAIT_FOR_ASYNC_QUEUE
 
 CONTAINS
 
-  SUBROUTINE WAIT_FOR_ASYNC_QUEUE(QUEUE)
-    INTEGER(KIND=JPIM), INTENT(IN) :: QUEUE
-    !Wait for all data transfer initiated on queue by the current thread
+SUBROUTINE WAIT_FOR_ASYNC_QUEUE(QUEUE)
+INTEGER(KIND=JPIM), INTENT(IN) :: QUEUE
+!Wait for all data transfer initiated on queue by the current thread
 !$acc wait (QUEUE)
-  END SUBROUTINE WAIT_FOR_ASYNC_QUEUE
+END SUBROUTINE WAIT_FOR_ASYNC_QUEUE
 
 END MODULE FIELD_MODULE
