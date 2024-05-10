@@ -9,11 +9,11 @@
 
 MODULE FIELD_MODULE
 
-#:set fieldTypeList = fieldType.getFieldTypeList ()
+#:set fieldTypeList = fieldType.getFieldTypeList (kinds=['JPIM', 'JPLM'])
 
+#:set fieldTypeListRM = fieldType.getFieldTypeList (kinds=['JPRM'])
 #:set fieldTypeListRB = fieldType.getFieldTypeList (kinds=['JPRB'])
 #:set fieldTypeListRD = fieldType.getFieldTypeList (kinds=['JPRD'])
-#:set fieldTypeListRM = fieldType.getFieldTypeList (kinds=['JPRM'])
 
 USE DEV_ALLOC_MODULE
 
@@ -47,9 +47,7 @@ $:useAliasRB (fieldTypeListRB, fieldTypeListRD, fieldTypeListRM)
 #endif
 
 #:for ft in fieldTypeList
-#:if ft.kind != 'JPRM' and ft.kind != 'JPRD'
 USE ${ft.name}$_MODULE
-#:endif
 #:endfor
 
 ${fieldType.useParkind1 ()}$
@@ -58,16 +56,7 @@ IMPLICIT NONE
 
 PRIVATE
 
-#:for ft in fieldTypeList
-PUBLIC :: ${ft.name}$
-PUBLIC :: ${ft.name}$_PTR
-#:if ft.hasView
-PUBLIC :: ${ft.name}$_VIEW
-#:endif
-#:endfor
-
-
-#:for ft in fieldTypeListRB
+#:for ft in fieldTypeList + fieldTypeListRM + fieldTypeListRB + fieldTypeListRD
 PUBLIC :: ${ft.name}$
 PUBLIC :: ${ft.name}$_PTR
 #:if ft.hasView
