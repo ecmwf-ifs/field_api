@@ -17,50 +17,33 @@ MODULE FIELD_MODULE
 
 USE DEV_ALLOC_MODULE
 
+#:def useAliasRB (ftlRB, ftlTA, ftlOT)
+
+#:for fta, ftb in zip (ftlTA, ftlRB)
+USE ${fta.name}$_MODULE, ONLY : &
+      & ${ftb.name}$      => ${fta.name}$,      &
+      & ${ftb.name}$_PTR  => ${fta.name}$_PTR,  &
+      & ${fta.name}$,                           &
+      & ${fta.name}$_PTR,                       &
+      & ${fta.name}$_OWNER,                     &
+      & ${fta.name}$_WRAPPER
+#:if fta.hasView
+USE ${fta.name}$_MODULE, ONLY : &
+      & ${ftb.name}$_VIEW => ${fta.name}$_VIEW, &
+      & ${fta.name}$_VIEW
+#:endif
+#:endfor
+
+#:for fto in ftlOT
+USE ${fto.name}$_MODULE
+#:endfor
+
+#:enddef
+
 #ifdef PARKIND1_SINGLE
-
-#:for ft, fta in zip (fieldTypeListRM, fieldTypeListRB)
-#:set ftn = "FIELD_" + str (ft.rank) + "RB"
-USE ${ft.name}$_MODULE, ONLY : &
-      & ${ftn}$      => ${ft.name}$,      &
-      & ${ftn}$_PTR  => ${ft.name}$_PTR,  &
-      & ${ft.name}$,                      &
-      & ${ft.name}$_PTR,                  &
-      & ${ft.name}$_OWNER,                &
-      & ${ft.name}$_WRAPPER
-#:if ft.hasView
-USE ${ft.name}$_MODULE, ONLY : &
-      & ${ftn}$_VIEW => ${ft.name}$_VIEW, &
-      & ${ft.name}$_VIEW
-#:endif
-#:endfor
-
-#:for ft in fieldTypeListRD
-USE ${ft.name}$_MODULE
-#:endfor
-
+$:useAliasRB (fieldTypeListRB, fieldTypeListRM, fieldTypeListRD)
 #else
-
-#:for ft, fta in zip (fieldTypeListRD, fieldTypeListRB)
-#:set ftn = "FIELD_" + str (ft.rank) + "RB"
-USE ${ft.name}$_MODULE, ONLY : &
-      & ${ftn}$      => ${ft.name}$,      &
-      & ${ftn}$_PTR  => ${ft.name}$_PTR,  &
-      & ${ft.name}$,                      &
-      & ${ft.name}$_PTR,                  &
-      & ${ft.name}$_OWNER,                &
-      & ${ft.name}$_WRAPPER
-#:if ft.hasView
-USE ${ft.name}$_MODULE, ONLY : &
-      & ${ftn}$_VIEW => ${ft.name}$_VIEW, &
-      & ${ft.name}$_VIEW
-#:endif
-#:endfor
-
-#:for ft in fieldTypeListRM
-USE ${ft.name}$_MODULE
-#:endfor
-
+$:useAliasRB (fieldTypeListRB, fieldTypeListRD, fieldTypeListRM)
 #endif
 
 #:for ft in fieldTypeList
