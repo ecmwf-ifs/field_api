@@ -41,14 +41,10 @@ USE ${fto.name}$_MODULE
 #:enddef
 
 #ifdef PARKIND1_SINGLE
-$:useAliasRB (fieldTypeListRB, fieldTypeListRM, fieldTypeListRD)
+$:useAliasRB (fieldTypeListRB, fieldTypeListRM, fieldTypeListRD + fieldTypeList)
 #else
-$:useAliasRB (fieldTypeListRB, fieldTypeListRD, fieldTypeListRM)
+$:useAliasRB (fieldTypeListRB, fieldTypeListRD, fieldTypeListRM + fieldTypeList)
 #endif
-
-#:for ft in fieldTypeList
-USE ${ft.name}$_MODULE
-#:endfor
 
 ${fieldType.useParkind1 ()}$
 
