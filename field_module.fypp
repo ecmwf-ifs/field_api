@@ -15,8 +15,6 @@ MODULE FIELD_MODULE
 #:set fieldTypeListRB = fieldType.getFieldTypeList (kinds=['JPRB'])
 #:set fieldTypeListRD = fieldType.getFieldTypeList (kinds=['JPRD'])
 
-USE DEV_ALLOC_MODULE
-
 #:def useAliasRB (ftlRB, ftlTA, ftlOT)
 
 #:for fta, ftb in zip (ftlTA, ftlRB)
