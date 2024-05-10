@@ -170,6 +170,10 @@ foreach(prec ${precisions})
                               INTERFACE $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include/${LIBNAME}_${prec}> 
                               INTERFACE $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${LIBNAME}_${prec}> 
                             )
+
+  if( prec MATCHES sp )
+      target_compile_definitions( ${LIBNAME}_${prec} PRIVATE PARKIND1_SINGLE )
+  endif()
   
   # set install location for .mod files
   install(DIRECTORY ${CMAKE_BINARY_DIR}/include/${LIBNAME}_${prec} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
