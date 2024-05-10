@@ -71,8 +71,8 @@ PUBLIC :: ${ft.name}$_PTR
 #:if ft.hasView
 PUBLIC :: ${ft.name}$_VIEW
 #:endif
-PUBLIC :: ${ft.name}$_OWNER
-PUBLIC :: ${ft.name}$_WRAPPER
+!PUBLIC :: ${ft.name}$_OWNER
+!PUBLIC :: ${ft.name}$_WRAPPER
 #:endfor
 
 
