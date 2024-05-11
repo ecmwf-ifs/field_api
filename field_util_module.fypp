@@ -19,11 +19,11 @@ MODULE FIELD_UTIL_MODULE
 #:for fta, ftb in zip (ftlTA, ftlRB)
 USE ${fta.name}$_UTIL_MODULE, ONLY : &
 #:for method in ['LOAD', 'SAVE', 'DIFF', 'COPY', 'WIPE', 'HOST', 'CRC64']
-      & ${method}$_${ftb.name}$ => ${method}$_${fta.name}$,  ${method}$_${fta.name}$, ${method}$, &
+      & ${method}$_${ftb.name}$ => ${method}$_${fta.name}$,  ${method}$_${fta.name}$, ${method}$,      &
 #:if method not in ['DIFF', 'CRC64']
-      & ${method}$_${ftb.name}$_PTR  => ${method}$_${fta.name}$,  ${method}$_${fta.name}$_PTR,    &
+      & ${method}$_${ftb.name}$_PTR  => ${method}$_${fta.name}$_PTR,   ${method}$_${fta.name}$_PTR,    &
 #:if fta.hasView
-      & ${method}$_${ftb.name}$_VIEW => ${method}$_${fta.name}$,  ${method}$_${fta.name}$_VIEW,   &
+      & ${method}$_${ftb.name}$_VIEW => ${method}$_${fta.name}$_VIEW,  ${method}$_${fta.name}$_VIEW,   &
 #:endif
 #:endif
 #:endfor
