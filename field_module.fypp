@@ -21,9 +21,7 @@ USE ${fta.name}$_MODULE, ONLY : &
       & ${ftb.name}$      => ${fta.name}$,      &
       & ${ftb.name}$_PTR  => ${fta.name}$_PTR,  &
       & ${fta.name}$,                           &
-      & ${fta.name}$_PTR,                       &
-      & ${fta.name}$_OWNER,                     &
-      & ${fta.name}$_WRAPPER
+      & ${fta.name}$_PTR
 #:if fta.hasView
 USE ${fta.name}$_MODULE, ONLY : &
       & ${ftb.name}$_VIEW => ${fta.name}$_VIEW, &
