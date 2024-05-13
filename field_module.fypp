@@ -9,8 +9,7 @@
 
 MODULE FIELD_MODULE
 
-#:set fieldTypeList = fieldType.getFieldTypeList (kinds=['JPIM', 'JPLM'])
-
+#:set fieldTypeListOT = fieldType.getFieldTypeList (kinds=['JPIM', 'JPLM'])
 #:set fieldTypeListRM = fieldType.getFieldTypeList (kinds=['JPRM'])
 #:set fieldTypeListRB = fieldType.getFieldTypeList (kinds=['JPRB'])
 #:set fieldTypeListRD = fieldType.getFieldTypeList (kinds=['JPRD'])
@@ -22,9 +21,7 @@ USE ${fta.name}$_MODULE, ONLY : &
       & ${ftb.name}$      => ${fta.name}$,      &
       & ${ftb.name}$_PTR  => ${fta.name}$_PTR,  &
       & ${fta.name}$,                           &
-      & ${fta.name}$_PTR,                       &
-      & ${fta.name}$_OWNER,                     &
-      & ${fta.name}$_WRAPPER
+      & ${fta.name}$_PTR
 #:if fta.hasView
 USE ${fta.name}$_MODULE, ONLY : &
       & ${ftb.name}$_VIEW => ${fta.name}$_VIEW, &
@@ -39,9 +36,9 @@ USE ${fto.name}$_MODULE
 #:enddef
 
 #ifdef PARKIND1_SINGLE
-$:useAliasRB (fieldTypeListRB, fieldTypeListRM, fieldTypeListRD + fieldTypeList)
+$:useAliasRB (fieldTypeListRB, fieldTypeListRM, fieldTypeListRD + fieldTypeListOT)
 #else
-$:useAliasRB (fieldTypeListRB, fieldTypeListRD, fieldTypeListRM + fieldTypeList)
+$:useAliasRB (fieldTypeListRB, fieldTypeListRD, fieldTypeListRM + fieldTypeListOT)
 #endif
 
 ${fieldType.useParkind1 ()}$
@@ -50,7 +47,7 @@ IMPLICIT NONE
 
 PRIVATE
 
-#:for ft in fieldTypeList + fieldTypeListRM + fieldTypeListRB + fieldTypeListRD
+#:for ft in fieldTypeListOT + fieldTypeListRM + fieldTypeListRB + fieldTypeListRD
 PUBLIC :: ${ft.name}$
 PUBLIC :: ${ft.name}$_PTR
 #:if ft.hasView
