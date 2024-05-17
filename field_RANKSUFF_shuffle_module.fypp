@@ -67,7 +67,7 @@ CONTAINS
 #:for what in ['DEVICE', 'HOST']
 #:for mode in ['RDONLY', 'RDWR']
 
-FUNCTION PAIR_${ft.name}$_GATHER_${what}$_DATA_${mode}$ (YDPAIR, LDNULL, LDFULL, KLON, KGPBLKS, YDFINDS, YLF, KBLKMIN, KBLKMAX) RESULT (PTR)
+SUBROUTINE PAIR_${ft.name}$_GATHER_${what}$_DATA_${mode}$ (YDPAIR, LDNULL, LDFULL, KLON, KGPBLKS, YDFINDS, PTR, YLF, KBLKMIN, KBLKMAX) 
 
 USE FIELD_3IM_MODULE
 USE FIELD_3IM_ACCESS_MODULE
@@ -77,11 +77,12 @@ TYPE (${ft.name}$_SHUFFLE_PAIR), POINTER              :: YDPAIR
 LOGICAL,                                   INTENT (IN) :: LDNULL, LDFULL
 INTEGER (KIND=JPIM),                       INTENT (IN) :: KLON, KGPBLKS
 CLASS (FIELD_3IM),                POINTER              :: YDFINDS 
-CLASS (${ft.name}$),              POINTER, INTENT (IN) :: YLF
+${ft.type}$,                      POINTER              :: PTR(${ft.shape}$)
+CLASS (${ft.name}$),              POINTER, OPTIONAL    :: YLF
 INTEGER (KIND=JPIM),                       INTENT (IN) :: KBLKMIN
 INTEGER (KIND=JPIM),                       INTENT (IN) :: KBLKMAX
 
-${ft.type}$, POINTER :: PTR(${ft.shape}$), ZTRG(${ft.shape}$), ZTRS(${ft.shape}$)
+${ft.type}$, POINTER :: ZTRG(${ft.shape}$), ZTRS(${ft.shape}$)
 ${ft.type}$, POINTER :: PTR1(${ft.shape}$)
 TYPE (${ft.name}$_SHUFFLE_PAIR), POINTER :: YLPAIR
 CLASS (${ft.name}$), POINTER :: YLGATH_DUMM
@@ -182,7 +183,7 @@ ENDDO
 
 END SUBROUTINE
 
-END FUNCTION PAIR_${ft.name}$_GATHER_${what}$_DATA_${mode}$
+END SUBROUTINE PAIR_${ft.name}$_GATHER_${what}$_DATA_${mode}$
 
 #:endfor
 #:endfor

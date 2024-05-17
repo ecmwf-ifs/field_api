@@ -38,6 +38,14 @@ END INTERFACE
 
 PUBLIC :: GATHER_${what}$_DATA_${mode}$
 
+INTERFACE SGATHER_${what}$_DATA_${mode}$
+#:for ft in fieldTypeList
+  MODULE PROCEDURE :: S${ft.name}$_GATHER_${what}$_DATA_${mode}$
+#:endfor
+END INTERFACE
+
+PUBLIC :: SGATHER_${what}$_DATA_${mode}$
+
 #:endfor
 #:endfor
 
@@ -53,10 +61,21 @@ CLASS (${ft.name}$),   POINTER, INTENT (IN) :: YLF
 
 ${ft.type}$, POINTER :: PTR(${ft.shape}$)
 
-PTR => PAIR_GATHER_${what}$_DATA_${mode}$ (SELF%${ft.name}$_LIST, SELF%LNULL, SELF%LFULL, &
-& SELF%KLON_G, SELF%KGPBLKS_G, SELF%YLFINDS, YLF, SELF%KBLKMIN, SELF%KBLKMAX)
+CALL S${ft.name}$_GATHER_${what}$_DATA_${mode}$ (SELF, PTR, YLF)
 
 END FUNCTION ${ft.name}$_GATHER_${what}$_DATA_${mode}$
+
+SUBROUTINE S${ft.name}$_GATHER_${what}$_DATA_${mode}$ (SELF, PTR, YLF) 
+
+CLASS (FIELD_SHUFFLE)                      :: SELF
+${ft.type}$,           POINTER             :: PTR(${ft.shape}$)
+CLASS (${ft.name}$),   POINTER, OPTIONAL   :: YLF
+
+
+CALL PAIR_GATHER_${what}$_DATA_${mode}$ (SELF%${ft.name}$_LIST, SELF%LNULL, SELF%LFULL, &
+& SELF%KLON_G, SELF%KGPBLKS_G, SELF%YLFINDS, PTR, YLF, SELF%KBLKMIN, SELF%KBLKMAX)
+
+END SUBROUTINE S${ft.name}$_GATHER_${what}$_DATA_${mode}$
 
 #:endfor
 #:endfor

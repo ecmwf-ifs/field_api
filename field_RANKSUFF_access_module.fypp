@@ -23,6 +23,14 @@ PRIVATE
 #:for mode in ['RDONLY', 'RDWR']
 #:for what in ['DEVICE', 'HOST']
 
+INTERFACE SGET_${what}$_DATA_${mode}$
+#:for ft in fieldTypeList
+  MODULE PROCEDURE :: SGET_${what}$_DATA_${mode}$_${ft.name}$
+#:endfor
+END INTERFACE SGET_${what}$_DATA_${mode}$
+
+PUBLIC :: SGET_${what}$_DATA_${mode}$
+
 INTERFACE GET_${what}$_DATA_${mode}$
 #:for ft in fieldTypeList
   MODULE PROCEDURE :: GET_${what}$_DATA_${mode}$_${ft.name}$
@@ -46,15 +54,27 @@ CONTAINS
 #:for what in ['DEVICE', 'HOST']
 
 #:for ft in fieldTypeList
+  SUBROUTINE SGET_${what}$_DATA_${mode}$_${ft.name}$ (PTR, FIELD_PTR) 
+    CLASS (${ft.name}$), POINTER, OPTIONAL :: FIELD_PTR
+    ${ft.type}$, POINTER :: PTR(${ft.shape}$)
+
+    IF (PRESENT (FIELD_PTR)) THEN
+      IF (ASSOCIATED (FIELD_PTR)) THEN
+        CALL FIELD_PTR%GET_${what}$_DATA_${mode}$ (PTR)
+      ELSE
+        PTR => DUMMY_${ft.name}$
+      ENDIF
+    ELSE
+      PTR => DUMMY_${ft.name}$
+    ENDIF
+
+  END SUBROUTINE SGET_${what}$_DATA_${mode}$_${ft.name}$
+
   FUNCTION GET_${what}$_DATA_${mode}$_${ft.name}$ (FIELD_PTR) RESULT (PTR)
     CLASS (${ft.name}$), POINTER :: FIELD_PTR
     ${ft.type}$, POINTER :: PTR(${ft.shape}$)
 
-    IF (ASSOCIATED (FIELD_PTR)) THEN
-      CALL FIELD_PTR%GET_${what}$_DATA_${mode}$ (PTR)
-    ELSE
-      PTR => DUMMY_${ft.name}$
-    ENDIF
+    CALL SGET_${what}$_DATA_${mode}$_${ft.name}$ (PTR, FIELD_PTR)
 
   END FUNCTION GET_${what}$_DATA_${mode}$_${ft.name}$
 
