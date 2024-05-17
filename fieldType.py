@@ -20,7 +20,6 @@ class fieldType (object):
 
     self.type = th[tt] + '(KIND=' + self.kind + ')'
     self.default = td[tt] + '_' + self.kind
-    self.alias = self.suffix == 'RB'
 
     self.name = 'FIELD_%s%s' % (self.rank, self.suffix);
     self.rank = int (self.rank)
@@ -32,17 +31,14 @@ class fieldType (object):
     self.ganged = self.rank > 2
 
 
-kinds = ['JPRM', 'JPRB', 'JPRD', 'JPIM', 'JPLM']
+kinds = ['JPRM', 'JPRD', 'JPIM', 'JPLM']
 
-def getFieldTypeList (ranks=[1,2,3,4,5], kinds=kinds, hasView=None, alias=None, ganged=None):
+def getFieldTypeList (ranks=[1,2,3,4,5], kinds=kinds, hasView=None, ganged=None):
   
   l = [fieldType (kind=kind, rank=rank) for (kind) in kinds for rank in ranks]
 
   if hasView != None:
     l = [ft for ft in l if ft.hasView == hasView]
-  
-  if alias != None:
-    l = [ft for ft in l if ft.alias == alias] 
   
   if ganged != None:
     l = [ft for ft in l if ft.ganged == ganged]

@@ -11,8 +11,14 @@ MODULE FIELD_${RANK}$${SUFF}$_FACTORY_MODULE
 
 #:set fieldTypeList = fieldType.getFieldTypeList (ranks=[RANK], kinds=['JP' + SUFF])
 
-USE FIELD_MODULE
-USE FIELD_GANG_MODULE
+#:for ft in fieldTypeList
+USE ${ft.name}$_MODULE
+#:if ft.ganged
+USE FIELD_${ft.rank-1}$${SUFF}$_MODULE
+USE ${ft.name}$_GANG_MODULE
+#:endif
+#:endfor
+
 ${fieldType.useParkind1 ()}$
 
 IMPLICIT NONE

@@ -9,7 +9,7 @@
 
 MODULE HOST_ALLOC_MODULE
 
-#:set fieldTypeList = fieldType.getFieldTypeList (alias=False)
+#:set fieldTypeList = fieldType.getFieldTypeList ()
 
 ${fieldType.useParkind1 ()}$
 USE ISO_C_BINDING

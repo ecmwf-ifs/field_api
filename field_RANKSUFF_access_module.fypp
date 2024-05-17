@@ -12,7 +12,8 @@ MODULE FIELD_${RANK}$${SUFF}$_ACCESS_MODULE
 #:set fieldTypeList = fieldType.getFieldTypeList (ranks=[RANK], kinds=['JP' + SUFF])
 #:set dumsize = '1'
 
-USE FIELD_MODULE
+USE FIELD_${RANK}$${SUFF}$_MODULE
+
 ${fieldType.useParkind1 ()}$
 
 IMPLICIT NONE

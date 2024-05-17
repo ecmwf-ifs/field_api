@@ -90,7 +90,7 @@ if( NOT fiat_FOUND )
   list(APPEND srcs ${ABOR1_PATH} ${OML_PATH} ${PARKIND1_PATH})
 endif()
 
-list(APPEND srcs field_basic_module.F90 field_defaults_module.F90 dev_alloc.c c_malloc.c field_constants_module.F90 field_abort_module.F90 field_statistics_module.F90)
+list(APPEND srcs field_async_module.F90 field_basic_module.F90 field_defaults_module.F90 dev_alloc.c c_malloc.c field_constants_module.F90 field_abort_module.F90 field_statistics_module.F90)
 
 ## check for CUDA
 include(CheckLanguage)
@@ -114,10 +114,10 @@ if(HAVE_CUDA)
 endif()
 
 ## preprocess fypp files
-foreach (SUFF IN ITEMS IM RM RB RD LM)
+foreach (SUFF IN ITEMS IM RM RD LM)
   string (TOLOWER ${SUFF} suff)
   foreach (RANK RANGE 1 5)
-    foreach (FUNC IN ITEMS "" _shuffle _access _util _array_util _gang _factory _gather _data)
+    foreach (FUNC IN ITEMS "" _shuffle _access _util _array _array_util _gang _factory _gather _data)
       add_custom_command (OUTPUT field_${RANK}${suff}${FUNC}_module.F90
 	      COMMAND ${FYPP} -DRANK=${RANK} -DSUFF='${SUFF}' ${fypp_defines} -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType 
         ${CMAKE_CURRENT_SOURCE_DIR}/field_RANKSUFF${FUNC}_module.fypp > field_${RANK}${suff}${FUNC}_module.F90
@@ -170,6 +170,10 @@ foreach(prec ${precisions})
                               INTERFACE $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include/${LIBNAME}_${prec}> 
                               INTERFACE $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${LIBNAME}_${prec}> 
                             )
+
+  if( prec MATCHES sp )
+      target_compile_definitions( ${LIBNAME}_${prec} PRIVATE PARKIND1_SINGLE )
+  endif()
   
   # set install location for .mod files
   install(DIRECTORY ${CMAKE_BINARY_DIR}/include/${LIBNAME}_${prec} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})

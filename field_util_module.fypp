@@ -9,11 +9,40 @@
 
 MODULE FIELD_UTIL_MODULE
 
-#:set fieldTypeList = fieldType.getFieldTypeList ()
+#:set fieldTypeListOT = fieldType.getFieldTypeList (kinds=['JPIM', 'JPLM'])
+#:set fieldTypeListRM = fieldType.getFieldTypeList (kinds=['JPRM'])
+#:set fieldTypeListRB = fieldType.getFieldTypeList (kinds=['JPRB'])
+#:set fieldTypeListRD = fieldType.getFieldTypeList (kinds=['JPRD'])
 
-#:for ft in fieldTypeList
-USE ${ft.name}$_UTIL_MODULE
+#:def useAliasRB (ftlRB, ftlTA, ftlOT)
+
+#:for fta, ftb in zip (ftlTA, ftlRB)
+USE ${fta.name}$_UTIL_MODULE, ONLY : &
+#:for method in ['LOAD', 'SAVE', 'DIFF', 'COPY', 'WIPE', 'HOST', 'CRC64']
+      & ${method}$_${ftb.name}$ => ${method}$_${fta.name}$,  ${method}$_${fta.name}$, ${method}$,      &
+#:if method not in ['DIFF', 'CRC64']
+      & ${method}$_${ftb.name}$_PTR  => ${method}$_${fta.name}$_PTR,   ${method}$_${fta.name}$_PTR,    &
+#:if fta.hasView
+      & ${method}$_${ftb.name}$_VIEW => ${method}$_${fta.name}$_VIEW,  ${method}$_${fta.name}$_VIEW,   &
+#:endif
+#:endif
 #:endfor
+      & COPY
+#:endfor
+
+#:for fto in ftlOT
+USE ${fto.name}$_UTIL_MODULE
+#:endfor
+
+#:enddef
+
+#ifdef PARKIND1_SINGLE
+$:useAliasRB (fieldTypeListRB, fieldTypeListRM, fieldTypeListRD + fieldTypeListOT)
+#else
+$:useAliasRB (fieldTypeListRB, fieldTypeListRD, fieldTypeListRM + fieldTypeListOT)
+#endif
+
+${fieldType.useParkind1 ()}$
 
 IMPLICIT NONE
 

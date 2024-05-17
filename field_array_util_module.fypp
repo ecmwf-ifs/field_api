@@ -8,11 +8,34 @@
 #! nor does it submit to any jurisdiction.
 MODULE FIELD_ARRAY_UTIL_MODULE
 
-#:set fieldTypeList = fieldType.getFieldTypeList ()
+#:set fieldTypeListOT = fieldType.getFieldTypeList (hasView=True, kinds=['JPIM', 'JPLM'])
+#:set fieldTypeListRM = fieldType.getFieldTypeList (hasView=True, kinds=['JPRM'])
+#:set fieldTypeListRB = fieldType.getFieldTypeList (hasView=True, kinds=['JPRB'])
+#:set fieldTypeListRD = fieldType.getFieldTypeList (hasView=True, kinds=['JPRD'])
 
-#:for ft in fieldTypeList
-USE ${ft.name}$_ARRAY_UTIL_MODULE
+#:def useAliasRB (ftlRB, ftlTA, ftlOT)
+
+#:for fta, ftb in zip (ftlTA, ftlRB)
+USE ${fta.name}$_ARRAY_UTIL_MODULE, ONLY : &
+#:for method in ['LOAD', 'SAVE', 'COPY', 'WIPE', 'HOST']
+      & ${method}$_${ftb.name}$_ARRAY => ${method}$_${fta.name}$_ARRAY,  ${method}$_${fta.name}$_ARRAY, ${method}$, &
 #:endfor
+      & COPY
+#:endfor
+
+#:for fto in ftlOT
+USE ${fto.name}$_ARRAY_UTIL_MODULE
+#:endfor
+
+#:enddef
+
+#ifdef PARKIND1_SINGLE
+$:useAliasRB (fieldTypeListRB, fieldTypeListRM, fieldTypeListRD + fieldTypeListOT)
+#else
+$:useAliasRB (fieldTypeListRB, fieldTypeListRD, fieldTypeListRM + fieldTypeListOT)
+#endif
+
+${fieldType.useParkind1 ()}$
 
 IMPLICIT NONE
 
