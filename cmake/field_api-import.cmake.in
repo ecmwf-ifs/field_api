@@ -1,0 +1,45 @@
+# (C) Copyright 2022- ECMWF.
+# (C) Copyright 2022- Meteo-France.
+#
+# This software is licensed under the terms of the Apache Licence Version 2.0
+# which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
+# In applying this licence, ECMWF does not waive the privileges and immunities
+# granted to it by virtue of its status as an intergovernmental organisation
+# nor does it submit to any jurisdiction.
+
+######################################################################
+# Define package import configuration. These instructions are executed
+# when another project issues `find_package(field_api ...)`.
+
+include( CMakeFindDependencyMacro )
+
+set( field_api_VERSION                @PROJECT_VERSION@       )
+set( field_api_HAVE_OMP               @HAVE_OMP@              )
+set( field_api_HAVE_ACC               @HAVE_ACC@              )
+set( field_api_HAVE_CUDA              @HAVE_CUDA@             )
+set( field_api_HAVE_SINGLE_PRECISION  @HAVE_SINGLE_PRECISION@ )
+set( field_api_HAVE_DOUBLE_PRECISION  @HAVE_DOUBLE_PRECISION@ )
+
+if( NOT CMAKE_Fortran_COMPILER_LOADED )
+    enable_language( Fortran )
+endif()
+
+if( field_api_HAVE_OMP AND NOT TARGET OpenMP::OpenMP_Fortran )
+    find_dependency( OpenMP COMPONENTS Fortran )
+endif()
+
+if( field_api_HAVE_ACC AND NOT TARGET OpenACC::OpenACC_Fortran )
+    find_dependency( OpenACC COMPONENTS Fortran )
+endif()
+
+##################################################################
+## Handle components
+
+set( field_api_single_FOUND ${field_api_HAVE_SINGLE_PRECISION} )
+set( field_api_double_FOUND ${field_api_HAVE_DOUBLE_PRECISION} )
+
+foreach( _component ${${CMAKE_FIND_PACKAGE_NAME}_FIND_COMPONENTS} )
+  if( NOT ${CMAKE_FIND_PACKAGE_NAME}_${_component}_FOUND AND ${CMAKE_FIND_PACKAGE_NAME}_FIND_REQUIRED )
+    message( SEND_ERROR "field_api was not build with support for COMPONENT ${_component}" )
+  endif()
+endforeach()

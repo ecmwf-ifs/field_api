@@ -17,3 +17,7 @@ if(CMAKE_Fortran_COMPILER_ID MATCHES PGI|NVIDIA|NVHPC)
 # that should really be coming from external input
 # set(CMAKE_Fortran_FLAGS "-gpu=cc70")
 endif ()
+
+if(CMAKE_Fortran_COMPILER_ID MATCHES Intel)
+  ecbuild_add_fortran_flags("-check nocontiguous" BUILD DEBUG)
+endif()
