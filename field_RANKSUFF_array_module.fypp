@@ -25,6 +25,7 @@ PRIVATE
 #:for ft in fieldTypeList
 TYPE ${ft.name}$_ARRAY
   CLASS (${ft.name}$), POINTER :: F_P => NULL ()
+  ${ft.type}$, POINTER :: P_FIELD (${ft.shape}$) => NULL()
 #:if ft.hasView
   ${ft.type}$, POINTER :: P (${ft.viewShape}$) => NULL()
 #:endif
@@ -50,7 +51,7 @@ CLASS (${ft.name}$_ARRAY) :: SELF
 ${ft.type}$, INTENT (IN), TARGET :: P (${ft.shape}$)
 INTEGER (KIND=JPIM), INTENT (IN), OPTIONAL :: LBOUNDS (${ft.rank}$)
 
-CALL FIELD_NEW (SELF%F_P, DATA=P, PERSISTENT=.TRUE., LBOUNDS=LBOUNDS)
+IF(SIZE(P) > 0) CALL FIELD_NEW (SELF%F_P, DATA=P, PERSISTENT=.TRUE., LBOUNDS=LBOUNDS)
 
 END SUBROUTINE
 
@@ -93,6 +94,7 @@ CLASS (${ft.name}$_ARRAY) :: SELF
 
 IF (ASSOCIATED (SELF%F_P)) THEN
   CALL FIELD_DELETE (SELF%F_P)
+  SELF%P_FIELD => NULL ()
 #:if ft.hasView
   SELF%P => NULL ()
 #:endif
