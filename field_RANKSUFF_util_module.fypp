@@ -38,19 +38,12 @@ CONTAINS
 #:for ft in fieldTypeList
 INTEGER*8 FUNCTION CRC64_${ft.name}$ (YD)
 CLASS (${ft.name}$), POINTER :: YD
-
-INTEGER*8 :: ICRC, ILEN
-${ft.type}$, POINTER :: PTR(${ft.shape}$)
-EXTERNAL :: CRC64
+INTEGER*8 :: ICRC
 
 ICRC = 0
 
 IF (ASSOCIATED (YD)) THEN
-
-  PTR => GET_HOST_DATA_RDONLY (YD)
-  ILEN = SIZE (PTR)
-  CALL CRC64 (PTR, ILEN, ICRC)
-
+  ICRC = YD%CRC64 ()
 ENDIF
 
 CRC64_${ft.name}$ = ICRC
