@@ -61,7 +61,7 @@ CONTAINS
     ${ft.type}$, POINTER :: PTR(${ft.shape}$)
     INTEGER*8 :: ICRC
     CHARACTER*1024 :: CLBT
-    CHARACTER*40 :: CLNAME
+    CHARACTER*10 :: CLF
     INTEGER :: ILEN, IP1, IP2
 
 
@@ -83,20 +83,24 @@ CONTAINS
     ENDIF
 
 
-    IF (GET_DEBUG_PRINT_LOCATION .OR. GET_DEBUG_PRINT_CRC) THEN
-      CLNAME = "GET_${what}$_DATA_${mode}$_${ft.name}$"
-      WRITE (0, '(A40)', ADVANCE='NO') CLNAME
-    ENDIF
-
     IF (GET_DEBUG_PRINT_CRC) THEN
-      WRITE (0, '(" ",Z16.16)', ADVANCE='NO') ICRC
+      WRITE (0, '(Z16.16," ")', ADVANCE='NO') ICRC
     ENDIF
     
+    IF (GET_DEBUG_PRINT_LOCATION .OR. GET_DEBUG_PRINT_CRC) THEN
+      CLF = "${ft.name}$"
+      WRITE (0, '(A10)', ADVANCE='NO') CLF
+      CLF = "${mode}$"
+      WRITE (0, '(A10)', ADVANCE='NO') CLF
+      CLF = "${what}$"
+      WRITE (0, '(A10)', ADVANCE='NO') CLF
+    ENDIF
+
     IF (GET_DEBUG_PRINT_LOCATION) THEN
       ILEN = LEN (CLBT)
-      IP1 = 3
-      IP2 = 6
-      CALL FIELD_BT (CLBT, IP1, IP2, ILEN)
+      IP1 = 2
+      IP2 = 4
+      CALL FIELD_BACKTRACE (CLBT, IP1, IP2, ILEN)
       WRITE (0, '(A)', ADVANCE='NO') CLBT (1:ILEN)
     ENDIF
 
