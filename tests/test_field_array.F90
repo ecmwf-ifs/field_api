@@ -30,7 +30,7 @@ PROGRAM TEST_FIELD_ARRAY_WRAPPER
         END IF 
         CALL W%FINAL()
 
-        CALL W%CREATE (UBOUNDS=[10,2])
+        CALL W%INIT (UBOUNDS=[10,2])
 
         CALL W%FINAL ()
 
