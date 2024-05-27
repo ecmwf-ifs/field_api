@@ -68,6 +68,7 @@ CONTAINS
   PROCEDURE, PRIVATE :: ${ftn}$_GET_HOST_DATA
   PROCEDURE, PRIVATE :: COPY_DATA =>  ${ftn}$_COPY_DATA
   PROCEDURE :: CREATE_DEVICE_DATA => ${ftn}$_CREATE_DEVICE_DATA
+  PROCEDURE :: CRC64 => ${ftn}$_CRC64
 #ifdef __PGI
   PROCEDURE :: SET_STATUS => ${ftn}$_SET_STATUS
 #endif
@@ -554,6 +555,31 @@ CONTAINS
     ENDIF
 
   END SUBROUTINE ${ftn}$_WRAPPER_GET_DEVICE_DATA
+
+  INTEGER*8 FUNCTION ${ftn}$_CRC64 (SELF) RESULT (ICRC)
+    CLASS(${ftn}$) :: SELF
+    ${ft.type}$, POINTER :: PTR(${ft.shape}$)
+    ${ft.type}$, ALLOCATABLE :: ZZ(${ft.shape}$)
+    INTEGER*8 :: ILEN
+    EXTERNAL :: CRC64
+    
+    ICRC = 0   
+ 
+    IF (IAND (SELF%GET_STATUS (), NHSTFRESH) /= 0) THEN
+      CALL SELF%GET_HOST_DATA_RDONLY (PTR)
+      ILEN = SIZE (PTR) * KIND (PTR)
+      CALL CRC64 (PTR, ILEN, ICRC)
+    ELSEIF (IAND (SELF%GET_STATUS (), NDEVFRESH) /= 0) THEN
+      CALL SELF%GET_DEVICE_DATA_RDONLY (PTR)
+      ALLOCATE (ZZ, MOLD=PTR)
+!$acc kernels present (PTR) copyout (ZZ)
+      ZZ = PTR
+!$acc end kernels
+      ILEN = SIZE (ZZ) * KIND (ZZ)
+      CALL CRC64 (ZZ, ILEN, ICRC)
+    ENDIF
+
+  END FUNCTION
 
   SUBROUTINE ${ftn}$_OWNER_GET_DEVICE_DATA (SELF, MODE, PTR, QUEUE)
     CLASS(${ftn}$_OWNER) :: SELF
