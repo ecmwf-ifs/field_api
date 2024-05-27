@@ -1,5 +1,6 @@
 #include <string.h>
 
+#ifdef HAVE_BACKTRACE
 
 #include <execinfo.h>
 #include <stdio.h>
@@ -26,7 +27,7 @@ void field_backtrace_ (char * str, int * p1, int * p2, int * plen)
 }
 
 
-#ifdef UNDEF
+#else
 
 void field_backtrace_ (char * str, int * p1, int * p2, int * plen)
 {
