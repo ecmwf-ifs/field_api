@@ -30,7 +30,8 @@ TYPE ${ft.name}$_ARRAY
   ${ft.type}$, POINTER :: P (${ft.viewShape}$) => NULL()
 #:endif
 CONTAINS
-  PROCEDURE :: INIT => INIT_${ft.name}$_ARRAY_WRAPPER, INIT_${ft.name}$_ARRAY_OWNER
+  PROCEDURE :: INIT => INIT_${ft.name}$_ARRAY_WRAPPER
+  PROCEDURE :: CREATE => INIT_${ft.name}$_ARRAY_OWNER
   PROCEDURE :: RESIZE => RESIZE_${ft.name}$_ARRAY
   PROCEDURE :: FINAL => FINAL_${ft.name}$_ARRAY
 #:if ft.hasView
