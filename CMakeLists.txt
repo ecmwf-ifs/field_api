@@ -33,7 +33,7 @@ find_program( FYPP fypp )
 
 if( fckit_FOUND AND fckit_HAVE_FCKIT_VENV )
   set( FYPP ${FCKIT_VENV_EXE} -m fypp )
-elseif( NOT fypp_FOUND )
+elseif( FYPP MATCHES FYPP-NOTFOUND )
   include(cmake/field_api_fetchcontent_fypp.cmake)
   set(FYPP ${fypp_SOURCE_DIR}/bin/fypp)
   ecbuild_info("fypp downloaded to: ${FYPP}")
