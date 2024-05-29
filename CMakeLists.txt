@@ -150,18 +150,47 @@ if( HAVE_ACC )
   ecbuild_warn("OpenACC builds force static linking.")
 endif()
 
+# field api common lib (precision independent)
+ecbuild_add_library(
+  TARGET ${LIBNAME}
+  SOURCES ${srcs}
+  DEFINITIONS $<$<NOT:${fiat_FOUND}>:${FIELD_API_DEFINITIONS}>
+  PUBLIC_LIBS
+    $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
+  PRIVATE_LIBS
+    $<${fiat_FOUND}:fiat>
+    $<IF:${fiat_HAVE_SINGLE_PRECISION},parkind_sp, parkind_dp>
+    OpenMP::OpenMP_Fortran
+  )
+target_include_directories( ${LIBNAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+set_property(TARGET ${LIBNAME} PROPERTY C_STANDARD 99)
+set_target_properties( ${LIBNAME} PROPERTIES Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/include/${LIBNAME} )
+target_link_options( ${LIBNAME} PUBLIC $<${HAVE_CUDA}:-cuda> )
+
+# export target usage interface
+target_include_directories( ${LIBNAME}
+                            INTERFACE $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include/${LIBNAME}>
+                            INTERFACE $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${LIBNAME}>
+                          )
+# set install location for .mod files
+install(DIRECTORY ${CMAKE_BINARY_DIR}/include/${LIBNAME} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+
+set(srcs field_module.F90 field_array_module.F90 field_array_util_module.F90 field_util_module.F90)
 foreach(prec ${precisions})
   ## add field_api target
   ecbuild_add_library(
       TARGET ${LIBNAME}_${prec}
       SOURCES ${srcs}
+      TYPE OBJECT
       DEFINITIONS $<$<NOT:${fiat_FOUND}>:${FIELD_API_DEFINITIONS}>
       PUBLIC_LIBS
          $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
       PRIVATE_LIBS
-         $<${fiat_FOUND}:fiat>
-         $<${fiat_FOUND}:parkind_${prec}>
-         OpenMP::OpenMP_Fortran
+        $<${fiat_FOUND}:fiat>
+        $<${fiat_FOUND}:parkind_${prec}>
+        OpenMP::OpenMP_Fortran
+        ${LIBNAME}
       )
   target_include_directories( ${LIBNAME}_${prec} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
   set_property(TARGET ${LIBNAME}_${prec} PROPERTY C_STANDARD 99)

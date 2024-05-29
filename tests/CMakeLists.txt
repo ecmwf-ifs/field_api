@@ -7,14 +7,12 @@
 # granted to it by virtue of its status as an intergovernmental organisation
 # nor does it submit to any jurisdiction.
 
-set(LIBNAME_PREC ${LIBNAME}_${DEFAULT_PRECISION})
-
 ## Host-device ping-pong runner
 ecbuild_add_test(
     TARGET main.x
     SOURCES main.F90
     LIBS
-    ${LIBNAME_PREC}
+    ${LIBNAME}
     parkind_${DEFAULT_PRECISION}
        fiat
        OpenMP::OpenMP_Fortran
@@ -97,12 +95,12 @@ set(ABOR1_TEST_FILES
 set(omp_num_threads 8)
 
 foreach(TEST_FILE ${TEST_FILES})
-	get_filename_component(TEST_NAME ${TEST_FILE} NAME_WE)
+    get_filename_component(TEST_NAME ${TEST_FILE} NAME_WE)
     ecbuild_add_test(
         TARGET ${TEST_NAME}.x
         SOURCES ${TEST_FILE}
         LIBS
-           ${LIBNAME_PREC}
+           ${LIBNAME}
            parkind_${DEFAULT_PRECISION}
            fiat
            OpenMP::OpenMP_Fortran
@@ -121,37 +119,43 @@ endforeach()
 foreach(FAILING_TEST_FILE ${FAILING_TEST_FILES})
 	get_filename_component(FAILING_TEST_NAME ${FAILING_TEST_FILE} NAME_WE)
 	add_executable(${FAILING_TEST_NAME}.x ${FAILING_TEST_FILE})
-	target_link_libraries(${FAILING_TEST_NAME}.x ${LIBNAME_PREC} parkind_${DEFAULT_PRECISION} fiat OpenMP::OpenMP_Fortran)
+	target_link_libraries(${FAILING_TEST_NAME}.x ${LIBNAME} parkind_${DEFAULT_PRECISION} fiat OpenMP::OpenMP_Fortran)
 	set_target_properties(${FAILING_TEST_NAME}.x PROPERTIES LINKER_LANGUAGE Fortran)
 	add_test(NAME ${FAILING_TEST_NAME} COMMAND ${FAILING_TEST_NAME}.x)
 	set_property(TEST ${FAILING_TEST_NAME} PROPERTY WILL_FAIL TRUE)
 	set_property(TEST ${FAILING_TEST_NAME} PROPERTY ENVIRONMENT "OMP_NUM_THREADS=${omp_num_threads}")
-    target_link_options( ${FAILING_TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:-gpu=pinned> )
-    target_compile_definitions( ${FAILING_TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:_CUDA> )
+	target_link_options( ${FAILING_TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:-gpu=pinned> )
+	target_compile_definitions( ${FAILING_TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:_CUDA> )
+	target_include_directories( ${FAILING_TEST_NAME}.x PRIVATE ${CMAKE_BINARY_DIR}/include/${LIBNAME} )
 endforeach()
 
 foreach(ABOR1_TEST_FILE ${ABOR1_TEST_FILES})
 	get_filename_component(ABOR1_TEST_NAME ${ABOR1_TEST_FILE} NAME_WE)
 	add_executable(${ABOR1_TEST_NAME}.x ${ABOR1_TEST_FILE})
-	target_link_libraries(${ABOR1_TEST_NAME}.x ${LIBNAME_PREC} parkind_${DEFAULT_PRECISION} fiat OpenMP::OpenMP_Fortran)
+	target_link_libraries(${ABOR1_TEST_NAME}.x ${LIBNAME} parkind_${DEFAULT_PRECISION} fiat OpenMP::OpenMP_Fortran)
 	set_target_properties(${ABOR1_TEST_NAME}.x PROPERTIES LINKER_LANGUAGE Fortran)
 	add_test(NAME ${ABOR1_TEST_NAME} COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/abor1catcher.sh "./${ABOR1_TEST_NAME}.x")
 	set_property(TEST ${ABOR1_TEST_NAME} PROPERTY ENVIRONMENT "OMP_NUM_THREADS=${omp_num_threads}")
-    target_link_options( ${ABOR1_TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:-gpu=pinned> )
-    target_compile_definitions( ${ABOR1_TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:_CUDA> )
+	target_link_options( ${ABOR1_TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:-gpu=pinned> )
+	target_compile_definitions( ${ABOR1_TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:_CUDA> )
+	target_include_directories( ${ABOR1_TEST_NAME}.x PRIVATE ${CMAKE_BINARY_DIR}/include/${LIBNAME} )
 endforeach()
 
 ## Mixed precision unit-test
 ecbuild_add_test(
-    TARGET  init_wrapper_mixed_precision.x
-    SOURCES init_wrapper_mixed_precision.F90
-    LIBS
-      ${LIBNAME}_sp
-      fiat
-      parkind_sp
-      OpenMP::OpenMP_Fortran
-    LINKER_LANGUAGE Fortran
-    CONDITION ${HAVE_SINGLE_PRECISION}
+  TARGET  init_wrapper_mixed_precision.x
+  SOURCES init_wrapper_mixed_precision.F90
+  LIBS
+    ${LIBNAME}
+    fiat
+    parkind_sp
+    OpenMP::OpenMP_Fortran
+  LINKER_LANGUAGE Fortran
+  CONDITION ${HAVE_SINGLE_PRECISION}
+  DEPENDS ${LIBNAME}_sp
+  INCLUDES
+    ${CMAKE_BINARY_DIR}/include/${LIBNAME}_sp
+    ${CMAKE_BINARY_DIR}/include/${LIBNAME}
 )
 
 ## Test presence of GPUs
