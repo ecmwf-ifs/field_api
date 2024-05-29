@@ -60,15 +60,17 @@ ecbuild_add_option( FEATURE DOUBLE_PRECISION
 
 set(DEFAULT_PRECISION sp)
 if(HAVE_SINGLE_PRECISION)
+    list(APPEND fiat_components single)
     list(APPEND precisions sp)
 endif()
 if(HAVE_DOUBLE_PRECISION)
     set(DEFAULT_PRECISION dp)
     list(APPEND precisions dp)
+    list(APPEND fiat_components double)
 endif()
 
 ## find fiat
-ecbuild_find_package(NAME fiat)
+ecbuild_find_package(NAME fiat COMPONENTS ${fiat_components})
 if( NOT fiat_FOUND )
   if(NOT UTIL_MODULE_PATH)
     ecbuild_critical("If not building with fiat, then the path for utility modules must be specified")
@@ -155,20 +157,46 @@ if( HAVE_ACC )
   ecbuild_warn("OpenACC builds force static linking.")
 endif()
 
+list(APPEND prec_srcs field_module.F90 field_array_module.F90 field_array_util_module.F90 field_util_module.F90)
+list(REMOVE_ITEM srcs ${prec_srcs})
+
+## build precision independent source files
+ecbuild_add_library(
+    TARGET ${LIBNAME}
+    TYPE OBJECT
+    SOURCES ${srcs}
+    DEFINITIONS $<$<NOT:${fiat_FOUND}>:${FIELD_API_DEFINITIONS}>
+    PRIVATE_LIBS
+       $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
+       $<${fiat_FOUND}:fiat>
+       $<${fiat_FOUND}:parkind_${DEFAULT_PRECISION}>
+       OpenMP::OpenMP_Fortran
+    )
+target_include_directories( ${LIBNAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+set_property(TARGET ${LIBNAME} PROPERTY C_STANDARD 99)
+set_target_properties( ${LIBNAME} PROPERTIES Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/include/${LIBNAME} )
+target_link_options( ${LIBNAME} PRIVATE $<${HAVE_CUDA}:-cuda> )
+if( HAVE_BACKTRACE )
+    target_compile_definitions( ${LIBNAME} PRIVATE HAVE_BACKTRACE )
+endif()
+
+# set install location for .mod files
+install(DIRECTORY ${CMAKE_BINARY_DIR}/include/${LIBNAME} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
 foreach(prec ${precisions})
   ## add field_api target
   ecbuild_add_library(
       TARGET ${LIBNAME}_${prec}
-      SOURCES ${srcs}
+      SOURCES ${prec_srcs} $<TARGET_OBJECTS:${LIBNAME}>
       DEFINITIONS $<$<NOT:${fiat_FOUND}>:${FIELD_API_DEFINITIONS}>
       PUBLIC_LIBS
-         $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
+       $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
       PRIVATE_LIBS
          $<${fiat_FOUND}:fiat>
          $<${fiat_FOUND}:parkind_${prec}>
          OpenMP::OpenMP_Fortran
       )
-  target_include_directories( ${LIBNAME}_${prec} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+  target_include_directories( ${LIBNAME}_${prec} PRIVATE ${CMAKE_BINARY_DIR}/include/${LIBNAME})
   set_property(TARGET ${LIBNAME}_${prec} PROPERTY C_STANDARD 99)
   set_target_properties( ${LIBNAME}_${prec} PROPERTIES Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/include/${LIBNAME}_${prec} )
   target_link_options( ${LIBNAME}_${prec} PUBLIC $<${HAVE_CUDA}:-cuda> )
@@ -177,12 +205,10 @@ foreach(prec ${precisions})
   target_include_directories( ${LIBNAME}_${prec}
                               INTERFACE $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include/${LIBNAME}_${prec}> 
                               INTERFACE $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${LIBNAME}_${prec}> 
+                              INTERFACE $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include/${LIBNAME}>
+                              INTERFACE $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${LIBNAME}>
                             )
 
-  if( HAVE_BACKTRACE )
-      target_compile_definitions( ${LIBNAME}_${prec} PRIVATE HAVE_BACKTRACE )
-  endif()
-  
   if( prec MATCHES sp )
       target_compile_definitions( ${LIBNAME}_${prec} PRIVATE PARKIND1_SINGLE )
   endif()
