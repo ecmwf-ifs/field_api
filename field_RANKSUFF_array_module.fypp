@@ -25,7 +25,7 @@ PRIVATE
 #:for ft in fieldTypeList
 TYPE ${ft.name}$_ARRAY
   CLASS (${ft.name}$), POINTER :: F_P => NULL ()
-  ${ft.type}$, POINTER :: P_FIELD (${ft.shape}$) => NULL()
+  ${ft.type}$, POINTER, CONTIGUOUS :: P_FIELD (${ft.shape}$) => NULL()
 #:if ft.hasView
   ${ft.type}$, POINTER :: P (${ft.viewShape}$) => NULL()
 #:endif
