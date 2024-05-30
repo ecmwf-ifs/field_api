@@ -18,11 +18,11 @@ ${fieldType.useParkind1 ()}$
 
 IMPLICIT NONE
 
-#:for method in ['LOAD', 'SAVE', 'DIFF', 'COPY', 'WIPE', 'HOST', 'CRC64']
+#:for method in ['LOAD', 'SAVE', 'DIFF', 'COPY', 'WIPE', 'HOST', 'LEGACY', 'CRC64']
 INTERFACE ${method}$
 #:for ft in fieldTypeList
   MODULE PROCEDURE ${method}$_${ft.name}$
-#:if method not in ['DIFF', 'CRC64']
+#:if method not in ['DIFF', 'CRC64', 'LEGACY']
   MODULE PROCEDURE ${method}$_${ft.name}$_PTR
 #:if ft.hasView
   MODULE PROCEDURE ${method}$_${ft.name}$_VIEW
@@ -106,6 +106,58 @@ SUBROUTINE HOST_${ft.name}$ (SELF)
 CLASS (${ft.name}$), POINTER :: SELF
 
 CALL SELF%SYNC_HOST_RDWR ()
+
+END SUBROUTINE 
+
+SUBROUTINE LEGACY_${ft.name}$ (SELF, KADDRL, KADDRU, KDIR)
+
+USE ${ft.name}$_ACCESS_MODULE
+USE FIELD_CONSTANTS_MODULE
+
+CLASS (${ft.name}$), POINTER :: SELF
+INTEGER*8, INTENT (IN) :: KADDRL
+INTEGER*8, INTENT (IN) :: KADDRU
+INTEGER,   INTENT (IN) :: KDIR
+
+${ft.type}$, POINTER :: PTR (${ft.shape}$), DEVPTR (${ft.shape}$)
+INTEGER*8 :: IADDRL
+INTEGER*8 :: IADDRU
+INTEGER (KIND=JPIM) :: ILBOUNDS (${ft.rank}$)
+INTEGER (KIND=JPIM) :: IUBOUNDS (${ft.rank}$)
+
+IF (ASSOCIATED (SELF)) THEN
+
+  CALL SELF%GET_DIMS (LBOUNDS=ILBOUNDS, UBOUNDS=IUBOUNDS)
+
+  PTR => SELF%PTR
+
+  IADDRL = LOC (PTR (${",".join (map (lambda i: "ILBOUNDS(" + str (i) + "):", range (1, ft.rank+1)))}$))
+  IADDRU = LOC (PTR (${",".join (map (lambda i: "IUBOUNDS(" + str (i) + "):", range (1, ft.rank+1)))}$))
+
+  IF ((KADDRL <= IADDRL) .AND. (IADDRU <= KADDRU)) THEN
+    DEVPTR => GET_DEVICE_DATA_RDONLY (SELF)
+
+    IF (KDIR == NF2L) THEN
+      CALL LEGACY_${ft.name}$_ASSIGN (PTR, DEVPTR)
+    ELSEIF (KDIR == NL2F) THEN
+      CALL LEGACY_${ft.name}$_ASSIGN (DEVPTR, PTR)
+    ENDIF
+
+  ENDIF
+
+ENDIF
+
+CONTAINS
+
+SUBROUTINE LEGACY_${ft.name}$_ASSIGN (PTR_RHS, PTR_LHS)
+
+${ft.type}$ :: PTR_RHS (${ft.shape}$), PTR_LHS (${ft.shape}$)
+
+!$acc kernels present (PTR_RHS, PTR_LHS)
+PTR_RHS = PTR_LHS
+!$acc end kernels
+
+END SUBROUTINE
 
 END SUBROUTINE 
 
