@@ -93,7 +93,7 @@ if( NOT fiat_FOUND )
   list(APPEND srcs ${ABOR1_PATH} ${OML_PATH} ${PARKIND1_PATH})
 endif()
 
-list(APPEND srcs field_async_module.F90 field_basic_module.F90 field_defaults_module.F90 dev_alloc.c c_malloc.c field_constants_module.F90 field_abort_module.F90 field_statistics_module.F90)
+list(APPEND srcs field_async_module.F90 field_basic_module.F90 field_defaults_module.F90 dev_alloc.c c_malloc.c field_constants_module.F90 field_abort_module.F90 field_statistics_module.F90 field_backtrace.c)
 
 ## check for CUDA
 include(CheckLanguage)
@@ -107,6 +107,8 @@ ecbuild_add_option( FEATURE BUDDY_MALLOC
     DESCRIPTION "Use buddy allocator for shadow host allocation"
     DEFAULT ON
 )
+
+check_symbol_exists(backtrace execinfo.h HAVE_BACKTRACE)
 
 ## fypp preprocessor flags
 if(HAVE_BUDDY_MALLOC)
@@ -174,6 +176,10 @@ foreach(prec ${precisions})
                               INTERFACE $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${LIBNAME}_${prec}> 
                             )
 
+  if( HAVE_BACKTRACE )
+      target_compile_definitions( ${LIBNAME}_${prec} PRIVATE HAVE_BACKTRACE )
+  endif()
+  
   if( prec MATCHES sp )
       target_compile_definitions( ${LIBNAME}_${prec} PRIVATE PARKIND1_SINGLE )
   endif()
