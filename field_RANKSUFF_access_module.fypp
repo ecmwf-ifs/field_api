@@ -71,9 +71,11 @@ CONTAINS
       IF (ASSOCIATED (FIELD_PTR)) THEN
         CALL FIELD_PTR%GET_${what}$_DATA_${mode}$ (PTR)
 
+#:if defined('WITH_FIAT')
         IF (GET_DEBUG_PRINT_CRC) THEN
           ICRC = FIELD_PTR%CRC64 ()
         ENDIF
+#:endif
 
       ELSE
         PTR => DUMMY_${ft.name}$
