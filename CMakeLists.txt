@@ -108,6 +108,8 @@ ecbuild_add_option( FEATURE BUDDY_MALLOC
     DEFAULT ON
 )
 
+check_symbol_exists(backtrace execinfo.h HAVE_BACKTRACE)
+
 ## fypp preprocessor flags
 if(HAVE_BUDDY_MALLOC)
   list( APPEND fypp_defines "-DUSE_BUDDY_MALLOC")
@@ -174,6 +176,10 @@ foreach(prec ${precisions})
                               INTERFACE $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${LIBNAME}_${prec}> 
                             )
 
+  if( HAVE_BACKTRACE )
+      target_compile_definitions( ${LIBNAME}_${prec} PRIVATE HAVE_BACKTRACE )
+  endif()
+  
   if( prec MATCHES sp )
       target_compile_definitions( ${LIBNAME}_${prec} PRIVATE PARKIND1_SINGLE )
   endif()
