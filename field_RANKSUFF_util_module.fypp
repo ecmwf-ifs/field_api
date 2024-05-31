@@ -131,8 +131,8 @@ IF (ASSOCIATED (SELF)) THEN
 
   PTR => SELF%PTR
 
-  IADDRL = LOC (PTR (${",".join (map (lambda i: "ILBOUNDS(" + str (i) + "):", range (1, ft.rank+1)))}$))
-  IADDRU = LOC (PTR (${",".join (map (lambda i: "IUBOUNDS(" + str (i) + "):", range (1, ft.rank+1)))}$))
+  IADDRL = LOC (PTR (${",".join (map (lambda i: "ILBOUNDS(" + str (i) + ")", range (1, ft.rank+1)))}$))
+  IADDRU = LOC (PTR (${",".join (map (lambda i: "IUBOUNDS(" + str (i) + ")", range (1, ft.rank+1)))}$))
 
   IF ((KADDRL <= IADDRL) .AND. (IADDRU <= KADDRU)) THEN
     DEVPTR => GET_DEVICE_DATA_RDONLY (SELF)
