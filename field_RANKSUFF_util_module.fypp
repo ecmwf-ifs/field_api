@@ -135,11 +135,12 @@ IF (ASSOCIATED (SELF)) THEN
   IADDRU = LOC (PTR (${",".join (map (lambda i: "IUBOUNDS(" + str (i) + ")", range (1, ft.rank+1)))}$))
 
   IF ((KADDRL <= IADDRL) .AND. (IADDRU <= KADDRU)) THEN
-    DEVPTR => GET_DEVICE_DATA_RDONLY (SELF)
 
     IF (KDIR == NF2L) THEN
+      DEVPTR => GET_DEVICE_DATA_RDONLY (SELF)
       CALL LEGACY_${ft.name}$_ASSIGN (PTR, DEVPTR)
     ELSEIF (KDIR == NL2F) THEN
+      DEVPTR => GET_DEVICE_DATA_RDWR (SELF)
       CALL LEGACY_${ft.name}$_ASSIGN (DEVPTR, PTR)
     ENDIF
 
