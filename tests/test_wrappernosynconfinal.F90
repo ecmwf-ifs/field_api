@@ -167,13 +167,11 @@ ZH = ZD4
 !$acc end serial
 
 IF (LLINITIALIZED (JSOC) .OR. JINIT == 2) THEN
-WRITE (*, *) __FILE__, ':', __LINE__ 
   IF (ANY (ZH /= ZVAL1)) THEN
     WRITE (*, *) ZH
     CALL FIELD_ABORT ('UNEXPECTED VALUES')
   ENDIF
 ELSE
-WRITE (*, *) __FILE__, ':', __LINE__ 
   IF (ALL (ZH == ZVAL1)) THEN
     WRITE (*, *) ZH
     CALL FIELD_ABORT ('UNEXPECTED VALUES')
@@ -195,16 +193,12 @@ CALL FIELD_DELETE (YLF4)
 
 IF (LLSYNC_ON_FINAL (JSOF)) THEN
 
-WRITE (*, *) __FILE__, ':', __LINE__ 
-
   IF (ALL (ZDATA4 == ZVAL3)) THEN
     WRITE (*, *) ZDATA4 
     CALL FIELD_ABORT ('UNEXPECTED VALUES')
   ENDIF
 
 ELSE
-
-WRITE (*, *) __FILE__, ':', __LINE__ 
 
   IF (ANY (ZDATA4 /= ZVAL1)) THEN
     WRITE (*, *) ZDATA4 

@@ -56,11 +56,6 @@ CONTAINS
   PROCEDURE :: CREATE_DEVICE_DATA => ${ftn}$_GANG_${type}$_CREATE_DEVICE_DATA
   PROCEDURE :: DELETE_DEVICE_DATA => ${ftn}$_GANG_${type}$_DELETE_DEVICE_DATA
   PROCEDURE :: SET_STATUS => ${ftn}$_GANG_${type}$_SET_STATUS
-#:if type == 'WRAPPER'
-#ifdef __PGI
-  PROCEDURE :: GET_HOST_DATA_RDWR => ${ftn}$_GANG_${type}$_GET_HOST_DATA_RDWR
-#endif
-#:endif
 END TYPE ${ftn}$_GANG_${type}$
 
 PUBLIC :: ${ftn}$_GANG_${type}$
@@ -282,18 +277,6 @@ CONTAINS
   END SUBROUTINE
 
 #:endfor
-
-#ifdef __PGI
-  SUBROUTINE ${ftn}$_GANG_WRAPPER_GET_HOST_DATA_RDWR (SELF, PPTR, QUEUE)
-    CLASS(${ftn}$_GANG_WRAPPER) :: SELF
-    ${ft.type}$, POINTER,         INTENT(INOUT) :: PPTR(${ft.shape}$)
-    INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
-
-    CALL SELF%GET_HOST_DATA (IOR (NRD, NWR), PPTR, QUEUE)
-    SELF%INITIALIZED = .TRUE.
-
-  END SUBROUTINE ${ftn}$_GANG_WRAPPER_GET_HOST_DATA_RDWR
-#endif
 
 #:endfor
 
