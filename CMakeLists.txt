@@ -117,6 +117,9 @@ endif()
 if(HAVE_CUDA)
   list( APPEND fypp_defines "-DCUDA")
 endif()
+if(fiat_FOUND)
+  list( APPEND fypp_defines "-DWITH_FIAT")
+endif()
 
 ## preprocess fypp files
 foreach (SUFF IN ITEMS IM RM RD LM)

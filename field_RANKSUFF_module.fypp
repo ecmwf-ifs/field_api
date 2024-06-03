@@ -68,7 +68,9 @@ CONTAINS
   PROCEDURE, PRIVATE :: ${ftn}$_GET_HOST_DATA
   PROCEDURE, PRIVATE :: COPY_DATA =>  ${ftn}$_COPY_DATA
   PROCEDURE :: CREATE_DEVICE_DATA => ${ftn}$_CREATE_DEVICE_DATA
+#:if defined('WITH_FIAT')
   PROCEDURE :: CRC64 => ${ftn}$_CRC64
+#:endif
 #ifdef __PGI
   PROCEDURE :: SET_STATUS => ${ftn}$_SET_STATUS
 #endif
@@ -556,6 +558,7 @@ CONTAINS
 
   END SUBROUTINE ${ftn}$_WRAPPER_GET_DEVICE_DATA
 
+#:if defined('WITH_FIAT')
   INTEGER*8 FUNCTION ${ftn}$_CRC64 (SELF) RESULT (ICRC)
     CLASS(${ftn}$) :: SELF
     ${ft.type}$, POINTER :: PTR(${ft.shape}$)
@@ -580,6 +583,7 @@ CONTAINS
     ENDIF
 
   END FUNCTION
+#:endif
 
   SUBROUTINE ${ftn}$_OWNER_GET_DEVICE_DATA (SELF, MODE, PTR, QUEUE)
     CLASS(${ftn}$_OWNER) :: SELF
