@@ -81,6 +81,7 @@ list(APPEND TEST_FILES
         test_crc64.F90
         wrapper_modify_gpu.F90
         test_gang.F90
+        test_get_device_data_wronly.F90
 	)
 
 #Place-holder for failing tests
