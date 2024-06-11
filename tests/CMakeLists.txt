@@ -118,6 +118,10 @@ foreach(TEST_FILE ${TEST_FILES})
 
     target_link_options( ${TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:-gpu=pinned> )
     target_compile_definitions( ${TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:_CUDA> )
+
+    if( DEFAULT_PRECISION MATCHES sp )
+       target_compile_definitions( ${TEST_NAME}.x PRIVATE PARKIND1_SINGLE )
+    endif()
 endforeach()
 
 foreach(FAILING_TEST_FILE ${FAILING_TEST_FILES})

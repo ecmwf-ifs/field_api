@@ -11,7 +11,7 @@ MODULE FIELD_SHUFFLE_TYPE_MODULE
 
 #:set fieldTypeList = fieldType.getFieldTypeList (hasView=True)
 
-USE FIELD_MODULE
+USE FIELD_3IM_MODULE, ONLY : FIELD_3IM
 USE FIELD_ACCESS_MODULE
 USE FIELD_FACTORY_MODULE
 ${fieldType.useParkind1 ()}$
