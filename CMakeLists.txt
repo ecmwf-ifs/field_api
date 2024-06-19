@@ -104,6 +104,17 @@ ecbuild_add_option( FEATURE CUDA
     DESCRIPTION "CUDA" DEFAULT ON
     CONDITION CMAKE_CUDA_COMPILER AND HAVE_ACC )
 
+## determine GPU offload library linking behaviour
+ecbuild_add_option( FEATURE EXPORT_GPU_LIBRARY
+                    DESCRIPTION "Export GPU offload library to targets linking to FIELD_API"
+                    DEFAULT ON )
+
+if( HAVE_EXPORT_GPU_LIBRARY )
+   set( _gpu_link_type PUBLIC )
+else()
+   set( _gpu_link_type PRIVATE )
+endif()
+
 ## buddy allocator option
 ecbuild_add_option( FEATURE BUDDY_MALLOC
     DESCRIPTION "Use buddy allocator for shadow host allocation"
@@ -189,8 +200,6 @@ foreach(prec ${precisions})
       TARGET ${LIBNAME}_${prec}
       SOURCES ${prec_srcs} $<TARGET_OBJECTS:${LIBNAME}>
       DEFINITIONS $<$<NOT:${fiat_FOUND}>:${FIELD_API_DEFINITIONS}>
-      PUBLIC_LIBS
-       $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
       PRIVATE_LIBS
          $<${fiat_FOUND}:fiat>
          $<${fiat_FOUND}:parkind_${prec}>
@@ -199,7 +208,9 @@ foreach(prec ${precisions})
   target_include_directories( ${LIBNAME}_${prec} PRIVATE ${CMAKE_BINARY_DIR}/include/${LIBNAME})
   set_property(TARGET ${LIBNAME}_${prec} PROPERTY C_STANDARD 99)
   set_target_properties( ${LIBNAME}_${prec} PROPERTIES Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/include/${LIBNAME}_${prec} )
-  target_link_options( ${LIBNAME}_${prec} PUBLIC $<${HAVE_CUDA}:-cuda> )
+
+  target_link_libraries( ${LIBNAME}_${prec} ${_gpu_link_type} $<${HAVE_ACC}:OpenACC::OpenACC_Fortran> )
+  target_link_options( ${LIBNAME}_${prec} ${_gpu_link_type} $<${HAVE_CUDA}:-cuda> )
 
   # export target usage interface
   target_include_directories( ${LIBNAME}_${prec}
