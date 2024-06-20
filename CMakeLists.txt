@@ -189,8 +189,8 @@ foreach(prec ${precisions})
       TARGET ${LIBNAME}_${prec}
       SOURCES ${prec_srcs} $<TARGET_OBJECTS:${LIBNAME}>
       DEFINITIONS $<$<NOT:${fiat_FOUND}>:${FIELD_API_DEFINITIONS}>
-      PUBLIC_LIBS
-       $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
+      INTERFACE_LIBS
+         $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
       PRIVATE_LIBS
          $<${fiat_FOUND}:fiat>
          $<${fiat_FOUND}:parkind_${prec}>
