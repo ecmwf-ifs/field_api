@@ -20,3 +20,18 @@
 {
    free(ptr);
 }
+
+ void c_ptr_incr (size_t siz, void * ptr)
+{
+  ptr += siz;
+}
+
+ void c_ptr_decr (size_t siz, void * ptr)
+{
+  ptr -= siz;
+}
+
+ void print_c_addr (void * ptr)
+{
+  printf (" GOT HERE C ADDR = %lld\n", ptr);
+}
