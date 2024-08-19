@@ -83,6 +83,7 @@ list(APPEND TEST_FILES
         wrapper_modify_gpu.F90
         test_gang.F90
         test_get_device_data_wronly.F90
+        test_host_mem_pool.F90
 	)
 
 #Place-holder for failing tests
