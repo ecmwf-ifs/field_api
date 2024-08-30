@@ -1,0 +1,58 @@
+! (C) Copyright 2022- ECMWF.
+! (C) Copyright 2022- Meteo-France.
+!
+! This software is licensed under the terms of the Apache Licence Version 2.0
+! which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
+! In applying this licence, ECMWF does not waive the privileges and immunities
+! granted to it by virtue of its status as an intergovernmental organisation
+! nor does it submit to any jurisdiction.
+
+PROGRAM TEST_HOST_MEM_POOL
+
+        USE FIELD_MODULE
+        USE FIELD_FACTORY_MODULE
+        USE PARKIND1
+        USE FIELD_ABORT_MODULE
+        USE FIELD_DEFAULTS_MODULE
+        USE HOST_ALLOC_MODULE, ONLY : HOST_POOL
+        IMPLICIT NONE
+        CLASS(FIELD_1RD), POINTER :: F1 => NULL()
+        CLASS(FIELD_1RM), POINTER :: F2 => NULL()
+        CLASS(FIELD_1RD), POINTER :: F3 => NULL()
+        INTEGER :: PADDED_F2_SIZE, F1_SIZE
+
+        POOL_BLOCK_SIZE = 1024_INT64*SIZEOF(REAL(1., KIND=JPRD))
+
+        !... Check creation of memory pool
+        CALL FIELD_NEW(F1, UBOUNDS=[256], PERSISTENT=.TRUE., POOLED=.TRUE.)
+        IF(.NOT. ASSOCIATED(HOST_POOL%START_BLK)) CALL FIELD_ABORT("ERROR")
+        IF(F1%BLKID /= 1) CALL FIELD_ABORT("ERROR")
+        CALL FIELD_NEW(F2, UBOUNDS=[511], PERSISTENT=.TRUE., POOLED=.TRUE.)
+        IF(F2%BLKID /= 1) CALL FIELD_ABORT("ERROR")
+        CALL FIELD_NEW(F3, UBOUNDS=[1024], PERSISTENT=.TRUE., POOLED=.TRUE.)
+        IF(.NOT. ASSOCIATED(HOST_POOL%START_BLK%NEXT)) CALL FIELD_ABORT("ERROR")
+        IF(F3%BLKID /= 2) CALL FIELD_ABORT("ERROR")
+
+        IF(HOST_POOL%START_BLK%NUMFLDS /= 2) CALL FIELD_ABORT("ERROR")
+        IF(HOST_POOL%START_BLK%NEXT%NUMFLDS /= 1) CALL FIELD_ABORT("ERROR")
+
+        !... Check allocation sizes
+        IF(SIZEOF(F1%PTR) /= 256*SIZEOF(REAL(1, KIND=JPRD))) CALL FIELD_ABORT("ERROR")
+        IF(SIZEOF(F2%PTR) /= 511*SIZEOF(REAL(1, KIND=JPRM))) CALL FIELD_ABORT("ERROR")
+
+        F1_SIZE = SIZEOF(F1%PTR)
+        PADDED_F2_SIZE = SIZEOF(F2%PTR) + MOD(SIZEOF(F2%PTR), POOL_ALLOC_PADDING_FACTOR)
+
+        IF(HOST_POOL%START_BLK%POS /= F1_SIZE + PADDED_F2_SIZE) CALL FIELD_ABORT("ERROR")
+        IF(SIZEOF(F3%PTR) /= 1024*SIZEOF(REAL(1, KIND=JPRD))) CALL FIELD_ABORT("ERROR")
+
+        !... Check memory pool teardown
+        CALL FIELD_DELETE(F1)
+        IF(HOST_POOL%START_BLK%POS /= F1_SIZE + PADDED_F2_SIZE) CALL FIELD_ABORT("ERROR")
+        CALL FIELD_DELETE(F2)
+        IF(HOST_POOL%START_BLK%POS /= 0) CALL FIELD_ABORT("ERROR")
+        CALL FIELD_DELETE(F3)
+        IF(HOST_POOL%START_BLK%NEXT%POS /= 0) CALL FIELD_ABORT("ERROR")
+
+        CALL FIELD_HOST_POOL_DELETE()
+END PROGRAM TEST_HOST_MEM_POOL

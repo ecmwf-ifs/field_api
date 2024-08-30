@@ -20,3 +20,8 @@
 {
    free(ptr);
 }
+
+ void c_ptr_incr (size_t siz, void ** ptr, void ** data)
+{
+  *data = (*ptr) + siz;
+}
