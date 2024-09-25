@@ -46,14 +46,22 @@ elseif( FYPP MATCHES FYPP-NOTFOUND )
 endif()
 
 ## find OpenACC
-### Workaround for CMake bug (fixed in CMake 3.25)
-find_package(OpenACC COMPONENTS Fortran)
-if( OpenACC_Fortran_FOUND )
-   set( OpenACC_FOUND ON )
+if( ${CMAKE_VERSION} VERSION_LESS "3.25" )
+  if ( FIELD_API_ENABLE_ACC OR (NOT DEFINED FIELD_API_ENABLE_ACC AND (ENABLE_ACC OR NOT DEFINED ENABLE_ACC)) )
+    # See https://gitlab.kitware.com/cmake/cmake/-/issues/23691, fixed in CMake 3.25
+    # (TL;DR: FindOpenACC sets OpenACC_<LANG>_FOUND correctly but does not set
+    #  OpenACC_FOUND unless all three C, CXX, and Fortran have been found - even if
+    #  only one language has been requested via COMPONENTS)
+    find_package( OpenACC COMPONENTS Fortran )
+    if( OpenACC_Fortran_FOUND )
+      set( OpenACC_FOUND ON )
+    endif()
+  endif()
 endif()
 ecbuild_add_option( FEATURE ACC
-    DESCRIPTION "OpenACC" DEFAULT ON
-    CONDITION OpenACC_FOUND )
+                    DEFAULT ON
+                    DESCRIPTION "Support for using GPUs with OpenACC"
+                    REQUIRED_PACKAGES "OpenACC COMPONENTS Fortran" )
 
 ## set general compiler flags
 include(cmake/field_api_compile_options.cmake)
