@@ -18,7 +18,13 @@ ${fieldType.useParkind1 ()}$
 
 IMPLICIT NONE
 
-#:for method in ['LOAD', 'SAVE', 'DIFF', 'COPY', 'WIPE', 'HOST', 'LEGACY', 'CRC64']
+#:if defined('WITH_FIAT')
+#:set method_list = ['LOAD', 'SAVE', 'DIFF', 'COPY', 'WIPE', 'HOST', 'LEGACY', 'CRC64']
+#:else
+#:set method_list = ['LOAD', 'SAVE', 'DIFF', 'COPY', 'WIPE', 'HOST', 'LEGACY']
+#:endif
+
+#:for method in method_list
 INTERFACE ${method}$
 #:for ft in fieldTypeList
   MODULE PROCEDURE ${method}$_${ft.name}$
@@ -36,6 +42,7 @@ END INTERFACE
 CONTAINS
 
 #:for ft in fieldTypeList
+#:if defined('WITH_FIAT')
 INTEGER*8 FUNCTION CRC64_${ft.name}$ (YD)
 CLASS (${ft.name}$), POINTER :: YD
 INTEGER*8 :: ICRC
@@ -49,6 +56,7 @@ ENDIF
 CRC64_${ft.name}$ = ICRC
 
 END FUNCTION
+#:endif
 
 SUBROUTINE LOAD_${ft.name}$ (KLUN, YD)
 

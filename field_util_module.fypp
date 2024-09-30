@@ -16,9 +16,15 @@ MODULE FIELD_UTIL_MODULE
 
 #:def useAliasRB (ftlRB, ftlTA, ftlOT)
 
+#:if defined('WITH_FIAT')
+#:set method_list = ['LOAD', 'SAVE', 'DIFF', 'COPY', 'WIPE', 'HOST', 'LEGACY', 'CRC64']
+#:else
+#:set method_list = ['LOAD', 'SAVE', 'DIFF', 'COPY', 'WIPE', 'HOST', 'LEGACY']
+#:endif
+
 #:for fta, ftb in zip (ftlTA, ftlRB)
 USE ${fta.name}$_UTIL_MODULE, ONLY : &
-#:for method in ['LOAD', 'SAVE', 'DIFF', 'COPY', 'WIPE', 'HOST', 'LEGACY', 'CRC64']
+#:for method in method_list
       & ${method}$_${ftb.name}$ => ${method}$_${fta.name}$,  ${method}$_${fta.name}$, ${method}$,      &
 #:if method not in ['DIFF', 'CRC64', 'LEGACY']
       & ${method}$_${ftb.name}$_PTR  => ${method}$_${fta.name}$_PTR,   ${method}$_${fta.name}$_PTR,    &

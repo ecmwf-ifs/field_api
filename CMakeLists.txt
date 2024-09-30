@@ -179,7 +179,7 @@ ecbuild_add_library(
     TARGET ${LIBNAME}
     TYPE OBJECT
     SOURCES ${srcs}
-    DEFINITIONS $<$<NOT:${fiat_FOUND}>:${FIELD_API_DEFINITIONS}>
+    DEFINITIONS $<$<NOT:${fiat_FOUND}>:${FIELD_API_DEFINITIONS}> $<${fiat_FOUND}:WITH_FIAT>
     PRIVATE_LIBS
        $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
        $<${fiat_FOUND}:fiat>
