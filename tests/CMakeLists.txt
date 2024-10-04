@@ -21,7 +21,7 @@ ecbuild_add_test(
         $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
     LINKER_LANGUAGE Fortran
 )
-target_link_options( main.x PRIVATE $<${HAVE_CUDA}:-cuda;-gpu=pinned> )
+target_link_options( main.x PRIVATE $<${HAVE_CUDA}:-gpu=pinned> )
 target_compile_definitions( main.x PRIVATE $<${HAVE_CUDA}:_CUDA> )
 
 ## Unit tests
@@ -119,7 +119,7 @@ foreach(TEST_FILE ${TEST_FILES})
         PROPERTIES Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/include/tests
     )
 
-    target_link_options( ${TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:-cuda;-gpu=pinned> )
+    target_link_options( ${TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:-gpu=pinned> )
     target_compile_definitions( ${TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:_CUDA> )
 
     if( DEFAULT_PRECISION MATCHES sp )
@@ -167,9 +167,6 @@ ecbuild_add_test(
     LINKER_LANGUAGE Fortran
     CONDITION ${HAVE_SINGLE_PRECISION}
 )
-if( HAVE_SINGLE_PRECISION )
-    target_link_options( init_wrapper_mixed_precision.x PRIVATE $<${HAVE_CUDA}:-cuda> )
-endif()
 
 ## Test presence of GPUs
 add_executable(check_gpu_num.x check_gpu_num.F90)
