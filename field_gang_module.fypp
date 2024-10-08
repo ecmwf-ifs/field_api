@@ -9,21 +9,8 @@
 
 MODULE FIELD_GANG_MODULE
 
-#:set fieldTypeList = fieldType.getFieldTypeList (ganged=True)
-
-#:for ft in fieldTypeList
-USE ${ft.name}$_GANG_MODULE
-#:endfor
-
-${fieldType.useParkind1 ()}$
-
 IMPLICIT NONE
 
 PRIVATE
-
-#:for ft in fieldTypeList
-PUBLIC :: ${ft.name}$_GANG_WRAPPER
-PUBLIC :: ${ft.name}$_GANG_OWNER
-#:endfor
 
 END MODULE FIELD_GANG_MODULE
