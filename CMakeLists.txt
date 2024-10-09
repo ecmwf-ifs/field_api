@@ -203,8 +203,6 @@ foreach(prec ${precisions})
       TARGET ${LIBNAME}_${prec}
       SOURCES ${prec_srcs} $<TARGET_OBJECTS:${LIBNAME}>
       DEFINITIONS $<$<NOT:${fiat_FOUND}>:${FIELD_API_DEFINITIONS}>
-      INTERFACE_LIBS
-         $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
       PRIVATE_LIBS
          $<${fiat_FOUND}:fiat>
          $<${fiat_FOUND}:parkind_${prec}>
@@ -214,6 +212,10 @@ foreach(prec ${precisions})
   set_property(TARGET ${LIBNAME}_${prec} PROPERTY C_STANDARD 99)
   set_target_properties( ${LIBNAME}_${prec} PROPERTIES Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/include/${LIBNAME}_${prec} )
   target_link_options( ${LIBNAME}_${prec} PUBLIC $<${HAVE_CUDA}:-cuda> )
+
+  if( HAVE_ACC AND CMAKE_Fortran_COMPILER_ID MATCHES "PGI|NVHPC")
+     target_link_options( ${LIBNAME}_${prec} INTERFACE SHELL:${OpenACC_Fortran_FLAGS} )
+  endif()
 
   # export target usage interface
   target_include_directories( ${LIBNAME}_${prec}
