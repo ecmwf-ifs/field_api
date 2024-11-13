@@ -82,6 +82,7 @@ list(APPEND TEST_FILES
         test_get_device_data_bounds.F90
         test_get_device_data_wronly.F90
         test_get_device_data_non_contiguous.F90
+        get_device_data_multi_blk_async.F90
         test_host_mem_pool.F90
         test_lastdim.F90
         test_legacy.F90
