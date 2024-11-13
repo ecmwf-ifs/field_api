@@ -173,7 +173,7 @@ endforeach ()
 unset( non_ranksuff_srcs )
 list ( APPEND non_ranksuff_srcs dev_alloc_module field_factory_module field_access_module field_array_module field_module 
                       field_shuffle_module field_util_module field_array_util_module field_shuffle_type_module host_alloc_module
-                      field_gathscat_module field_gathscat_type_module)
+                      field_gathscat_module field_gathscat_type_module field_data_module)
 if(HAVE_FIELD_GANG)
   list( APPEND non_ranksuff_srcs field_gang_module )
 endif()
