@@ -107,6 +107,7 @@ list(APPEND TEST_FILES
         test_field_clone_optional.F90
         test_field_delete_on_null.F90
         test_force_methods.F90
+        test_get_device_data_bounds.F90
         test_get_device_data_non_contiguous.F90
         test_get_device_data_wronly.F90
         test_host_mem_pool.F90
