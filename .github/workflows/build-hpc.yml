@@ -17,7 +17,6 @@ jobs:
       fail-fast: false    # false: try to complete all jobs
 
       matrix:
-        prec: [dp, sp]
         cuda: [False, True]
         name:
           - ac-gpu nvhpc
@@ -28,10 +27,10 @@ jobs:
             sbatch_options: |
               #SBATCH --time=00:20:00
               #SBATCH --nodes=1
-              #SBATCH --ntasks=2
+              #SBATCH --ntasks=1
               #SBATCH --cpus-per-task=32
               #SBATCH --gpus-per-task=1
-              #SBATCH --mem=200G
+              #SBATCH --mem=100G
               #SBATCH --qos=dg
 
     runs-on: [self-hosted, linux, hpc]
@@ -46,17 +45,15 @@ jobs:
           template_data: |
             modules:
               - cmake
-              - fcm
               - ninja
               - ecbuild
               - prgenv/nvidia
-              - hpcx-openmpi
               - python3
             cmake_options:
               - -DENABLE_ACC=ON
               - -DENABLE_CUDA=${{ matrix.cuda }}
-              - -DENABLE_SINGLE_PRECISION=${{ matrix.prec == 'sp' }}
-              - -DENABLE_DOUBLE_PRECISION=${{ matrix.prec == 'dp' }}
+              - -DENABLE_SINGLE_PRECISION=ON
+              - -DENABLE_DOUBLE_PRECISION=ON
             dependencies:
               ecmwf/fckit:
                 version: 0.13.0
@@ -66,9 +63,8 @@ jobs:
               ecmwf-ifs/fiat:
                 version: 1.4.1
                 cmake_options:
-                  - -DENABLE_MPI=ON
-                  - -DENABLE_SINGLE_PRECISION=${{ matrix.prec == 'sp' }}
-                  - -DENABLE_DOUBLE_PRECISION=${{ matrix.prec == 'dp' }}
+                  - -DENABLE_SINGLE_PRECISION=ON
+                  - -DENABLE_DOUBLE_PRECISION=ON
           template: |
             {% for module in modules %}
               module load {{module}}
