@@ -3,6 +3,13 @@ name: build-hpc
 # Controls when the action will run
 on:
 
+  # Trigger the workflow on all pushes to main, except on tag creation
+  push:
+    branches:
+    - main
+    tags-ignore:
+    - '**'
+
   # Trigger the workflow on all pull requests
   pull_request: ~
 
