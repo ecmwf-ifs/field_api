@@ -61,7 +61,8 @@ endif()
 ecbuild_add_option( FEATURE ACC
                     DEFAULT ON
                     DESCRIPTION "Support for using GPUs with OpenACC"
-                    REQUIRED_PACKAGES "OpenACC COMPONENTS Fortran" )
+                    REQUIRED_PACKAGES "OpenACC COMPONENTS Fortran" 
+                    CONDITION CMAKE_Fortran_COMPILER_ID MATCHES "PGI|NVHPC")
 
 ## set general compiler flags
 include(cmake/field_api_compile_options.cmake)
