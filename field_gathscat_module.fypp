@@ -9,7 +9,7 @@
 
 MODULE FIELD_GATHSCAT_MODULE
 
-#:set fieldTypeList = fieldType.getFieldTypeList ()
+#:set fieldTypeList = fieldType.getFieldTypeList (hasView=True)
 
 USE FIELD_ACCESS_MODULE
 USE FIELD_FACTORY_MODULE
@@ -30,9 +30,24 @@ PUBLIC :: FIELD_GATHSCAT
 #:for what in ['DEVICE', 'HOST']
 #:for mode in ['RDONLY', 'RDWR']
 
+INTERFACE GATHER_${what}$_DATA_${mode}$
+#:for ft in fieldTypeList
+  MODULE PROCEDURE ${ft.name}$_GATHER_${what}$_DATA_${mode}$
+#:endfor
+END INTERFACE GATHER_${what}$_DATA_${mode}$
+
 PUBLIC :: GATHER_${what}$_DATA_${mode}$
+
+INTERFACE SGATHER_${what}$_DATA_${mode}$
+#:for ft in fieldTypeList
+  MODULE PROCEDURE S${ft.name}$_GATHER_${what}$_DATA_${mode}$
+#:endfor
+END INTERFACE SGATHER_${what}$_DATA_${mode}$
+
+PUBLIC :: SGATHER_${what}$_DATA_${mode}$
 
 #:endfor
 #:endfor
+
 
 END MODULE FIELD_GATHSCAT_MODULE

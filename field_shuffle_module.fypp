@@ -14,11 +14,15 @@ MODULE FIELD_SHUFFLE_MODULE
 USE FIELD_ACCESS_MODULE
 USE FIELD_FACTORY_MODULE
 USE FIELD_SHUFFLE_TYPE_MODULE
+#:for what in ['DEVICE', 'HOST']
+#:for mode in ['RDONLY', 'RDWR']
+USE FIELD_GATHSCAT_MODULE, ONLY : GATHER_${what}$_DATA_${mode}$
+#:endfor
+#:endfor
 ${fieldType.useParkind1 ()}$
 
 #:for ft in fieldTypeList
 USE ${ft.name}$_SHUFFLE_MODULE
-USE ${ft.name}$_GATHER_MODULE
 #:endfor
 
 
