@@ -13,9 +13,11 @@ MODULE FIELD_${RANK}$${SUFF}$_FACTORY_MODULE
 
 #:for ft in fieldTypeList
 USE ${ft.name}$_MODULE
+#:if defined('HAVE_GANG')
 #:if ft.ganged
 USE FIELD_${ft.rank-1}$${SUFF}$_MODULE
 USE ${ft.name}$_GANG_MODULE
+#:endif
 #:endif
 #:endfor
 
@@ -29,9 +31,11 @@ INTERFACE FIELD_NEW
 #:for ft in fieldTypeList
   MODULE PROCEDURE ${ft.name}$_NEW_OWNER
   MODULE PROCEDURE ${ft.name}$_NEW_WRAPPER
+#:if defined('HAVE_GANG')
 #:if ft.ganged
   MODULE PROCEDURE ${ft.name}$_NEW_GANG_WRAPPER
   MODULE PROCEDURE ${ft.name}$_NEW_GANG_OWNER
+#:endif
 #:endif
 #:endfor
 END INTERFACE
@@ -108,6 +112,7 @@ IF (FIELD_STATISTICS_ENABLE) CALL FIELD_STATISTICS_NEW ()
 
 END SUBROUTINE
 
+#:if defined('HAVE_GANG')
 #:if ft.ganged
 SUBROUTINE ${ft.name}$_NEW_GANG_WRAPPER (FIELD_PTR, CHILDREN, LBOUNDS, PERSISTENT, DATA, SYNC_ON_FINAL, INITIALIZED)
 
@@ -180,6 +185,7 @@ IF (FIELD_STATISTICS_ENABLE) CALL FIELD_STATISTICS_NEW ()
 
 END SUBROUTINE
 
+#:endif
 #:endif
 
 SUBROUTINE ${ft.name}$_DELETE (FIELD_PTR)

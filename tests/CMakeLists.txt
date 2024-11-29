@@ -75,7 +75,6 @@ list(APPEND TEST_FILES
         test_field1d.F90
         test_field_array.F90
         test_field_delete_on_null.F90
-        test_gang.F90
         test_get_device_data_wronly.F90
         test_host_mem_pool.F90
         test_lastdim.F90
@@ -86,6 +85,10 @@ list(APPEND TEST_FILES
         test_wrappernosynconfinal.F90
         wrapper_modify_gpu.F90
 	)
+
+if(HAVE_FIELD_GANG)
+  list(APPEND TEST_FILES test_gang.F90)
+endif()
 
 #Place-holder for failing tests
 set(FAILING_TEST_FILES
@@ -112,6 +115,8 @@ foreach(TEST_FILE ${TEST_FILES})
            fiat
            OpenMP::OpenMP_Fortran
            $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
+        DEFINITIONS
+           $<${HAVE_FIELD_GANG}:HAVE_FIELD_GANG>
         LINKER_LANGUAGE Fortran
         OMP ${omp_num_threads}
     )
