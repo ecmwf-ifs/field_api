@@ -10,7 +10,7 @@
 set(LIBNAME_PREC ${LIBNAME}_${DEFAULT_PRECISION})
 
 # set DEV_ALLOC_SIZE for tests
-set(dev_alloc_size "268435456") # 1GB
+set(dev_alloc_size "268435456") # 256MB
 
 ## Host-device ping-pong runner
 ecbuild_add_test(
