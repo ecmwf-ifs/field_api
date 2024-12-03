@@ -44,15 +44,17 @@ Features of FIELD_API can be toggled by passing the following argument to the CM
 |:--- |:--- |:--- |
 | TESTS | ON | Build the testing suite. |
 | BUDDY_MALLOC | ON | Enable the use of a binary buddy memory allocator for the shadow host allocation for `FIELD%DEVPTR`. This option is switched off if CUDA is enabled.|
-| ACC | ON | Enable the use of OpenACC for GPU offload. |
+| ACC | ON | Enable the use of OpenACC for GPU offload. Currently only suppored on NVHPC. |
 | SINGLE_PRECISION | ON | Enable the compilation of field_api in single precision |
 | DOUBLE_PRECISION | ON | Enable the compilation of field_api in double precision |
 | CUDA | OFF | Enable the use of CUDA for GPU offload. Disables the use of the buddy memory allocator, removes the shadow host allocation for `FIELD%DEVPTR` and allocates owned fields (see below) in pinned (page-locked) host memory.|
+| FIELD_GANG | ON | Enable packed storage of groups of fields. This feature is not supported for the Cray compiler as it cannot resolve the underlying polymorphism.|
 
 ## Supported compilers
 The library has been tested with the nvhpc toolkit from Nvidia, version 23.9
-and is continually tested with newer releases. It has also been tested on CPU
-(-DENABLE_ACC=OFF) with GCC 12 and Intel 2021. The CI testing (CPU-only for now) uses GNU 11.4.
+and is continually tested with newer releases. Please note that GPU offload is currently
+only supported for Nvidia compilers. It has also been tested on CPU (-DENABLE_ACC=OFF)
+with GCC 12, Intel 2021 and CCE17.
 
 # Field API types
 

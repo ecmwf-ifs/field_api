@@ -30,21 +30,14 @@ PUBLIC :: FIELD_SHUFFLE
 
 #:for what in ['DEVICE', 'HOST']
 #:for mode in ['RDONLY', 'RDWR']
-INTERFACE GATHER_${what}$_DATA_${mode}$
+
 #:for ft in fieldTypeList
-  MODULE PROCEDURE :: ${ft.name}$_GATHER_${what}$_DATA_${mode}$
+PUBLIC :: ${ft.name}$_GATHER_${what}$_DATA_${mode}$
 #:endfor
-END INTERFACE
 
-PUBLIC :: GATHER_${what}$_DATA_${mode}$
-
-INTERFACE SGATHER_${what}$_DATA_${mode}$
 #:for ft in fieldTypeList
-  MODULE PROCEDURE :: S${ft.name}$_GATHER_${what}$_DATA_${mode}$
+PUBLIC :: S${ft.name}$_GATHER_${what}$_DATA_${mode}$
 #:endfor
-END INTERFACE
-
-PUBLIC :: SGATHER_${what}$_DATA_${mode}$
 
 #:endfor
 #:endfor

@@ -28,7 +28,11 @@ PUBLIC :: ${ftn}$_COPY_INTF
 
 ABSTRACT INTERFACE
   SUBROUTINE ${ftn}$_COPY_INTF (HST, DEV, MAP_DEVPTR, KDIR, QUEUE)
+#:if 'IM' in ftn
+    IMPORT :: ${ft.kind}$
+#:else
     IMPORT :: JPIM, ${ft.kind}$
+#:endif
     ${ft.type}$, POINTER :: HST (${ft.shape}$), DEV (${ft.shape}$)
     LOGICAL,                       INTENT (IN) :: MAP_DEVPTR
     INTEGER (KIND=JPIM),           INTENT (IN) :: KDIR

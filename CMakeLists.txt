@@ -61,7 +61,8 @@ endif()
 ecbuild_add_option( FEATURE ACC
                     DEFAULT ON
                     DESCRIPTION "Support for using GPUs with OpenACC"
-                    REQUIRED_PACKAGES "OpenACC COMPONENTS Fortran" )
+                    REQUIRED_PACKAGES "OpenACC COMPONENTS Fortran" 
+                    CONDITION CMAKE_Fortran_COMPILER_ID MATCHES "PGI|NVHPC")
 
 ## set general compiler flags
 include(cmake/field_api_compile_options.cmake)
@@ -124,6 +125,13 @@ ecbuild_add_option( FEATURE BUDDY_MALLOC
     DEFAULT ON
 )
 
+## Field Gang
+ecbuild_add_option( FEATURE FIELD_GANG
+    DESCRIPTION "Enable packed storage of fields"
+    DEFAULT ON
+    CONDITION (NOT CMAKE_Fortran_COMPILER_ID MATCHES "Cray")
+)
+
 check_symbol_exists(backtrace execinfo.h HAVE_BACKTRACE)
 
 ## fypp preprocessor flags
@@ -136,12 +144,21 @@ endif()
 if(fiat_FOUND)
   list( APPEND fypp_defines "-DWITH_FIAT")
 endif()
+if(HAVE_FIELD_GANG)
+  list( APPEND fypp_defines "-DHAVE_GANG")
+endif()
 
+unset( ranksuff_srcs )
 ## preprocess fypp files
+list( APPEND ranksuff_srcs _shuffle _access _util _array _array_util _factory _gather _data)
+if(HAVE_FIELD_GANG)
+  list( APPEND ranksuff_srcs _gang )
+endif()
+
 foreach (SUFF IN ITEMS IM RM RD LM)
   string (TOLOWER ${SUFF} suff)
   foreach (RANK RANGE 1 5)
-    foreach (FUNC IN ITEMS "" _shuffle _access _util _array _array_util _gang _factory _gather _data)
+    foreach (FUNC ${ranksuff_srcs} "")
       add_custom_command (OUTPUT field_${RANK}${suff}${FUNC}_module.F90
 	      COMMAND ${FYPP} -DRANK=${RANK} -DSUFF='${SUFF}' ${fypp_defines} -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType 
         ${CMAKE_CURRENT_SOURCE_DIR}/field_RANKSUFF${FUNC}_module.fypp > field_${RANK}${suff}${FUNC}_module.F90
@@ -153,9 +170,15 @@ foreach (SUFF IN ITEMS IM RM RD LM)
   endforeach ()
 endforeach ()
 
-foreach (SRC IN ITEMS dev_alloc_module field_factory_module field_access_module field_gang_module field_array_module field_module 
+unset( non_ranksuff_srcs )
+list ( APPEND non_ranksuff_srcs dev_alloc_module field_factory_module field_access_module field_array_module field_module 
                       field_shuffle_module field_util_module field_array_util_module field_shuffle_type_module host_alloc_module
                       field_gathscat_module field_gathscat_type_module)
+if(HAVE_FIELD_GANG)
+  list( APPEND non_ranksuff_srcs field_gang_module )
+endif()
+
+foreach (SRC ${non_ranksuff_srcs} )
   add_custom_command (OUTPUT ${SRC}.F90
 	  COMMAND ${FYPP} -m os ${fypp_defines} -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/${SRC}.fypp > ${SRC}.F90
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${SRC}.fypp
