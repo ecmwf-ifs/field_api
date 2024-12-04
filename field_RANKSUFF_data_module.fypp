@@ -121,23 +121,28 @@ CONTAINS
     INTEGER (KIND=JPIM), OPTIONAL, INTENT (IN) :: QUEUE
     INTEGER (KIND=INT64)                       :: ISIZE
     INTEGER :: ${', '.join (['J'] + list (map (lambda i: 'J' + str (i+1), range (d, ft.rank))))}$
+    INTEGER :: ${', '.join (['D'] + list (map (lambda i: 'D' + str (i+1), range (d, ft.rank))))}$
+    INTEGER :: ${', '.join (['JD'] + list (map (lambda i: 'JD' + str (i+1), range (d, ft.rank))))}$
 #ifdef _OPENACC
     TYPE(C_DEVPTR) :: DEVPTR
 #endif
 
   #:for e in range (ft.rank, d, -1)
+    ${'  ' * (ft.rank - e)}$D${e}$ = 1 - LBOUND (HST, ${e}$)
     ${'  ' * (ft.rank - e)}$DO J${e}$ = LBOUND (HST, ${e}$), UBOUND (HST, ${e}$)
+    ${'  ' * (ft.rank - e + 1)}$JD${e}$ = J${e}$ + D${e}$
   #:endfor
   #:set ar = ', '.join ([':'] * d  + list (map (lambda i: 'J' + str (i+1), range (d, ft.rank))))
+  #:set ard = ', '.join ([':'] * d  + list (map (lambda i: 'JD' + str (i+1), range (d, ft.rank))))
   #:set indent = '  ' * (ft.rank - e)
 #ifdef _OPENACC
     ${indent}$  IF(MAP_DEVPTR)THEN
     ${indent}$    !$acc host_data use_device(DEV)
-    ${indent}$    DEVPTR = C_DEVLOC(DEV (${ar}$))
+    ${indent}$    DEVPTR = C_DEVLOC(DEV (${ard}$))
     ${indent}$    !$acc end host_data
     ${indent}$  ELSE
     ${indent}$    !$acc data deviceptr(DEVPTR, DEV)
-    ${indent}$    DEVPTR = C_DEVLOC(DEV (${ar}$))
+    ${indent}$    DEVPTR = C_DEVLOC(DEV (${ard}$))
     ${indent}$    !$acc end data
     ${indent}$  ENDIF
 #endif
@@ -154,7 +159,7 @@ CONTAINS
     ${indent}$      CALL ACC_MEMCPY_TO_DEVICE (DEVPTR , HST (${ar}$), ISIZE)
     ${indent}$    ENDIF
 #else
-    ${indent}$    DEV (${ar}$) = HST (${ar}$)
+    ${indent}$    DEV (${ard}$) = HST (${ar}$)
 #endif
     ${indent}$  ELSEIF (KDIR == ND2H) THEN
 #ifdef _OPENACC
@@ -164,7 +169,7 @@ CONTAINS
     ${indent}$      CALL ACC_MEMCPY_FROM_DEVICE (HST (${ar}$), DEVPTR, ISIZE)
     ${indent}$    ENDIF
 #else
-    ${indent}$    HST (${ar}$) = DEV (${ar}$)
+    ${indent}$    HST (${ar}$) = DEV (${ard}$)
 #endif
     ${indent}$  ENDIF
   #:for e in range (d, ft.rank)
@@ -273,7 +278,6 @@ CONTAINS
   INTEGER (KIND=JPIM) :: J, LB(${ft.rank}$)
 
   ! assume that dimension all dimensions before AFTER are contiguous...
-
   LB = LBOUND(PTR)
   IF (AFTER == 0) THEN
     IPREVIOUS_STRIDE = KIND (PTR)

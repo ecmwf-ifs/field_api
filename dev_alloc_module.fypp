@@ -104,6 +104,7 @@ ${ft.type}$, POINTER :: DEV(${ft.shape}$)
 INTEGER (KIND=JPIM), INTENT (IN) :: UBOUNDS (${ft.rank}$)
 INTEGER (KIND=JPIM), INTENT (IN), OPTIONAL :: LBOUNDS (${ft.rank}$)
 INTEGER (KIND=JPIM) :: ILBOUNDS (${ft.rank}$)
+INTEGER (KIND=JPIM) :: DIMSIZES (${ft.rank}$)
 ${ft.type}$, POINTER :: TMP(${ft.shape}$)
 LOGICAL, INTENT(IN) :: MAP_DEVPTR
 
@@ -115,10 +116,11 @@ INTEGER :: ISTAT
 
 ILBOUNDS = 1
 IF (PRESENT (LBOUNDS)) ILBOUNDS = LBOUNDS
+DIMSIZES = UBOUNDS-ILBOUNDS+1
 
 SIZ = KIND (DEV)
 #:for i in range (1, ft.rank+1, 1)
-SIZ = SIZ * INT (UBOUNDS(${i}$)-ILBOUNDS(${i}$)+1, C_SIZE_T)
+SIZ = SIZ * INT (DIMSIZES(${i}$), C_SIZE_T)
 #:endfor
 
 IF(MAP_DEVPTR)THEN
@@ -129,8 +131,8 @@ ELSE
 #:endif
 ENDIF
 
-CALL C_F_POINTER (PTR, TMP, UBOUNDS-ILBOUNDS+1)
-DEV (${ ', '.join (map (lambda i: 'ILBOUNDS (' + str (i) + '):', range (1, ft.rank+1))) }$) => TMP
+CALL C_F_POINTER (PTR, TMP, DIMSIZES)
+DEV => TMP
 
 IF(MAP_DEVPTR)THEN
 !$acc enter data create (DEV)
@@ -155,7 +157,7 @@ IF (ASSOCIATED (DEV)) THEN
 
   IF (FIELD_STATISTICS_ENABLE) CALL FIELD_STATISTICS_DEVICE_DEALLOCATE (SIZE (DEV, KIND=JPIB) * INT (KIND (DEV), KIND=JPIB))
 
-  PTR = C_LOC (DEV (${ ', '.join (map (lambda i: 'LBOUND (DEV, ' + str (i) + ')', range (1, ft.rank+1))) }$))
+  PTR = C_LOC (DEV)
   
   IF(MAP_DEVPTR)THEN
     CALL DEV_FREE (PTR)
@@ -179,13 +181,10 @@ SUBROUTINE ${ft.name}$_DEV_ALLOCATE_HST (DEV, HST, MAP_DEVPTR)
 ${ft.type}$, POINTER :: DEV(${ft.shape}$)
 ${ft.type}$, POINTER :: HST(${ft.shape}$)
 LOGICAL, INTENT(IN) :: MAP_DEVPTR
+INTEGER (KIND=JPIM) :: DIMSIZES (${ft.rank}$)
 
-#if __INTEL_COMPILER == 1800 && __INTEL_COMPILER_UPDATE == 5
-! Bug with Intel 18.0.5.274
-ALLOCATE (DEV (${ ', '.join (map (lambda i: 'LBOUND (HST, ' + str (i) + '):UBOUND (HST,' + str (i) + ')', range (1, ft.rank+1))) }$))
-#else
-ALLOCATE (DEV, MOLD=HST)
-#endif
+DIMSIZES = UBOUND(HST) - LBOUND(HST)
+ALLOCATE (DEV(${ ', '.join (['1:DIMSIZES(i)' for i in range (1, ft.rank+1)])}$))
 
 !$acc enter data create (DEV)
 
