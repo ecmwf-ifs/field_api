@@ -34,7 +34,7 @@ PROGRAM TEST_GET_DEVICE_DATA_BOUNDS
   DO I=1,128
     DO J = 1,2
       IF ( PTR_GPU(I,J) /= 42 ) THEN
-        OKAY =.FALSE.
+        OKAY = .FALSE.
       END IF
     END DO
   END DO
