@@ -464,7 +464,7 @@ $:offload_macros.detach(ptr=['SELF%DEVPTR'], indent=6)
   INTEGER(KIND=JPIM), OPTIONAL,  INTENT(IN) :: BLK_BOUNDS(2)
     
   INTEGER(KIND=JPIM) :: LB, UB
-  ${ft.type}$, POINTER :: TMP_PTR(${ft.shape}$) => NULL()
+  ${ft.type}$, POINTER :: HST_BLK(${ft.shape}$) => NULL()
   REAL :: START, FINISH
   
   IF ( .NOT. PRESENT(BLK_BOUNDS) ) THEN
@@ -475,10 +475,10 @@ $:offload_macros.detach(ptr=['SELF%DEVPTR'], indent=6)
     LB = LBOUND(SELF%PTR, ${ft.rank}$)
     UB = UBOUND(SELF%PTR, ${ft.rank}$)
     IF ( BLK_BOUNDS(1) < LB .OR. BLK_BOUNDS(2) > UB ) THEN
-      CALL FIELD_ABORT("BLOCK DIMENSIONS ARE OUR OF RANGE")
+      CALL FIELD_ABORT("BLOCK DIMENSIONS ARE OUT OF RANGE")
     END IF
-    TMP_PTR => SELF%PTR(${':,' * (ft.rank-1) + 'BLK_BOUNDS(1):BLK_BOUNDS(2)'}$)
-    CALL COPY_ARRAY(TMP_PTR, SELF%DEVPTR, SELF%MAP_DEVPTR, KDIR, QUEUE)
+    HST_BLK => SELF%PTR(${ft.hst_blk}$)
+    CALL COPY_ARRAY(HST_BLK, SELF%DEVPTR, SELF%MAP_DEVPTR, KDIR, QUEUE)
   END IF
   IF (KDIR == NH2D) THEN
     CALL SELF%STATS%INC_CPU_TO_GPU_TRANSFER(START, FINISH)
@@ -505,12 +505,12 @@ $:offload_macros.detach(ptr=['SELF%DEVPTR'], indent=6)
 
     IF ((SELF%IS_STATUS(NDEVFRESH) .AND. .NOT. SELF%IS_STATUS(NHSTFRESH)) .OR. &
     &    SELF%IS_STATUS(UNDEFINED)) THEN
-      CALL SELF%COPY_DATA (ND2H, QUEUE)
+      CALL SELF%COPY_DATA (ND2H, QUEUE, BLK_BOUNDS=BLK_BOUNDS)
       CALL SELF%ADD_STATUS (NHSTFRESH)
       CALL SELF%REMOVE_STATUS (UNINITIALIZED_CPU)
     ENDIF
 
-    CALL SELF%GET_HOST_POINTER(PTR)
+    CALL SELF%GET_HOST_POINTER(PTR, BLK_BOUNDS=BLK_BOUNDS)
 
     IF (IAND (MODE, NWR) /= 0) THEN
       CALL SELF%REMOVE_STATUS (UNINITIALIZED_CPU)
@@ -519,14 +519,19 @@ $:offload_macros.detach(ptr=['SELF%DEVPTR'], indent=6)
     ENDIF
   END SUBROUTINE ${ftn}$_GET_HOST_DATA
 
-  SUBROUTINE ${ftn}$_GET_HOST_POINTER(SELF, PTR)
+  SUBROUTINE ${ftn}$_GET_HOST_POINTER(SELF, PTR, BLK_BOUNDS)
     CLASS(${ftn}$) :: SELF
-    ${ft.type}$, POINTER, INTENT(INOUT) :: PTR(${ft.shape}$)
+    ${ft.type}$, POINTER, INTENT(INOUT)         :: PTR(${ft.shape}$)
+    INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: BLK_BOUNDS(2)
 
     INTEGER(KIND=JPIM) :: LBOUNDS(${ft.rank}$)
 
     LBOUNDS=SELF%LBOUNDS
-    PTR (${ft.lbptr}$) => SELF%PTR (${','.join(':' for _ in range(ft.rank))}$)
+    IF ( PRESENT(BLK_BOUNDS) ) THEN
+      PTR ( ${ft.lbptr_blk}$) => SELF%PTR (${ft.hst_blk}$)
+    ELSE
+      PTR (${ft.lbptr}$) => SELF%PTR (${','.join(':' for _ in range(ft.rank))}$)
+    END IF
   END SUBROUTINE ${ftn}$_GET_HOST_POINTER
 
   SUBROUTINE ${ftn}$_OWNER_GET_HOST_DATA (SELF, MODE, PTR, QUEUE, BLK_BOUNDS)
@@ -545,7 +550,7 @@ $:offload_macros.detach(ptr=['SELF%DEVPTR'], indent=6)
       CALL SELF%REMOVE_STATUS (UNINITIALIZED_CPU)
       CALL SELF%ADD_STATUS (NHSTFRESH)
     ENDIF
-    CALL SELF%${ftn}$_GET_HOST_DATA(MODE, PTR, QUEUE, BLK_BOUNDS)
+    CALL SELF%${ftn}$_GET_HOST_DATA(MODE, PTR, QUEUE=QUEUE, BLK_BOUNDS=BLK_BOUNDS)
 
   END SUBROUTINE ${ftn}$_OWNER_GET_HOST_DATA
 
@@ -636,7 +641,7 @@ $:offload_macros.detach(ptr=['SELF%DEVPTR'], indent=6)
       CALL SELF%ADD_STATUS (NDEVFRESH)
     ENDIF
 
-    CALL SELF%GET_DEVICE_POINTER(PTR)
+    CALL SELF%GET_DEVICE_POINTER(PTR, BLK_BOUNDS=BLK_BOUNDS)
 
     IF (IAND (MODE, NWR) /= 0) THEN
       CALL SELF%REMOVE_STATUS (NHSTFRESH)
@@ -646,13 +651,18 @@ $:offload_macros.detach(ptr=['SELF%DEVPTR'], indent=6)
 
   END SUBROUTINE ${ftn}$_GET_DEVICE_DATA
 
-  SUBROUTINE ${ftn}$_GET_DEVICE_POINTER (SELF, PTR)
+  SUBROUTINE ${ftn}$_GET_DEVICE_POINTER (SELF, PTR, BLK_BOUNDS)
     CLASS(${ftn}$) :: SELF
     ${ft.type}$, POINTER,          INTENT(INOUT) :: PTR(${ft.shape}$)
+    INTEGER(KIND=JPIM), OPTIONAL,  INTENT(IN)    :: BLK_BOUNDS(2)
     INTEGER(KIND=JPIM)                           :: LBOUNDS(${ft.rank}$)
 
     LBOUNDS=SELF%LBOUNDS
-    PTR (${ft.lbptr}$) => SELF%DEVPTR (${','.join(':' for _ in range(ft.rank))}$)
+    IF ( PRESENT(BLK_BOUNDS) ) THEN
+      PTR ( ${ft.lbptr_blk}$) => SELF%DEVPTR (${ft.devptr_blk}$)
+    ELSE
+      PTR (${ft.lbptr}$) => SELF%DEVPTR (${','.join(':' for _ in range(ft.rank))}$)
+    END IF
   END SUBROUTINE ${ftn}$_GET_DEVICE_POINTER
 
 #:if defined('WITH_FIAT')
@@ -709,7 +719,7 @@ ${indent}$ ENDDO
     INTEGER (KIND=JPIM),           INTENT(IN)    :: MODE
     ${ft.type}$, POINTER,          INTENT(INOUT) :: PTR(${ft.shape}$)
     INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
-    INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: BLK_BOUNDS(2)
+    INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)     :: BLK_BOUNDS(2)
 #:for i in range(1, RANK+1)
     INTEGER(KIND=JPIM) :: I${i}$
 #:endfor
