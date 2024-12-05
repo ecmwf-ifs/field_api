@@ -27,6 +27,8 @@ class fieldType (object):
     self.viewRank = self.rank-1
     self.viewShape = ','.join ([':'] * (self.rank-1))
     self.lbptr = ', '.join (list (map (lambda i: "LBOUNDS(" + str (i+1) + "):", range (0, self.rank))))
+    self.lbptr_blk = ', '.join([ f"LBOUNDS({i}):" for i in range range(1, self.rank)] + ["BLK_BOUNDS(1):"])
+    self.devptr_blk =  ':, ' * (ft.rank-1) + 'BLK_BOUNDS(1):BLK_BOUNDS(2)'
     self.hasView = self.rank > 1
     self.ganged = self.rank > 2
 
