@@ -53,7 +53,7 @@ CONTAINS
 
 #:for ft in fieldTypeList
 
-SUBROUTINE ${ft.name}$_DEV_ALLOCATE_DIM (DEV, UBOUNDS, LBOUNDS, MAP_DEVPTR)
+SUBROUTINE ${ft.name}$_DEV_ALLOCATE_DIM (DEV, UBOUNDS, LBOUNDS, MAP_DEVPTR, BLK_BOUNDS)
 
 USE FIELD_STATISTICS_MODULE
 
@@ -61,8 +61,10 @@ ${ft.type}$, POINTER :: DEV(${ft.shape}$)
 INTEGER (KIND=JPIM), INTENT (IN) :: UBOUNDS (${ft.rank}$)
 INTEGER (KIND=JPIM), INTENT (IN), OPTIONAL :: LBOUNDS (${ft.rank}$)
 INTEGER (KIND=JPIM) :: ILBOUNDS (${ft.rank}$)
+INTEGER (KIND=JPIM) :: IUBOUNDS (${ft.rank}$)
 ${ft.type}$, POINTER :: TMP(${ft.shape}$)
 LOGICAL, INTENT(IN) :: MAP_DEVPTR
+INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN) :: BLK_BOUNDS(2)
 
 TYPE (C_PTR) :: PTR
 INTEGER (C_SIZE_T) :: SIZ
@@ -71,11 +73,17 @@ $:offload_macros.runtime_error_decl(symbols=['ISTAT',])
 #:endif
 
 ILBOUNDS = 1
+IUBOUNDS = UBOUNDS
 IF (PRESENT (LBOUNDS)) ILBOUNDS = LBOUNDS
+
+IF ( PRESENT(BLK_BOUNDS) ) THEN
+ILBOUNDS(${ft.rank}$) = BLK_BOUNDS(1)
+IUBOUNDS(${ft.rank}$) = BLK_BOUNDS(2)
+ENDIF
 
 SIZ = KIND (DEV)
 #:for i in range (1, ft.rank+1, 1)
-SIZ = SIZ * INT (UBOUNDS(${i}$)-ILBOUNDS(${i}$)+1, C_SIZE_T)
+SIZ = SIZ * INT (IUBOUNDS(${i}$)-ILBOUNDS(${i}$)+1, C_SIZE_T)
 #:endfor
 
 IF(SIZ > 0)THEN
@@ -87,10 +95,10 @@ $:offload_macros.dev_malloc(ptr='PTR', size='SIZ', return_val='ISTAT', indent=5)
 #:endif
    ENDIF
    
-   CALL C_F_POINTER (PTR, TMP, UBOUNDS-ILBOUNDS+1)
+   CALL C_F_POINTER (PTR, TMP, IUBOUNDS-ILBOUNDS+1)
    DEV (${ ', '.join (map (lambda i: 'ILBOUNDS (' + str (i) + '):', range (1, ft.rank+1))) }$) => TMP
 ELSE
-   ALLOCATE(DEV(${ ', '.join (f'ILBOUNDS({i}):UBOUNDS({i})' for i in  range (1, ft.rank+1)) }$))
+   ALLOCATE(DEV(${ ', '.join (f'ILBOUNDS({i}):IUBOUNDS({i})' for i in  range (1, ft.rank+1)) }$))
 ENDIF
 
 IF(MAP_DEVPTR)THEN
