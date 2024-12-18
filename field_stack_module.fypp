@@ -1,0 +1,50 @@
+#! (C) Copyright 2022- ECMWF.
+#! (C) Copyright 2022- Meteo-France.
+#!
+#! This software is licensed under the terms of the Apache Licence Version 2.0
+#! which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
+#! In applying this licence, ECMWF does not waive the privileges and immunities
+#! granted to it by virtue of its status as an intergovernmental organisation
+#! nor does it submit to any jurisdiction.
+
+MODULE FIELD_STACK_MODULE
+
+#:set fieldTypeListOT = fieldType.getFieldTypeList (kinds=['JPIM', 'JPLM'])
+#:set fieldTypeListRM = fieldType.getFieldTypeList (kinds=['JPRM'])
+#:set fieldTypeListRB = fieldType.getFieldTypeList (kinds=['JPRB'])
+#:set fieldTypeListRD = fieldType.getFieldTypeList (kinds=['JPRD'])
+
+#:def useAliasRB (ftlRB, ftlTA, ftlOT)
+
+#:for fta, ftb in zip (ftlTA, ftlRB)
+#:if fta.hasView
+USE ${fta.name}$_STACK_MODULE, ONLY : &
+      & ${ftb.name}$_STACK_MEMBER_PTR => ${fta.name}$_STACK_MEMBER_PTR, &
+      & ${fta.name}$_STACK_MEMBER_PTR
+#:endif
+#:endfor
+
+#:for fto in ftlOT
+#:if fto.hasView
+USE ${fto.name}$_STACK_MODULE, ONLY : ${fto.name}$_STACK_MEMBER_PTR
+#:endif
+#:endfor
+#:enddef
+
+#ifdef PARKIND1_SINGLE
+$:useAliasRB (fieldTypeListRB, fieldTypeListRM, fieldTypeListRD + fieldTypeListOT)
+#else
+$:useAliasRB (fieldTypeListRB, fieldTypeListRD, fieldTypeListRM + fieldTypeListOT)
+#endif
+
+IMPLICIT NONE
+
+PRIVATE
+
+#:for ft in fieldTypeListOT + fieldTypeListRM + fieldTypeListRB + fieldTypeListRD
+#:if ft.hasView
+PUBLIC :: ${ft.name}$_STACK_MEMBER_PTR
+#:endif
+#:endfor
+
+END MODULE FIELD_STACK_MODULE
