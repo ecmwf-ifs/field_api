@@ -17,9 +17,9 @@ USE ${ft.name}$_MODULE
 #:if ft.ganged
 USE FIELD_${ft.rank-1}$${SUFF}$_MODULE
 #:endif
-#:endif
-#:if ft.rank > 1 and ft.rank < 5
+#:if ft.hasView
 USE ${ft.name}$_STACK_MODULE
+#:endif
 #:endif
 #:endfor
 
@@ -37,6 +37,8 @@ INTERFACE FIELD_NEW
 #:if ft.ganged
   MODULE PROCEDURE ${ft.name}$_NEW_GANG_WRAPPER
   MODULE PROCEDURE ${ft.name}$_NEW_GANG_OWNER
+#:endif
+#:if ft.hasView
   MODULE PROCEDURE ${ft.name}$_NEW_STACK_WRAPPER
   MODULE PROCEDURE ${ft.name}$_NEW_STACK_OWNER
 #:endif
@@ -78,7 +80,9 @@ LOGICAL, OPTIONAL,  INTENT(IN) :: DELAYED
 ${ft.type}$, OPTIONAL, INTENT(IN) :: INIT_VALUE
 
 END SUBROUTINE
+#:endif
 
+#:if ft.hasView
 SUBROUTINE ${ft.name}$_NEW_STACK_WRAPPER (FIELD_PTR, MEMBERS, LBOUNDS, PERSISTENT, DATA, SYNC_ON_FINAL, INITIALIZED, &
 &                                         MEMBER_LBOUNDS, MEMBER_MAP)
 
@@ -216,7 +220,13 @@ NULLIFY (FIELD_PTR)
 
 END SUBROUTINE
 
+<<<<<<< HEAD:src/factory/field_RANKSUFF_factory_module.fypp
 #:endfor
+=======
+#:if ft.hasView and defined('HAVE_GANG')
+SUBROUTINE ${ft.name}$_NEW_STACK_WRAPPER (FIELD_PTR, MEMBERS, LBOUNDS, PERSISTENT, DATA, SYNC_ON_FINAL, INITIALIZED, &
+&                                         MEMBER_LBOUNDS, MEMBER_MAP)
+>>>>>>> 85542f0 (FIELD_STACK: only build if option FIELD_GANG enabled):field_RANKSUFF_factory_module.fypp
 
 END MODULE
 
