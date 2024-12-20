@@ -14,7 +14,7 @@ SUBMODULE(FIELD_${RANK}$${SUFF}$_FACTORY_MODULE) FIELD_${RANK}$${SUFF}$_FACTORY_
 #:for ft in fieldTypeList
 USE ${ft.name}$_MODULE
 #:if defined('HAVE_GANG')
-#:if ft.ganged
+#:if ft.hasView
 USE FIELD_${ft.rank-1}$${SUFF}$_MODULE
 USE ${ft.name}$_STACK_MODULE
 #:endif
@@ -28,7 +28,7 @@ IMPLICIT NONE
 CONTAINS
 
 #:for ft in fieldTypeList
-#:if ft.ganged
+#:if ft.hasView
 MODULE SUBROUTINE ${ft.name}$_NEW_STACK_WRAPPER (FIELD_PTR, MEMBERS, LBOUNDS, PERSISTENT, DATA, SYNC_ON_FINAL, INITIALIZED, &
 &                                         MEMBER_LBOUNDS, MEMBER_MAP)
 
