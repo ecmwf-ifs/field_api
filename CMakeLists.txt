@@ -150,9 +150,9 @@ endif()
 
 unset( ranksuff_srcs )
 ## preprocess fypp files
-list( APPEND ranksuff_srcs _shuffle _access _util _array _array_util _factory _gather _data _stack _stack_member)
+list( APPEND ranksuff_srcs _shuffle _access _util _array _array_util _factory _gather _data)
 if(HAVE_FIELD_GANG)
-  list( APPEND ranksuff_srcs _gang )
+  list( APPEND ranksuff_srcs _gang _stack _stack_member)
 endif()
 
 foreach (SUFF IN ITEMS IM RM RD LM)
@@ -173,9 +173,9 @@ endforeach ()
 unset( non_ranksuff_srcs )
 list ( APPEND non_ranksuff_srcs dev_alloc_module field_factory_module field_access_module field_array_module field_module 
                       field_shuffle_module field_util_module field_array_util_module field_shuffle_type_module host_alloc_module
-                      field_gathscat_module field_gathscat_type_module field_stack_module)
+                      field_gathscat_module field_gathscat_type_module )
 if(HAVE_FIELD_GANG)
-  list( APPEND non_ranksuff_srcs field_gang_module )
+  list( APPEND non_ranksuff_srcs field_gang_module field_stack_module)
 endif()
 
 foreach (SRC ${non_ranksuff_srcs} )
