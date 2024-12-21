@@ -109,6 +109,23 @@ CONTAINS
 
   END SUBROUTINE
 
+  SUBROUTINE ${ftn}$_COPY_ARRAY_BLKS (HST, DEV, MAP_DEVPTR, KDIR, QUEUE)
+
+    USE FIELD_ABORT_MODULE
+
+    ${ft.type}$, POINTER :: HST (${ft.shape}$), DEV (${ft.shape}$)
+    LOGICAL,                       INTENT (IN) :: MAP_DEVPTR
+    INTEGER (KIND=JPIM),           INTENT (IN) :: KDIR
+    INTEGER (KIND=JPIM), OPTIONAL, INTENT (IN) :: QUEUE
+
+    PROCEDURE (${ftn}$_COPY_INTF), POINTER :: FUNC
+
+    FUNC => ${ftn}$_COPY_FUNC (HST, DEV)
+
+    CALL FUNC (HST, DEV, MAP_DEVPTR, KDIR, QUEUE)
+
+  END SUBROUTINE
+
 #:for d in range (0, ft.rank+1)
   SUBROUTINE ${ftn}$_COPY_DIM${d}$_CONTIGUOUS (HST, DEV, MAP_DEVPTR, KDIR, QUEUE)
 #ifdef _OPENACC
