@@ -129,15 +129,17 @@ CONTAINS
     ${'  ' * (ft.rank - e)}$DO J${e}$ = LBOUND (HST, ${e}$), UBOUND (HST, ${e}$)
   #:endfor
   #:set ar = ', '.join ([':'] * d  + list (map (lambda i: 'J' + str (i+1), range (d, ft.rank))))
+  #:set lbdiff = lambda i: f'LBOUND(DEV, {i}) - LBOUND (HST, {i})'
+  #:set ard = ', '.join ([':'] * d  + ['J' + str(i+1) + ' + ' + lbdiff(i+1) for i in range (d, ft.rank)])
   #:set indent = '  ' * (ft.rank - e)
 #ifdef _OPENACC
     ${indent}$  IF(MAP_DEVPTR)THEN
     ${indent}$    !$acc host_data use_device(DEV)
-    ${indent}$    DEVPTR = C_DEVLOC(DEV (${ar}$))
+    ${indent}$    DEVPTR = C_DEVLOC(DEV (${ard}$))
     ${indent}$    !$acc end host_data
     ${indent}$  ELSE
     ${indent}$    !$acc data deviceptr(DEVPTR, DEV)
-    ${indent}$    DEVPTR = C_DEVLOC(DEV (${ar}$))
+    ${indent}$    DEVPTR = C_DEVLOC(DEV (${ard}$))
     ${indent}$    !$acc end data
     ${indent}$  ENDIF
 #endif
@@ -154,7 +156,7 @@ CONTAINS
     ${indent}$      CALL ACC_MEMCPY_TO_DEVICE (DEVPTR , HST (${ar}$), ISIZE)
     ${indent}$    ENDIF
 #else
-    ${indent}$    DEV (${ar}$) = HST (${ar}$)
+    ${indent}$    DEV (${ard}$) = HST (${ar}$)
 #endif
     ${indent}$  ELSEIF (KDIR == ND2H) THEN
 #ifdef _OPENACC
@@ -164,7 +166,7 @@ CONTAINS
     ${indent}$      CALL ACC_MEMCPY_FROM_DEVICE (HST (${ar}$), DEVPTR, ISIZE)
     ${indent}$    ENDIF
 #else
-    ${indent}$    HST (${ar}$) = DEV (${ar}$)
+    ${indent}$    HST (${ar}$) = DEV (${ard}$)
 #endif
     ${indent}$  ENDIF
   #:for e in range (d, ft.rank)
@@ -273,7 +275,6 @@ CONTAINS
   INTEGER (KIND=JPIM) :: J, LB(${ft.rank}$)
 
   ! assume that dimension all dimensions before AFTER are contiguous...
-
   LB = LBOUND(PTR)
   IF (AFTER == 0) THEN
     IPREVIOUS_STRIDE = KIND (PTR)
