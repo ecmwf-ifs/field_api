@@ -220,13 +220,7 @@ NULLIFY (FIELD_PTR)
 
 END SUBROUTINE
 
-<<<<<<< HEAD:src/factory/field_RANKSUFF_factory_module.fypp
 #:endfor
-=======
-#:if ft.hasView and defined('HAVE_GANG')
-SUBROUTINE ${ft.name}$_NEW_STACK_WRAPPER (FIELD_PTR, MEMBERS, LBOUNDS, PERSISTENT, DATA, SYNC_ON_FINAL, INITIALIZED, &
-&                                         MEMBER_LBOUNDS, MEMBER_MAP)
->>>>>>> 85542f0 (FIELD_STACK: only build if option FIELD_GANG enabled):field_RANKSUFF_factory_module.fypp
 
 END MODULE
 
