@@ -7,17 +7,21 @@
 # granted to it by virtue of its status as an intergovernmental organisation
 # nor does it submit to any jurisdiction.
 
-if(CMAKE_Fortran_COMPILER_ID MATCHES PGI|NVIDIA|NVHPC)
-  ecbuild_add_fortran_flags("-Mlarge_arrays")
-  ecbuild_add_fortran_flags("-gopt")
+macro( field_api_compile_options )
 
-  ecbuild_add_fortran_flags("-Minfo=accel,all,ccff" BUILD DEBUG)
+  if(CMAKE_Fortran_COMPILER_ID MATCHES PGI|NVIDIA|NVHPC)
+    ecbuild_add_fortran_flags("-Mlarge_arrays")
+    ecbuild_add_fortran_flags("-gopt")
+  
+    ecbuild_add_fortran_flags("-Minfo=accel,all,ccff" BUILD DEBUG)
+  
+  # These are architecture/compiler/offload-library specific options 
+  # that should really be coming from external input
+  # set(CMAKE_Fortran_FLAGS "-gpu=cc70")
+  endif ()
+  
+  if(CMAKE_Fortran_COMPILER_ID MATCHES Intel)
+    ecbuild_add_fortran_flags("-check nocontiguous" BUILD DEBUG)
+  endif()
 
-# These are architecture/compiler/offload-library specific options 
-# that should really be coming from external input
-# set(CMAKE_Fortran_FLAGS "-gpu=cc70")
-endif ()
-
-if(CMAKE_Fortran_COMPILER_ID MATCHES Intel)
-  ecbuild_add_fortran_flags("-check nocontiguous" BUILD DEBUG)
-endif()
+endmacro()

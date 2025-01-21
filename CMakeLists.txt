@@ -24,26 +24,14 @@ endif()
 project(field_api VERSION 0.3.4 LANGUAGES Fortran)
 set(LIBNAME field_api)
 
+## load cmake macros
+include( field_api_macros )
+
 ## find required packages
 ecbuild_find_package(OpenMP COMPONENTS Fortran REQUIRED)
 
 ## find fypp
-ecbuild_find_package( fckit )
-find_program( FYPP fypp )
-
-if( fckit_FOUND AND fckit_HAVE_FCKIT_VENV )
-  set( FYPP ${FCKIT_VENV_EXE} -m fypp )
-elseif( fckit_FOUND )
-  # This is only needed for building in environments with python3 older than 3.8
-  list( APPEND _fckit_fypp_path "${FYPP}" )
-  list( LENGTH _fckit_fypp_path _list_length )
-  MATH( EXPR _last_entry "${_list_length} - 1" )
-  list( GET _fckit_fypp_path ${_last_entry} FYPP )
-elseif( FYPP MATCHES FYPP-NOTFOUND )
-  include(cmake/field_api_fetchcontent_fypp.cmake)
-  set(FYPP ${fypp_SOURCE_DIR}/bin/fypp)
-  ecbuild_info("fypp downloaded to: ${FYPP}")
-endif()
+field_api_find_fypp()
 
 ## find OpenACC
 if( ${CMAKE_VERSION} VERSION_LESS "3.25" )
@@ -65,7 +53,7 @@ ecbuild_add_option( FEATURE ACC
                     CONDITION CMAKE_Fortran_COMPILER_ID MATCHES "PGI|NVHPC")
 
 ## set general compiler flags
-include(cmake/field_api_compile_options.cmake)
+include( field_api_compile_options )
 
 ## choose to build dp or sp or both
 ecbuild_add_option( FEATURE SINGLE_PRECISION
@@ -85,30 +73,7 @@ if(HAVE_DOUBLE_PRECISION)
 endif()
 
 ## find fiat
-ecbuild_find_package(NAME fiat COMPONENTS ${fiat_components})
-if( NOT fiat_FOUND )
-  if(NOT UTIL_MODULE_PATH)
-    ecbuild_critical("If not building with fiat, then the path for utility modules must be specified")
-  endif()
-
-  ecbuild_info( "Checking for FIAT components in ${UTIL_MODULE_PATH}" )
-
-  find_file( ABOR1_PATH abor1.F90 REQUIRED
-      HINTS ${UTIL_MODULE_PATH} ${UTIL_MODULE_PATH}/src/fiat/util
-  )
-  ecbuild_info( "Found ABOR1: ${ABOR1_PATH}" )
-
-  find_file( OML_PATH oml_mod.F90 REQUIRED
-      HINTS ${UTIL_MODULE_PATH} ${UTIL_MODULE_PATH}/src/fiat/oml
-  )
-  ecbuild_info( "Found OML: ${OML_PATH}" )
-
-  find_file( PARKIND1_PATH parkind1.F90 REQUIRED
-      HINTS ${UTIL_MODULE_PATH} ${UTIL_MODULE_PATH}/src/parkind
-  )
-  ecbuild_info( "Found PARKIND1: ${PARKIND1_PATH}" )
-  list(APPEND srcs ${ABOR1_PATH} ${OML_PATH} ${PARKIND1_PATH})
-endif()
+field_api_find_fiat_modules()
 
 list(APPEND srcs field_async_module.F90 field_basic_module.F90 field_defaults_module.F90 dev_alloc.c c_malloc.c field_constants_module.F90 field_abort_module.F90 field_statistics_module.F90 field_backtrace.c)
 
@@ -155,20 +120,13 @@ if(HAVE_FIELD_GANG)
   list( APPEND ranksuff_srcs _gang )
 endif()
 
-foreach (SUFF IN ITEMS IM RM RD LM)
-  string (TOLOWER ${SUFF} suff)
-  foreach (RANK RANGE 1 5)
-    foreach (FUNC ${ranksuff_srcs} "")
-      add_custom_command (OUTPUT field_${RANK}${suff}${FUNC}_module.F90
-	      COMMAND ${FYPP} -DRANK=${RANK} -DSUFF='${SUFF}' ${fypp_defines} -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType 
-        ${CMAKE_CURRENT_SOURCE_DIR}/field_RANKSUFF${FUNC}_module.fypp > field_${RANK}${suff}${FUNC}_module.F90
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/field_RANKSUFF${FUNC}_module.fypp
-        VERBATIM)
-      list(APPEND srcs "field_${RANK}${suff}${FUNC}_module.F90")
-      set_source_files_properties( "field_${RANK}${suff}${FUNC}_module.F90" PROPERTIES COMPILE_OPTIONS $<${HAVE_CUDA}:-cuda>)
-    endforeach ()
-  endforeach ()
-endforeach ()
+## expand ranksuff sources
+field_api_expand_fypp_ranksuff(
+   PYTHON_MODULE_DIR      ${CMAKE_CURRENT_SOURCE_DIR}
+   SOURCE_DIR             ${CMAKE_CURRENT_SOURCE_DIR}
+   INPUT_SRCS             ${ranksuff_srcs}
+   OUTPUT_SRCS            srcs
+)
 
 unset( non_ranksuff_srcs )
 list ( APPEND non_ranksuff_srcs dev_alloc_module field_factory_module field_access_module field_array_module field_module 
@@ -178,13 +136,14 @@ if(HAVE_FIELD_GANG)
   list( APPEND non_ranksuff_srcs field_gang_module )
 endif()
 
-foreach (SRC ${non_ranksuff_srcs} )
-  add_custom_command (OUTPUT ${SRC}.F90
-	  COMMAND ${FYPP} -m os ${fypp_defines} -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/${SRC}.fypp > ${SRC}.F90
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${SRC}.fypp
-    VERBATIM)
-  list(APPEND srcs "${SRC}.F90")
-endforeach ()
+## expand non ranksuff sources
+field_api_expand_fypp(
+   PYTHON_MODULE_DIR      ${CMAKE_CURRENT_SOURCE_DIR}
+   SOURCE_DIR             ${CMAKE_CURRENT_SOURCE_DIR}
+   INPUT_SRCS             ${non_ranksuff_srcs}
+   OUTPUT_SRCS            srcs
+)
+
 set_source_files_properties("dev_alloc_module.F90" PROPERTIES COMPILE_OPTIONS $<${HAVE_CUDA}:-cuda>)
 set_source_files_properties("host_alloc_module.F90" PROPERTIES COMPILE_OPTIONS $<${HAVE_CUDA}:-cuda>)
 
