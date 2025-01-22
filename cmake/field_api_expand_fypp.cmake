@@ -17,11 +17,12 @@ macro( field_api_expand_fypp )
 
     foreach (SRC ${_PAR_INPUT_SRCS} )
 
-      add_custom_command (OUTPUT ${SRC}.F90
-    	  COMMAND ${FYPP} -m os ${fypp_defines} -M ${_PAR_PYTHON_MODULE_DIR} -m fieldType ${_PAR_SOURCE_DIR}/${SRC}.fypp > ${SRC}.F90
+      add_custom_command (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${SRC}.F90
+    	  COMMAND ${FYPP} -m os ${fypp_defines} -M ${_PAR_PYTHON_MODULE_DIR} -m fieldType ${_PAR_SOURCE_DIR}/${SRC}.fypp > ${CMAKE_CURRENT_BINARY_DIR}/${SRC}.F90
         DEPENDS ${_PAR_SOURCE_DIR}/${SRC}.fypp
         VERBATIM)
-      list(APPEND ${_PAR_OUTPUT_SRCS} ${SRC}.F90)
+
+      list(APPEND ${_PAR_OUTPUT_SRCS} ${CMAKE_CURRENT_BINARY_DIR}/${SRC}.F90)
 
     endforeach ()
 

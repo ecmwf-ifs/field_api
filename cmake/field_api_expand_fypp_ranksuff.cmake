@@ -9,7 +9,7 @@
 
 macro( field_api_expand_fypp_ranksuff )
 
-    set( options )
+    set( options CORE )
     set( oneValueArgs PYTHON_MODULE_DIR SOURCE_DIR )
     set( multiValueArgs INPUT_SRCS OUTPUT_SRCS )
 
@@ -18,15 +18,30 @@ macro( field_api_expand_fypp_ranksuff )
     foreach (SUFF IN ITEMS IM RM RD LM)
       string (TOLOWER ${SUFF} suff)
       foreach (RANK RANGE 1 5)
-        foreach (FUNC ${_PAR_INPUT_SRCS} "")
-          add_custom_command (OUTPUT field_${RANK}${suff}${FUNC}_module.F90
-    	      COMMAND ${FYPP} -DRANK=${RANK} -DSUFF='${SUFF}' ${fypp_defines} -m os -M ${_PAR_PYTHON_MODULE_DIR} -m fieldType 
-            ${_PAR_SOURCE_DIR}/field_RANKSUFF${FUNC}_module.fypp > field_${RANK}${suff}${FUNC}_module.F90
-            DEPENDS ${_PAR_SOURCE_DIR}/field_RANKSUFF${FUNC}_module.fypp
-            VERBATIM)
-          list(APPEND ${_PAR_OUTPUT_SRCS} field_${RANK}${suff}${FUNC}_module.F90)
-          set_source_files_properties(field_${RANK}${suff}${FUNC}_module.F90 PROPERTIES COMPILE_OPTIONS $<${HAVE_CUDA}:-cuda>)
-        endforeach ()
+
+        if( ${_PAR_CORE} )
+           foreach (FUNC ${_PAR_INPUT_SRCS} "")
+   
+             add_custom_command (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/field_${RANK}${suff}${FUNC}_module.F90
+       	      COMMAND ${FYPP} -DRANK=${RANK} -DSUFF='${SUFF}' ${fypp_defines} -m os -M ${_PAR_PYTHON_MODULE_DIR} -m fieldType 
+               ${_PAR_SOURCE_DIR}/field_RANKSUFF${FUNC}_module.fypp > ${CMAKE_CURRENT_BINARY_DIR}/field_${RANK}${suff}${FUNC}_module.F90
+               DEPENDS ${_PAR_SOURCE_DIR}/field_RANKSUFF${FUNC}_module.fypp
+               VERBATIM)
+   
+             list(APPEND ${_PAR_OUTPUT_SRCS} ${CMAKE_CURRENT_BINARY_DIR}/field_${RANK}${suff}${FUNC}_module.F90)
+           endforeach ()
+        else()
+           foreach (FUNC ${_PAR_INPUT_SRCS})
+   
+             add_custom_command (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/field_${RANK}${suff}${FUNC}_module.F90
+       	      COMMAND ${FYPP} -DRANK=${RANK} -DSUFF='${SUFF}' ${fypp_defines} -m os -M ${_PAR_PYTHON_MODULE_DIR} -m fieldType 
+               ${_PAR_SOURCE_DIR}/field_RANKSUFF${FUNC}_module.fypp > ${CMAKE_CURRENT_BINARY_DIR}/field_${RANK}${suff}${FUNC}_module.F90
+               DEPENDS ${_PAR_SOURCE_DIR}/field_RANKSUFF${FUNC}_module.fypp
+               VERBATIM)
+   
+             list(APPEND ${_PAR_OUTPUT_SRCS} ${CMAKE_CURRENT_BINARY_DIR}/field_${RANK}${suff}${FUNC}_module.F90)
+           endforeach ()
+        endif()
       endforeach ()
     endforeach ()
 

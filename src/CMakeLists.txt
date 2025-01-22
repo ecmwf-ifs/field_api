@@ -7,10 +7,8 @@
 # granted to it by virtue of its status as an intergovernmental organisation
 # nor does it submit to any jurisdiction.
 
-include( field_api_compile_options )
-include( field_api_find_fypp )
-include( field_api_find_fiat_modules )
-include( field_api_expand_fypp )
-include( field_api_expand_fypp_ranksuff )
-include( field_api_add_object_library )
-include( field_api_target_add_module_dirs )
+add_subdirectory( debug )
+add_subdirectory( core )
+add_subdirectory( factory )
+add_subdirectory( util )
+add_subdirectory( shuffle )

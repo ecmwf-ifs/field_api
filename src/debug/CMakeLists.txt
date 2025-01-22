@@ -7,10 +7,20 @@
 # granted to it by virtue of its status as an intergovernmental organisation
 # nor does it submit to any jurisdiction.
 
-include( field_api_compile_options )
-include( field_api_find_fypp )
-include( field_api_find_fiat_modules )
-include( field_api_expand_fypp )
-include( field_api_expand_fypp_ranksuff )
-include( field_api_add_object_library )
-include( field_api_target_add_module_dirs )
+check_symbol_exists(backtrace execinfo.h HAVE_BACKTRACE)
+
+list(APPEND srcs
+    field_statistics_module.F90
+    field_backtrace.c)
+
+unset( _definitions )
+if( HAVE_BACKTRACE )
+   list(APPEND _defintions HAVE_BACKTRACE)
+endif()
+
+## define object library
+field_api_add_object_library(
+    LIBNAME      field_api_debug
+    SRCS         ${srcs}
+    DEFINITIONS  ${_definitions}
+)
