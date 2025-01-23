@@ -17,11 +17,6 @@ list(APPEND srcs
      field_abort_module.F90)
 
 list( APPEND ranksuff_srcs _data)
-if(HAVE_FIELD_GANG)
-  list( APPEND ranksuff_srcs _gang )
-  list( APPEND non_ranksuff_srcs field_gang_module )
-endif()
-
 list( APPEND non_ranksuff_srcs dev_alloc_module field_module host_alloc_module )
 
 ## expand ranksuff sources

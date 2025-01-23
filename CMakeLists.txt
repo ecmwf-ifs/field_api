@@ -125,6 +125,19 @@ list(APPEND prec_srcs
     ${CMAKE_CURRENT_BINARY_DIR}/src/util/field_array_util_module.F90
     ${CMAKE_CURRENT_BINARY_DIR}/src/util/field_util_module.F90)
 
+list(APPEND obj_libs
+        field_api_core
+        field_api_debug
+        field_api_factory
+        field_api_buffer
+        field_api_util
+        field_api_shuffle
+)
+
+if( HAVE_FIELD_GANG )
+   list(APPEND obj_libs field_api_buffer)
+endif()
+
 ## add field_api targets
 foreach(prec ${precisions})
   ecbuild_add_library(
@@ -132,11 +145,7 @@ foreach(prec ${precisions})
       SOURCES ${prec_srcs}
       DEFINITIONS $<$<NOT:${fiat_FOUND}>:${FIELD_API_DEFINITIONS}>
       OBJECTS
-         field_api_core
-         field_api_debug
-         field_api_factory
-         field_api_util
-         field_api_shuffle
+         ${obj_libs}
       PRIVATE_LIBS
          $<${fiat_FOUND}:fiat>
          $<${fiat_FOUND}:parkind_${prec}>
