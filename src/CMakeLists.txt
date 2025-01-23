@@ -10,5 +10,8 @@
 add_subdirectory( debug )
 add_subdirectory( core )
 add_subdirectory( factory )
+if( HAVE_FIELD_GANG )
+  add_subdirectory( buffer )
+endif()
 add_subdirectory( util )
 add_subdirectory( shuffle )
