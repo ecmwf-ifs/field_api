@@ -7,6 +7,18 @@
 # granted to it by virtue of its status as an intergovernmental organisation
 # nor does it submit to any jurisdiction.
 
+##############################################################################
+#.rst:
+#
+# field_api_find_fiat_modules
+# =========================
+# 
+# Find the FIAT utility modules needed to build FIELD_API. ::
+#
+#        field_api_find_fiat_modules()
+#
+##############################################################################
+
 macro( field_api_find_fiat_modules )
 
    ecbuild_find_package(NAME fiat COMPONENTS ${fiat_components})

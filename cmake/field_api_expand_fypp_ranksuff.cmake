@@ -7,6 +7,33 @@
 # granted to it by virtue of its status as an intergovernmental organisation
 # nor does it submit to any jurisdiction.
 
+##############################################################################
+#.rst:
+#
+# field_api_expand_fypp_ranksuff
+# ==============================
+# 
+# Preprocess a given set of .fypp files over the rank
+# and suffix (i.e. field data-type) matrix. ::
+# 
+#        field_api_expand_fypp_ranksuff( PYTHON_MODULE_DIR <python-util-module-dir> 
+#                                        SOURCE_DIR        <source-directory> 
+#                                        INPUT_SRCS        <fypp files>
+#                                        OUTPUT_SRCS       <processed F90 files> 
+#                                        [CORE] )
+#
+# Input variables
+# ---------------
+#
+# :PYTHON_MODULE_DIR:  Directory containing fieldType.py python module.
+# :SOURCE_DIR:         Directory containing .fypp files to be processed.
+# :INPUT_SRCS:         List of .fypp files to be processed.
+# :OUTPUT_SRCS:        List of processed .F90 files named field_${rank}${suff}_<name>_module.F90
+# :CORE:               Flag to determine whether field_${rank}${suff}_module.F90
+#                      files are to be generated.
+#
+##############################################################################
+
 macro( field_api_expand_fypp_ranksuff )
 
     set( options CORE )

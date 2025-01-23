@@ -7,6 +7,18 @@
 # granted to it by virtue of its status as an intergovernmental organisation
 # nor does it submit to any jurisdiction.
 
+##############################################################################
+#.rst:
+#
+# field_api_find_fypp
+# ===================
+# 
+# Find a compatible version of the fypp preprocessor.
+#
+#        field_api_find_fypp()
+#
+##############################################################################
+
 macro( field_api_find_fypp )
 
    ecbuild_find_package( fckit )

@@ -7,6 +7,26 @@
 # granted to it by virtue of its status as an intergovernmental organisation
 # nor does it submit to any jurisdiction.
 
+##############################################################################
+#.rst:
+#
+# field_api_target_add_module_dirs
+# ================================
+# 
+# Propagate Fortran module directories of object libraries to target library. :: 
+#
+#        field_api_target_add_module_dirs( TARGET  <target-library> 
+#                                          LIBS    <object-libraries> )
+#
+# Input variables
+# ---------------
+#
+# :TARGET:   Target library.
+# :LIBS:     Object libraries whose Fortran module directories
+#            need to be propagated.
+#
+##############################################################################
+
 macro( field_api_target_add_module_dirs )
 
     set( options )

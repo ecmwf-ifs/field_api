@@ -7,6 +7,18 @@
 # granted to it by virtue of its status as an intergovernmental organisation
 # nor does it submit to any jurisdiction.
 
+##############################################################################
+#.rst:
+#
+# field_api_compile_options
+# =========================
+# 
+# Define the compiler flags used to build FIELD_API. ::
+#
+#        field_api_compile_options()
+#
+##############################################################################
+
 macro( field_api_compile_options )
 
   if(CMAKE_Fortran_COMPILER_ID MATCHES PGI|NVIDIA|NVHPC)

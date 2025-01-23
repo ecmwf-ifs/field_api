@@ -7,6 +7,36 @@
 # granted to it by virtue of its status as an intergovernmental organisation
 # nor does it submit to any jurisdiction.
 
+##############################################################################
+#.rst:
+#
+# field_api_add_object_library
+# ============================
+#
+# Create an object library from a given set of objects and/or sources. ::
+#
+#        field_api_add_object_library( LIBNAME       <name>
+#                                      OBJECTS       <object-libraries>
+#                                      SRCS          <sourcefiles>
+#                                      DEFINITIONS   <compile-definitions>
+#                                      LIBARIES      <libraries> )
+#
+# Note that an object library is not a full cmake target, for example
+# object libraries never lead to a .so/.a file.
+#
+# Input variables
+# ---------------
+#
+# :LIBNAME:       Library name.
+# :OBJECTS:       Object libraries to include. Only target
+#                 objects will be included, other link-time
+#                 information is not propagated.
+# :SRCS:          Sources to compile.
+# :DEFINITIONS:   Preprocessor definitions.
+# :LIBRARIES:     Libraries to link against.
+#
+##############################################################################
+
 macro(field_api_add_object_library)
 
     set( options )
