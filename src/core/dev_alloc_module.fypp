@@ -13,15 +13,7 @@ MODULE DEV_ALLOC_MODULE
 
 ${fieldType.useParkind1 ()}$
 
-#:if defined('USE_BUDDY_MALLOC') or defined('CUDA')
-USE ISO_C_BINDING
-#:endif
-#ifdef _OPENACC
-USE OPENACC
-#endif
-#:if defined('CUDA')
-USE CUDAFOR
-#:endif
+USE, INTRINSIC :: ISO_C_BINDING
 
 IMPLICIT NONE
 
