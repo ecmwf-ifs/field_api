@@ -7,11 +7,4 @@
 # granted to it by virtue of its status as an intergovernmental organisation
 # nor does it submit to any jurisdiction.
 
-include( field_api_compile_options )
-include( field_api_find_fypp )
-include( field_api_find_fiat_modules )
-include( field_api_expand_fypp )
-include( field_api_expand_fypp_ranksuff )
-include( field_api_add_object_library )
-include( field_api_target_add_module_dirs )
-include( field_api_get_offload_model )
+from offload_backends.nvhpc import *
