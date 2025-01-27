@@ -112,7 +112,7 @@ CONTAINS
 #:for d in range (0, ft.rank+1)
   SUBROUTINE ${ftn}$_COPY_DIM${d}$_CONTIGUOUS (HST, DEV, MAP_DEVPTR, KDIR, QUEUE)
 #ifdef _OPENACC
-  USE OPENACC
+$:offload_macros.RuntimeApiImport(indent=2)
 #endif
   USE, INTRINSIC :: ISO_FORTRAN_ENV, ONLY : INT64
     ${ft.type}$, POINTER :: HST (${ft.shape}$), DEV (${ft.shape}$)
@@ -122,21 +122,21 @@ CONTAINS
     INTEGER (KIND=INT64)                       :: ISIZE
     INTEGER :: ${', '.join (['J'] + list (map (lambda i: 'J' + str (i+1), range (d, ft.rank))))}$
 #ifdef _OPENACC
-    TYPE(C_DEVPTR) :: DEVPTR
+$:offload_macros.CDevptrDecl(symbols=['DEVPTR'], indent=4)
 #endif
 
   #:for e in range (ft.rank, d, -1)
     ${'  ' * (ft.rank - e)}$DO J${e}$ = LBOUND (HST, ${e}$), UBOUND (HST, ${e}$)
   #:endfor
   #:set ar = ', '.join ([':'] * d  + list (map (lambda i: 'J' + str (i+1), range (d, ft.rank))))
-  #:set lbdiff = lambda i: f'LBOUND(DEV, {i}) - LBOUND (HST, {i})'
+  #:set lbdiff = lambda i: f'LBOUND(DEV,{i}) - LBOUND (HST,{i})'
   #:set ard = ', '.join ([':'] * d  + ['J' + str(i+1) + ' + ' + lbdiff(i+1) for i in range (d, ft.rank)])
   #:set indent = '  ' * (ft.rank - e)
 #ifdef _OPENACC
     ${indent}$  IF(MAP_DEVPTR)THEN
-    ${indent}$    !$acc host_data use_device(DEV)
-    ${indent}$    DEVPTR = C_DEVLOC(DEV (${ard}$))
-    ${indent}$    !$acc end host_data
+$:offload_macros.HostDataStart(symbols=[f'DEV ({ard})'], indent=ft.rank - e)
+    ${indent}$    DEVPTR = ${offload_macros.DevptrCLOC(f'DEV ({ard})')}$
+$:offload_macros.HostDataEnd(indent=ft.rank - e)
     ${indent}$  ELSE
     ${indent}$    !$acc data deviceptr(DEVPTR, DEV)
     ${indent}$    DEVPTR = C_DEVLOC(DEV (${ard}$))
@@ -151,9 +151,9 @@ CONTAINS
     ${indent}$  IF (KDIR == NH2D) THEN
 #ifdef _OPENACC
     ${indent}$    IF(PRESENT(QUEUE))THEN
-    ${indent}$      CALL ACC_MEMCPY_TO_DEVICE_ASYNC (DEVPTR , HST (${ar}$), ISIZE, QUEUE)
+$:offload_macros.CopyToDevice1DAsync(dev='DEVPTR', host=f'HST ({ar})', size='ISIZE', queue='QUEUE', indent=ft.rank - e + 10)
     ${indent}$    ELSE
-    ${indent}$      CALL ACC_MEMCPY_TO_DEVICE (DEVPTR , HST (${ar}$), ISIZE)
+$:offload_macros.CopyToDevice1D(dev='DEVPTR', host=f'HST ({ar})', size='ISIZE', indent=ft.rank - e + 10)
     ${indent}$    ENDIF
 #else
     ${indent}$    DEV (${ard}$) = HST (${ar}$)
@@ -161,9 +161,9 @@ CONTAINS
     ${indent}$  ELSEIF (KDIR == ND2H) THEN
 #ifdef _OPENACC
     ${indent}$    IF(PRESENT(QUEUE))THEN
-    ${indent}$      CALL ACC_MEMCPY_FROM_DEVICE_ASYNC (HST (${ar}$), DEVPTR, ISIZE, QUEUE)
+$:offload_macros.CopyFromDevice1DAsync(dev='DEVPTR', host=f'HST ({ar})', size='ISIZE', queue='QUEUE', indent=ft.rank - e + 10)
     ${indent}$    ELSE
-    ${indent}$      CALL ACC_MEMCPY_FROM_DEVICE (HST (${ar}$), DEVPTR, ISIZE)
+$:offload_macros.CopyFromDevice1D(dev='DEVPTR', host=f'HST ({ar})', size='ISIZE', indent=ft.rank - e + 10)
     ${indent}$    ENDIF
 #else
     ${indent}$    HST (${ar}$) = DEV (${ard}$)

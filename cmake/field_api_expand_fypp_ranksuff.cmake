@@ -51,6 +51,7 @@ macro( field_api_expand_fypp_ranksuff )
    
              add_custom_command (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/field_${RANK}${suff}${FUNC}_module.F90
        	      COMMAND ${FYPP} -DRANK=${RANK} -DSUFF='${SUFF}' ${fypp_defines} -m os -M ${_PAR_PYTHON_MODULE_DIR} -m fieldType 
+               -DOFFLOAD_MODEL="${FIELD_API_OFFLOAD_MODEL}" -M ${_PAR_PYTHON_MODULE_DIR} -m offload_macros
                ${_PAR_SOURCE_DIR}/field_RANKSUFF${FUNC}_module.fypp > ${CMAKE_CURRENT_BINARY_DIR}/field_${RANK}${suff}${FUNC}_module.F90
                DEPENDS ${_PAR_SOURCE_DIR}/field_RANKSUFF${FUNC}_module.fypp
                VERBATIM)
@@ -62,6 +63,7 @@ macro( field_api_expand_fypp_ranksuff )
    
              add_custom_command (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/field_${RANK}${suff}${FUNC}_module.F90
        	      COMMAND ${FYPP} -DRANK=${RANK} -DSUFF='${SUFF}' ${fypp_defines} -m os -M ${_PAR_PYTHON_MODULE_DIR} -m fieldType 
+               -DOFFLOAD_MODEL="${FIELD_API_OFFLOAD_MODEL}" -M ${_PAR_PYTHON_MODULE_DIR} -m offload_macros
                ${_PAR_SOURCE_DIR}/field_RANKSUFF${FUNC}_module.fypp > ${CMAKE_CURRENT_BINARY_DIR}/field_${RANK}${suff}${FUNC}_module.F90
                DEPENDS ${_PAR_SOURCE_DIR}/field_RANKSUFF${FUNC}_module.fypp
                VERBATIM)

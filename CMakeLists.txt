@@ -33,24 +33,8 @@ ecbuild_find_package(OpenMP COMPONENTS Fortran REQUIRED)
 ## find fypp
 field_api_find_fypp()
 
-## find OpenACC
-if( ${CMAKE_VERSION} VERSION_LESS "3.25" )
-  if ( FIELD_API_ENABLE_ACC OR (NOT DEFINED FIELD_API_ENABLE_ACC AND (ENABLE_ACC OR NOT DEFINED ENABLE_ACC)) )
-    # See https://gitlab.kitware.com/cmake/cmake/-/issues/23691, fixed in CMake 3.25
-    # (TL;DR: FindOpenACC sets OpenACC_<LANG>_FOUND correctly but does not set
-    #  OpenACC_FOUND unless all three C, CXX, and Fortran have been found - even if
-    #  only one language has been requested via COMPONENTS)
-    find_package( OpenACC COMPONENTS Fortran )
-    if( OpenACC_Fortran_FOUND )
-      set( OpenACC_FOUND ON )
-    endif()
-  endif()
-endif()
-ecbuild_add_option( FEATURE ACC
-                    DEFAULT ON
-                    DESCRIPTION "Support for using GPUs with OpenACC"
-                    REQUIRED_PACKAGES "OpenACC COMPONENTS Fortran" 
-                    CONDITION CMAKE_Fortran_COMPILER_ID MATCHES "PGI|NVHPC")
+## determine GPU offload model
+field_api_get_offload_model()
 
 ## set general compiler flags
 field_api_compile_options()
@@ -74,13 +58,6 @@ endif()
 
 ## find fiat
 field_api_find_fiat_modules()
-
-## check for CUDA
-include(CheckLanguage)
-check_language(CUDA)
-ecbuild_add_option( FEATURE CUDA
-    DESCRIPTION "CUDA" DEFAULT ON
-    CONDITION CMAKE_CUDA_COMPILER AND HAVE_ACC )
 
 ## buddy allocator option
 ecbuild_add_option( FEATURE BUDDY_MALLOC
