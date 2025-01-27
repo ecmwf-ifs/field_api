@@ -7,14 +7,10 @@
 # granted to it by virtue of its status as an intergovernmental organisation
 # nor does it submit to any jurisdiction.
 
-# Download ecbuild if not found.
-
-include(FetchContent)
-FetchContent_Populate(
-    ecbuild
-    URL            https://github.com/ecmwf/ecbuild/archive/refs/tags/3.7.0.tar.gz
-    SOURCE_DIR     ${CMAKE_BINARY_DIR}/ecbuild
-    BINARY_DIR     ${CMAKE_BINARY_DIR}/_deps/ecbuild-build
-    SUBBUILD_DIR   ${CMAKE_BINARY_DIR}/_deps/ecbuild-subbuild
-  )
-find_package( ecbuild 3.7 REQUIRED HINTS ${CMAKE_BINARY_DIR} )
+include( field_api_compile_options )
+include( field_api_find_fypp )
+include( field_api_find_fiat_modules )
+include( field_api_expand_fypp )
+include( field_api_expand_fypp_ranksuff )
+include( field_api_add_object_library )
+include( field_api_target_add_module_dirs )

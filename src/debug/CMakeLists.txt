@@ -7,14 +7,20 @@
 # granted to it by virtue of its status as an intergovernmental organisation
 # nor does it submit to any jurisdiction.
 
-# Download ecbuild if not found.
+check_symbol_exists(backtrace execinfo.h HAVE_BACKTRACE)
 
-include(FetchContent)
-FetchContent_Populate(
-    ecbuild
-    URL            https://github.com/ecmwf/ecbuild/archive/refs/tags/3.7.0.tar.gz
-    SOURCE_DIR     ${CMAKE_BINARY_DIR}/ecbuild
-    BINARY_DIR     ${CMAKE_BINARY_DIR}/_deps/ecbuild-build
-    SUBBUILD_DIR   ${CMAKE_BINARY_DIR}/_deps/ecbuild-subbuild
-  )
-find_package( ecbuild 3.7 REQUIRED HINTS ${CMAKE_BINARY_DIR} )
+list(APPEND srcs
+    field_statistics_module.F90
+    field_backtrace.c)
+
+unset( _definitions )
+if( HAVE_BACKTRACE )
+   list(APPEND _defintions HAVE_BACKTRACE)
+endif()
+
+## define object library
+field_api_add_object_library(
+    LIBNAME      field_api_debug
+    SRCS         ${srcs}
+    DEFINITIONS  ${_definitions}
+)
