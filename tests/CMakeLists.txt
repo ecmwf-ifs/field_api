@@ -93,6 +93,7 @@ list(APPEND TEST_FILES
         test_pinned.F90
         test_sizeof.F90
         test_statistics.F90
+        test_sync_device_wronly.F90
         test_wrappernosynconfinal.F90
         wrapper_modify_gpu.F90
 	)
