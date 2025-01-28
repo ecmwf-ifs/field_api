@@ -185,3 +185,4 @@ endif()
 
 ## export the project
 ecbuild_install_project(NAME ${PROJECT_NAME})
+
