@@ -26,16 +26,15 @@ macro( field_api_find_fypp )
    
    if( fckit_FOUND AND fckit_HAVE_FCKIT_VENV )
      set( FYPP ${FCKIT_VENV_EXE} -m fypp )
-   elseif( fckit_FOUND )
-     # This is only needed for building in environments with python3 older than 3.8
-     list( APPEND _fckit_fypp_path "${FYPP}" )
-     list( LENGTH _fckit_fypp_path _list_length )
-     MATH( EXPR _last_entry "${_list_length} - 1" )
-     list( GET _fckit_fypp_path ${_last_entry} FYPP )
-   elseif( FYPP MATCHES FYPP-NOTFOUND )
-     include(cmake/field_api_fetchcontent_fypp.cmake)
-     set(FYPP ${fypp_SOURCE_DIR}/bin/fypp)
-     ecbuild_info("fypp downloaded to: ${FYPP}")
+   elseif( FYPP MATCHES FYPP-NOTFOUND OR (fckit_FOUND AND (NOT fckit_HAVE_FCKIT_VENV OR NOT DEFINED fckit_HAVE_FCKIT_VENV)) )
+     # Discover only system install Python 3
+     set( Python3_FIND_VIRTUALENV STANDARD )
+     find_package( Python3 COMPONENTS Interpreter )
+
+     execute_process( COMMAND ${Python3_EXECUTABLE} -m ensurepip --upgrade OUTPUT_QUIET )
+     execute_process( COMMAND ${Python3_EXECUTABLE} -m pip --disable-pip-version-check install fypp OUTPUT_QUIET )
+     ecbuild_info("field_api installed fypp as a pip package")
+     set( FYPP ${Python3_EXECUTABLE} -m fypp )
    endif()
 
 endmacro()
