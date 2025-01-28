@@ -8,14 +8,15 @@
 # nor does it submit to any jurisdiction.
 
 import fypp
-from offload_backends import NVHPCOpenACC
+from offload_backends import NVHPCOpenACC, HostOnly
 
 """
 A common entry point for retrieving macros from the various GPU offload backends.
 """
 
 _offload_map = {
-    'NVHPCOpenACC': NVHPCOpenACC
+    'NVHPCOpenACC': NVHPCOpenACC,
+    'HostOnly': HostOnly
 }
 
 def _wrap_lines(input_str, ref_len, pragma='', indent=0):
@@ -92,14 +93,29 @@ def _get_offload_backend():
 
     return _offload_map[offload_model]
 
+def _empty_string(*args, **kwargs):
+    """Simple method to return an empty string."""
+    return ""
+
+def _get_method(backend, method):
+    """
+    Retrieve the appropriate method from the given backend.
+    """
+
+    try:
+        return getattr(backend, method)
+    except AttributeError:
+        return _empty_string
+
 def RuntimeApiImport(indent=0):
     """
     Import the runtime API.
     """
 
     backend = _get_offload_backend()
+    method = _get_method(backend, 'runtime_api_import')
 
-    return _format_lines(backend.runtime_api_import())
+    return _format_lines(method())
 
 def CDevptrDecl(symbols, indent=0):
     """
@@ -107,8 +123,9 @@ def CDevptrDecl(symbols, indent=0):
     """
 
     backend = _get_offload_backend()
+    method = _get_method(backend, 'c_devptr_declaration')
 
-    return _format_lines(backend.c_devptr_declaration(symbols))
+    return _format_lines(method(symbols))
 
 def HostDataStart(symbols, indent=0):
     """
@@ -116,7 +133,9 @@ def HostDataStart(symbols, indent=0):
     """
 
     backend = _get_offload_backend()
-    return _format_lines(backend.host_data_start(symbols), indent=indent, pragma=backend.pragma)
+    method = _get_method(backend, 'host_data_start')
+
+    return _format_lines(method(symbols), indent=indent, pragma=backend.pragma)
 
 def HostDataEnd(indent=0):
     """
@@ -124,7 +143,9 @@ def HostDataEnd(indent=0):
     """
 
     backend = _get_offload_backend()
-    return _format_lines(backend.host_data_end(), indent=indent)
+    method = _get_method(backend, 'host_data_end')
+
+    return _format_lines(method(), indent=indent)
 
 def DevptrCLOC(symbol, indent=0):
     """
@@ -132,7 +153,9 @@ def DevptrCLOC(symbol, indent=0):
     """
 
     backend = _get_offload_backend()
-    return _format_lines(backend.devptr_c_loc(symbol))
+    method = _get_method(backend, 'devptr_c_loc')
+
+    return _format_lines(method(symbol))
 
 def CopyToDevice1D(dev, host, size, indent=0):
     """
@@ -140,7 +163,9 @@ def CopyToDevice1D(dev, host, size, indent=0):
     """
 
     backend = _get_offload_backend()
-    return _format_lines(backend.copy_to_device_1D(dev, host, size), indent=indent)
+    method = _get_method(backend, 'copy_to_device_1D')
+
+    return _format_lines(method(dev, host, size), indent=indent)
 
 def CopyToDevice1DAsync(dev, host, size, queue, indent=0):
     """
@@ -148,7 +173,9 @@ def CopyToDevice1DAsync(dev, host, size, queue, indent=0):
     """
 
     backend = _get_offload_backend()
-    return _format_lines(backend.copy_to_device_1D_async(dev, host, size, queue), indent=indent)
+    method = _get_method(backend, 'copy_to_device_1D_async')
+
+    return _format_lines(method(dev, host, size, queue), indent=indent)
 
 def CopyFromDevice1D(dev, host, size, indent=0):
     """
@@ -156,7 +183,9 @@ def CopyFromDevice1D(dev, host, size, indent=0):
     """
 
     backend = _get_offload_backend()
-    return _format_lines(backend.copy_from_device_1D(dev, host, size), indent=indent)
+    method = _get_method(backend, 'copy_from_device_1D')
+
+    return _format_lines(method(dev, host, size), indent=indent)
 
 def CopyFromDevice1DAsync(dev, host, size, queue, indent=0):
     """
@@ -164,4 +193,6 @@ def CopyFromDevice1DAsync(dev, host, size, queue, indent=0):
     """
 
     backend = _get_offload_backend()
-    return _format_lines(backend.copy_from_device_1D_async(dev, host, size, queue), indent=indent)
+    method = _get_method(backend, 'copy_from_device_1D_async')
+
+    return _format_lines(method(dev, host, size, queue), indent=indent)

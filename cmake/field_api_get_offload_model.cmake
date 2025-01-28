@@ -47,7 +47,7 @@ macro( field_api_get_offload_model )
        DESCRIPTION "CUDA" DEFAULT ON
        CONDITION CMAKE_CUDA_COMPILER AND HAVE_ACC )
 
-   set(FIELD_API_OFFLOAD_MODEL "None")
+   set(FIELD_API_OFFLOAD_MODEL "HostOnly")
    if( HAVE_CUDA )
       set(FIELD_API_OFFLOAD_MODEL "NVHPCOpenACCCUDA")
    elseif( HAVE_ACC )
