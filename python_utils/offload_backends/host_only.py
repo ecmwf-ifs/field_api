@@ -7,5 +7,12 @@
 # granted to it by virtue of its status as an intergovernmental organisation
 # nor does it submit to any jurisdiction.
 
-from offload_backends.nvhpc import *
-from offload_backends.host_only import *
+
+__all__ = ['HostOnly']
+
+class HostOnly():
+    """
+    A dummy class only to be used if GPU offload is disabled.
+    """
+
+    pragma = ''
