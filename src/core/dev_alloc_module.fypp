@@ -125,7 +125,7 @@ CALL C_F_POINTER (PTR, TMP, UBOUNDS-ILBOUNDS+1)
 DEV (${ ', '.join (map (lambda i: 'ILBOUNDS (' + str (i) + '):', range (1, ft.rank+1))) }$) => TMP
 
 IF(MAP_DEVPTR)THEN
-!$acc enter data create (DEV)
+$:offload_macros.HostMappedDevAlloc(data=['DEV',])
 ENDIF
 
 IF (FIELD_STATISTICS_ENABLE) CALL FIELD_STATISTICS_DEVICE_ALLOCATE (SIZE (DEV, KIND=JPIB) * INT (KIND (DEV), KIND=JPIB))
@@ -151,7 +151,7 @@ IF (ASSOCIATED (DEV)) THEN
   
   IF(MAP_DEVPTR)THEN
     CALL DEV_FREE (PTR)
-    !$acc exit data delete (DEV)
+$:offload_macros.HostMappedDevFree(data=['DEV',], indent=4)
   ELSE
 #:if defined('CUDA')
     ISTAT = CUDA_FREE (PTR)
@@ -181,7 +181,7 @@ ALLOCATE (DEV (${ ', '.join (map (lambda i: 'LBOUND (HST, ' + str (i) + '):UBOUN
 ALLOCATE (DEV, MOLD=HST)
 #endif
 
-!$acc enter data create (DEV)
+$:offload_macros.HostMappedDevAlloc(data=['DEV',])
 
 IF (FIELD_STATISTICS_ENABLE) CALL FIELD_STATISTICS_DEVICE_ALLOCATE (SIZE (DEV, KIND=JPIB) * INT (KIND (DEV), KIND=JPIB))
 
@@ -198,7 +198,7 @@ IF (ASSOCIATED (DEV)) THEN
 
   IF (FIELD_STATISTICS_ENABLE) CALL FIELD_STATISTICS_DEVICE_DEALLOCATE (SIZE (DEV, KIND=JPIB) * INT (KIND (DEV), KIND=JPIB))
 
-  !$acc exit data delete (DEV)
+$:offload_macros.HostMappedDevFree(data=['DEV',], indent=2)
   DEALLOCATE (DEV)
   NULLIFY (DEV)
 ENDIF

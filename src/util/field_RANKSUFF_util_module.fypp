@@ -162,9 +162,9 @@ SUBROUTINE LEGACY_${ft.name}$_ASSIGN (PTR_RHS, PTR_LHS)
 
 ${ft.type}$ :: PTR_RHS (${ft.shape}$), PTR_LHS (${ft.shape}$)
 
-!$acc kernels present (PTR_RHS, PTR_LHS)
+$:offload_macros.LaunchParallelKernel(present=['PTR_RHS', 'PTR_LHS'])
 PTR_RHS = PTR_LHS
-!$acc end kernels
+$:offload_macros.EndParallelKernel()
 
 END SUBROUTINE
 

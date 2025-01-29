@@ -41,7 +41,9 @@ macro( field_api_expand_fypp )
     foreach (SRC ${_PAR_INPUT_SRCS} )
 
       add_custom_command (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${SRC}.F90
-    	  COMMAND ${FYPP} -m os ${fypp_defines} -M ${_PAR_PYTHON_MODULE_DIR} -m fieldType ${_PAR_SOURCE_DIR}/${SRC}.fypp > ${CMAKE_CURRENT_BINARY_DIR}/${SRC}.F90
+    	  COMMAND ${FYPP} -m os ${fypp_defines} -M ${_PAR_PYTHON_MODULE_DIR} -m fieldType
+                        -DOFFLOAD_MODEL="${FIELD_API_OFFLOAD_MODEL}" -M ${_PAR_PYTHON_MODULE_DIR} -m offload_macros
+                        ${_PAR_SOURCE_DIR}/${SRC}.fypp > ${CMAKE_CURRENT_BINARY_DIR}/${SRC}.F90
         DEPENDS ${_PAR_SOURCE_DIR}/${SRC}.fypp
         VERBATIM)
 

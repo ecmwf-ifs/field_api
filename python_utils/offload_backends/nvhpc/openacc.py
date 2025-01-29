@@ -17,6 +17,9 @@ class NVHPCOpenACC():
     """
 
     pragma = '!$acc'
+    _data_attributes = ['private', 'copy', 'copyout', 'copyin', 'present', 'deviceptr', 'create']
+    _loop_attributes = ['gang', 'vector', 'worker', 'seq']
+    _declare_attributes = ['create', 'device_resident', 'deviceptr']
 
     @classmethod
     def runtime_api_import(cls):
@@ -89,3 +92,161 @@ class NVHPCOpenACC():
         """
 
         return f"CALL ACC_MEMCPY_FROM_DEVICE_ASYNC ({host}, {dev}, {size}, {queue})"
+
+    @classmethod
+    def host_mapped_dev_alloc(cls, data):
+        """
+        Allocate host-mapped memory on device.
+        """
+
+        return f"!$acc enter data create ({','.join(data)})"
+
+    @classmethod
+    def host_mapped_dev_free(cls, data):
+        """
+        Free host-mapped memory on device.
+        """
+
+        return f"!$acc exit data delete ({','.join(data)})"
+
+    @classmethod
+    def attach_dev_ptr(cls, ptr):
+        """
+        Attach device pointer to its target on device.
+        """
+
+        return f"!$acc enter data attach ({ptr})"
+
+    @classmethod
+    def detach_dev_ptr(cls, ptr):
+        """
+        Detach device pointer from its target on device.
+        """
+
+        return f"!$acc exit data detach ({ptr})"
+
+    @classmethod
+    def launch_kernel(cls, **kwargs):
+        """
+        Launch an implicitly mapped parallel kernel on device.
+        """
+
+        _data_spec = ""
+        for attr in cls._data_attributes:
+            decl = kwargs.get(attr, None)
+            if decl:
+                _data_spec += f"{attr}({','.join(decl)}) "
+
+        return f"!$acc kernels {_data_spec}"
+
+    @classmethod
+    def end_kernel(cls):
+        """
+        End an implicitly mapped parallel kernel on device.
+        """
+
+        return "!$acc end kernels"
+
+    @classmethod
+    def async_wait(cls, stream):
+        """
+        Wait for the operations queued on a stream to complete.
+        """
+
+        return f"!$acc wait ({stream})"
+
+    @classmethod
+    def launch_parallel_loop(cls, **kwargs):
+        """
+        Launch an explicitly mapped parallel kernel on device.
+        """
+
+        _loop_spec = ""
+        for attr in cls._loop_attributes:
+            if kwargs.get(attr, None):
+                _loop_spec += f"{attr} "
+
+        for attr in cls._data_attributes:
+            decl = kwargs.get(attr, None)
+            if decl:
+                _loop_spec += f"{attr}({','.join(decl)}) "
+
+        return f"!$acc parallel loop {_loop_spec}"
+
+    @classmethod
+    def end_parallel_loop(cls):
+        """
+        End an explicitly mapped parallel kernel on device.
+        """
+
+        return "!$acc end parallel loop"
+
+    @classmethod
+    def annotate_parallel_loop(cls, **kwargs):
+        """
+        Annotate a loop in a device parallel region.
+        """
+
+        _loop_spec = ""
+        for attr in cls._loop_attributes:
+            if kwargs.get(attr, None):
+                _loop_spec += f"{attr} "
+
+        for attr in cls._data_attributes:
+            decl = kwargs.get(attr, None)
+            if decl:
+                _loop_spec += f"{attr}({','.join(decl)}) "
+
+        return f"!$acc loop {_loop_spec}"
+
+    @classmethod
+    def declare(cls, **kwargs):
+        """
+        Issue a device declaration for a host-mapped symbol.
+        """
+
+        _decl_spec = ""
+        for attr in cls._declare_attributes:
+            decl = kwargs.get(attr, None)
+            if decl:
+                _decl_spec += f"{attr}({','.join(decl)}) "
+
+        return f"!$acc declare {_decl_spec}"
+
+    @classmethod
+    def launch_serial_kernel(cls, **kwargs):
+        """
+        Launch a serial kernel on device.
+        """
+
+        _data_spec = ""
+        for attr in cls._data_attributes:
+            decl = kwargs.get(attr, None)
+            if decl:
+                _data_spec += f"{attr}({','.join(decl)}) "
+
+        return f"!$acc serial {_data_spec}"
+
+    @classmethod
+    def end_serial_kernel(cls):
+        """
+        End a serial device kernel.
+        """
+
+        return "!$acc end serial"
+
+    @classmethod
+    def update_device(cls, data):
+        """
+        Update host-mapped symbol on device.
+        """
+
+        return f"!$acc update device ({','.join(data)})"
+
+    @classmethod
+    def update_host(cls, data):
+        """
+        Update device-mapped symbol on host.
+        """
+
+        return f"!$acc update self ({','.join(data)})"
