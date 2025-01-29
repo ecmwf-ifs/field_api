@@ -66,14 +66,14 @@ LLCREATED = .FALSE.
 IF (PRESENT (LDCREATED)) LLCREATED = LDCREATED
 
 IF (.NOT. LLCREATED) THEN
-  !$acc enter data create (SELF)
-  !$acc update device (SELF)
+$:offload_macros.HostMappedDevAlloc(data=['SELF',], indent=2)
+$:offload_macros.UpdateDevice(data=['SELF',], indent=2)
 ENDIF
 
-!$acc serial present (SELF)
+$:offload_macros.LaunchSerialKernel(present=['SELF',])
 NULLIFY (SELF%P)
 NULLIFY (SELF%F_P)
-!$acc end serial
+$:offload_macros.EndSerialKernel()
 
 IF (LLFIELDAPI .AND. ASSOCIATED (SELF%F_P)) THEN
   CALL COPY (SELF%F_P, LDCREATED)
@@ -100,7 +100,7 @@ IF (LLFIELDAPI .AND. ASSOCIATED (SELF%F_P)) THEN
 ENDIF
 
 IF (.NOT. LLDELETED) THEN
-  !$acc exit data delete (SELF)
+$:offload_macros.HostMappedDevFree(data=['SELF',], indent=2)
 ENDIF
 
 END SUBROUTINE 

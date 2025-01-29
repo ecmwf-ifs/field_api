@@ -158,13 +158,13 @@ INTEGER (KIND=JPIM) :: ${ind}$
 #:endif
 
 #:if what == 'DEVICE'
-!$acc parallel loop gang present (PTRG, PTRS, KNDS)
+$:offload_macros.LaunchParallelLoop(gang=True, present=['PTRG', 'PTRS', 'KNDS'])
 #:elif what == 'HOST'
 !$OMP PARALLEL DO PRIVATE (${ind}$JBLKG, JLONG, JBLKS, JLONS)
 #:endif
 DO JBLKG = 1, SIZE (KNDS, 3)
 #:if what == 'DEVICE'
-!$acc loop vector private (${ind}$JLONG, JBLKS, JLONS) 
+$:offload_macros.AnnotateParallelLoop(vector=True, private=[f'{ind}JLONG', 'JBLKS', 'JLONS'])
 #:endif
   DO JLONG = 1, SIZE (KNDS, 2)
     JLONS = KNDS (NLONDIM, JLONG, JBLKG)
@@ -253,13 +253,13 @@ INTEGER (KIND=JPIM) :: ${ind}$
 #:endif
 
 #:if what == 'DEVICE'
-!$acc parallel loop gang present (PTRG, PTRS, KNDS)
+$:offload_macros.LaunchParallelLoop(gang=True, present=['PTRG', 'PTRS', 'KNDS'])
 #:elif what == 'HOST'
 !$OMP PARALLEL DO PRIVATE (${ind}$JBLKG, JLONG, JBLKS, JLONS)
 #:endif
 DO JBLKG = 1, SIZE (KNDS, 3)
 #:if what == 'DEVICE'
-!$acc loop vector private (${ind}$JLONG, JBLKS, JLONS) 
+$:offload_macros.AnnotateParallelLoop(vector=True, private=[f'{ind}JLONG', 'JBLKS', 'JLONS'])
 #:endif
   DO JLONG = 1, SIZE (KNDS, 2)
     JLONS = KNDS (NLONDIM, JLONG, JBLKG)

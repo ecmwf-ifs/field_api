@@ -392,7 +392,7 @@ CONTAINS
     SELF%LOBJECT_COPIED = .TRUE.
 #ifdef _OPENACC
     IF (ASSOCIATED (SELF%DEVPTR)) THEN
-      !$acc enter data attach (SELF%DEVPTR)
+$:offload_macros.AttachDevPtr(ptr='SELF%DEVPTR', indent=6)
     ENDIF
 #endif
   ENDIF
@@ -416,7 +416,7 @@ CONTAINS
     SELF%LOBJECT_COPIED = .FALSE.
 #ifdef _OPENACC
     IF (ASSOCIATED (SELF%DEVPTR)) THEN
-      !$acc exit data detach (SELF%DEVPTR)
+$:offload_macros.DetachDevPtr(ptr='SELF%DEVPTR', indent=6)
     ENDIF
 #endif
   ENDIF
@@ -561,9 +561,9 @@ CONTAINS
     ELSEIF (IAND (SELF%GET_STATUS (), NDEVFRESH) /= 0) THEN
       CALL SELF%GET_DEVICE_DATA_RDONLY (PTR)
       ALLOCATE (ZZ, MOLD=PTR)
-!$acc kernels present (PTR) copyout (ZZ)
+$:offload_macros.LaunchParallelKernel(present=['PTR',], copyout=['ZZ',])
       ZZ = PTR
-!$acc end kernels
+$:offload_macros.EndParallelKernel()
       ILEN = SIZE (ZZ) * KIND (ZZ)
       CALL CRC64 (ZZ, ILEN, ICRC)
     ENDIF

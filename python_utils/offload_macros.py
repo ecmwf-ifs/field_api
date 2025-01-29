@@ -196,3 +196,158 @@ def CopyFromDevice1DAsync(dev, host, size, queue, indent=0):
     method = _get_method(backend, 'copy_from_device_1D_async')
 
     return _format_lines(method(dev, host, size, queue), indent=indent)
+
+def HostMappedDevAlloc(data, indent=0):
+    """
+    Allocate host-mapped memory on device.
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'host_mapped_dev_alloc')
+
+    return _format_lines(method(data), indent=indent)
+
+def HostMappedDevFree(data, indent=0):
+    """
+    Free host-mapped memory on device.
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'host_mapped_dev_free')
+
+    return _format_lines(method(data), indent=indent)
+
+def AttachDevPtr(ptr, indent=0):
+    """
+    Attach a device pointer to its target.
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'attach_dev_ptr')
+
+    return _format_lines(method(ptr), indent=indent)
+
+def DetachDevPtr(ptr, indent=0):
+    """
+    Detach a device pointer from its target.
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'detach_dev_ptr')
+
+    return _format_lines(method(ptr), indent=indent)
+
+def LaunchParallelKernel(**kwargs):
+    """
+    Launch an implicitly mapped parallel kernel on device.
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'launch_kernel')
+
+    indent = kwargs.pop('indent', 0)
+    return _format_lines(method(**kwargs), indent=indent)
+
+def EndParallelKernel(indent=0):
+    """
+    End an implicitly mapped parallel kernel on device.
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'end_kernel')
+
+    return _format_lines(method(), indent=indent)
+
+def WaitAsyncStream(stream, indent=0):
+    """
+    Wait for the operations queued on a stream to complete.
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'async_wait')
+
+    return _format_lines(method(stream), indent=indent)
+
+def LaunchParallelLoop(**kwargs):
+    """
+    Launch an explicitly mapped parallel kernel on device.
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'launch_parallel_loop')
+
+    indent = kwargs.pop('indent', 0)
+    return _format_lines(method(**kwargs), indent=indent)
+
+def EndParallelLoop(indent=0):
+    """
+    End an explicitly mapped parallel kernel on device.
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'end_parallel_loop')
+
+    return _format_lines(method(), indent=indent)
+
+def AnnotateParallelLoop(**kwargs):
+    """
+    Annotate a loop in a device parallel region.
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'annotate_parallel_loop')
+
+    indent = kwargs.pop('indent', 0)
+    return _format_lines(method(**kwargs), indent=indent)
+
+def Declare(**kwargs):
+    """
+    Issue a device declaration for a host-mapped symbol.
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'declare')
+
+    indent = kwargs.pop('indent', 0)
+    return _format_lines(method(**kwargs), indent=indent)
+
+def LaunchSerialKernel(**kwargs):
+    """
+    Launch a serial kernel on device.
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'launch_serial_kernel')
+
+    indent = kwargs.pop('indent', 0)
+    return _format_lines(method(**kwargs), indent=indent)
+
+def EndSerialKernel(indent=0):
+    """
+    End a serial device kernel.
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'end_serial_kernel')
+
+    return _format_lines(method(), indent=indent)
+
+def UpdateDevice(data, indent=0):
+    """
+    Update host-mapped symbol on device.
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'update_device')
+
+    return _format_lines(method(data), indent=indent)
+
+def UpdateHost(data, indent=0):
+    """
+    Update device-mapped symbol on host.
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'update_host')
+
+    return _format_lines(method(data), indent=indent)
