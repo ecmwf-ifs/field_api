@@ -16,6 +16,10 @@ USE FIELD_${ft.rank}$${ft.suffix}$_DATA_MODULE, ONLY : ${ft.name}$_COPY_ARRAY
 
 IMPLICIT NONE
 
+PRIVATE
+
+PUBLIC :: COPY_ARRAY
+
 INTERFACE COPY_ARRAY
 #:for ft in fieldTypeList
   MODULE PROCEDURE ${ft.name}$_COPY_ARRAY
