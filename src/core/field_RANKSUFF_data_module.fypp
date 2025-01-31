@@ -138,9 +138,9 @@ $:offload_macros.HostDataStart(symbols=[f'DEV ({ard})'], indent=ft.rank - e)
     ${indent}$    DEVPTR = ${offload_macros.DevptrCLOC(f'DEV ({ard})')}$
 $:offload_macros.HostDataEnd(indent=ft.rank - e)
     ${indent}$  ELSE
-    ${indent}$    !$acc data deviceptr(DEVPTR, DEV)
-    ${indent}$    DEVPTR = C_DEVLOC(DEV (${ard}$))
-    ${indent}$    !$acc end data
+$:offload_macros.DataStart(deviceptr=['DEVPTR', 'DEV'], indent=ft.rank - e)
+    ${indent}$    DEVPTR = ${offload_macros.DevptrCLOC(f'DEV ({ard})')}$
+$:offload_macros.DataEnd(indent=ft.rank - e)
     ${indent}$  ENDIF
 #endif
     #:if d == 0
@@ -180,22 +180,22 @@ $:offload_macros.CopyFromDevice1D(dev='DEVPTR', host=f'HST ({ar})', size='ISIZE'
 #:for d1 in range (0, ft.rank)
 #:for d2 in range (d1+1, ft.rank+1)
     SUBROUTINE ${ftn}$_COPY_2D_DIM${d1}$_${d2}$_CONTIGUOUS (HST, DEV, MAP_DEVPTR, KDIR, QUEUE)
-    USE OPENACC
-    USE CUDAFOR
+$:offload_macros.RuntimeApiImport(indent=4)
     USE FIELD_ABORT_MODULE
 
     ${ft.type}$, POINTER :: HST (${ft.shape}$), DEV (${ft.shape}$)
     INTEGER (KIND=JPIM),           INTENT (IN) :: KDIR
     LOGICAL,                       INTENT (IN) :: MAP_DEVPTR
     INTEGER (KIND=JPIM), OPTIONAL, INTENT (IN) :: QUEUE
-    INTEGER (KIND=JPIM) :: IHST_PITCH, IDEV_PITCH, IRET
+    INTEGER (KIND=JPIM) :: IHST_PITCH, IDEV_PITCH
     INTEGER (KIND=JPIM) :: IWIDTH, IHEIGHT, ISHP(${ft.rank+1}$)
   #:if d2 < ft.rank
     INTEGER :: ${', '.join (list (map (lambda i: 'J' + str (i+1), range (d2, ft.rank))))}$
   #:endif
-    INTEGER(KIND=CUDA_STREAM_KIND) :: STREAM
+    INTEGER(KIND=${offload_macros.StreamHandleKind()}$) :: STREAM
     TYPE(C_PTR) :: HSTPTR
-    TYPE(C_DEVPTR) :: DEVPTR
+$:offload_macros.CDevptrDecl(symbols=['DEVPTR'], indent=4)
+$:offload_macros.RuntimeErrorType(symbols=['IRET',], indent=4)
 
     ISHP(1) = 1
     ISHP(2:) = SHAPE(HST)
@@ -216,42 +216,36 @@ $:offload_macros.CopyFromDevice1D(dev='DEVPTR', host=f'HST ({ar})', size='ISIZE'
   #:set ar = lambda arr: ', '.join(lbnds(arr, 0, d2) + [f'J{i+1}' for i in range(d2, ft.rank)])
     ${indent}$  HSTPTR = C_LOC(HST (${ar('HST')}$))
     ${indent}$  IF (MAP_DEVPTR) THEN
-    ${indent}$     !$acc host_data use_device(DEV)
-    ${indent}$     DEVPTR = C_DEVLOC(DEV (${ar('DEV')}$))
-    ${indent}$     !$acc end host_data
+$:offload_macros.HostDataStart(symbols=['DEV',], indent=ft.rank - d2 - 1)
+    ${indent}$     DEVPTR = ${offload_macros.DevptrCLOC(symbol=f"DEV({ar('DEV')})")}$
+$:offload_macros.HostDataEnd(indent=ft.rank - d2 - 1)
     ${indent}$  ELSE
-    ${indent}$     !$acc data deviceptr(DEVPTR,DEV)
-    ${indent}$     DEVPTR = C_DEVLOC(DEV (${ar('DEV')}$))
-    ${indent}$     !$acc end data
+$:offload_macros.DataStart(deviceptr=['DEVPTR', 'DEV'], indent=ft.rank - d2 - 1)
+    ${indent}$     DEVPTR = ${offload_macros.DevptrCLOC(symbol=f"DEV({ar('DEV')})")}$
+$:offload_macros.DataEnd(indent=ft.rank - d2 - 1)
     ${indent}$  ENDIF
     ${indent}$  IF (KDIR == NH2D) THEN
     ${indent}$    IF(PRESENT(QUEUE)) THEN
-    ${indent}$      CALL ACC_SET_CUDA_STREAM(QUEUE, STREAM)
-    ${indent}$      IRET = CUDAMEMCPY2DASYNC (DEVPTR, IDEV_PITCH, &
-    ${indent}$                              & HSTPTR, IHST_PITCH, &
-    ${indent}$                              & IWIDTH, IHEIGHT, &
-    ${indent}$                              & STREAM=STREAM)
+$:offload_macros.SetAsyncStream(id='QUEUE', stream='STREAM', indent=ft.rank - d2 + 9)
+$:offload_macros.Copy2DAsync(dst='DEVPTR', dst_pitch='IDEV_PITCH', src='HSTPTR', src_pitch='IHST_PITCH', &
+&                            width='IWIDTH', height='IHEIGHT', stream='STREAM', return_val='IRET', indent=ft.rank - d2 + 9)
     ${indent}$    ELSE
-    ${indent}$      IRET = CUDAMEMCPY2D (DEVPTR, IDEV_PITCH, &
-    ${indent}$                         & HSTPTR, IHST_PITCH, &
-    ${indent}$                         & IWIDTH, IHEIGHT)
+$:offload_macros.Copy2D(dst='DEVPTR', dst_pitch='IDEV_PITCH', src='HSTPTR', src_pitch='IHST_PITCH', &
+&                       width='IWIDTH', height='IHEIGHT', return_val='IRET', indent=ft.rank - d2 + 9)
     ${indent}$    ENDIF
-    ${indent}$    IF (IRET /= CUDASUCCESS) THEN
+    ${indent}$    IF (IRET /= 0) THEN
     ${indent}$       CALL FIELD_ABORT ("${ftn}$_COPY_2D_DIM${d1}$_${d2}$_CONTIGUOUS: HOST-TO-DEVICE TRANSFER FAILED")
     ${indent}$    ENDIF
     ${indent}$  ELSEIF (KDIR == ND2H) THEN
     ${indent}$    IF(PRESENT(QUEUE)) THEN
-    ${indent}$      CALL ACC_SET_CUDA_STREAM(QUEUE, STREAM)
-    ${indent}$      IRET = CUDAMEMCPY2DASYNC (HSTPTR, IHST_PITCH, &
-    ${indent}$                              & DEVPTR, IDEV_PITCH, &
-    ${indent}$                              & IWIDTH, IHEIGHT, &
-    ${indent}$                              & STREAM=STREAM)
+$:offload_macros.SetAsyncStream(id='QUEUE', stream='STREAM', indent=ft.rank - d2 + 9)
+$:offload_macros.Copy2DAsync(dst='HSTPTR', dst_pitch='IHST_PITCH', src='DEVPTR', src_pitch='IDEV_PITCH', &
+&                            width='IWIDTH', height='IHEIGHT', stream='STREAM', return_val='IRET', indent=ft.rank - d2 + 9)
     ${indent}$    ELSE
-    ${indent}$      IRET = CUDAMEMCPY2D (HSTPTR, IHST_PITCH, &
-    ${indent}$                         & DEVPTR, IDEV_PITCH, &
-    ${indent}$                         & IWIDTH, IHEIGHT)
+$:offload_macros.Copy2D(dst='HSTPTR', dst_pitch='IHST_PITCH', src='DEVPTR', src_pitch='IDEV_PITCH', &
+&                       width='IWIDTH', height='IHEIGHT', return_val='IRET', indent=ft.rank - d2 + 9)
     ${indent}$    ENDIF
-    ${indent}$    IF (IRET /= CUDASUCCESS) THEN
+    ${indent}$    IF (IRET /= 0) THEN
     ${indent}$       CALL FIELD_ABORT ("${ftn}$_COPY_2D_DIM${d1}$_${d2}$_CONTIGUOUS: DEVICE-TO-HOST TRANSFER FAILED")
     ${indent}$    ENDIF
     ${indent}$  ENDIF

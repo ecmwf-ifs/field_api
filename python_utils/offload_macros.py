@@ -8,7 +8,7 @@
 # nor does it submit to any jurisdiction.
 
 import fypp
-from offload_backends import NVHPCOpenACC, HostOnly
+from offload_backends import NVHPCOpenACC, NVHPCOpenACCCUDA, HostOnly
 
 """
 A common entry point for retrieving macros from the various GPU offload backends.
@@ -16,7 +16,8 @@ A common entry point for retrieving macros from the various GPU offload backends
 
 _offload_map = {
     'NVHPCOpenACC': NVHPCOpenACC,
-    'HostOnly': HostOnly
+    'HostOnly': HostOnly,
+    'NVHPCOpenACCCUDA': NVHPCOpenACCCUDA
 }
 
 def _wrap_lines(input_str, ref_len, pragma='', indent=0):
@@ -70,7 +71,7 @@ def _format_lines(input_str, indent=0, width=132, pragma=''):
     _wrapped_lines = []
     if isinstance(input_str, (list, tuple)):
         for s in input_str:
-            _wrapped_lines += _format_lines(s, indent=indent, pragma=pragma)
+            _wrapped_lines += [_format_lines(s, indent=indent, pragma=pragma),]
     else:
         ref_len = width - indent - 2 - len(pragma)
         if len(input_str) > width - indent:
@@ -115,7 +116,7 @@ def RuntimeApiImport(indent=0):
     backend = _get_offload_backend()
     method = _get_method(backend, 'runtime_api_import')
 
-    return _format_lines(method())
+    return _format_lines(method(), indent=indent)
 
 def CDevptrDecl(symbols, indent=0):
     """
@@ -125,7 +126,7 @@ def CDevptrDecl(symbols, indent=0):
     backend = _get_offload_backend()
     method = _get_method(backend, 'c_devptr_declaration')
 
-    return _format_lines(method(symbols))
+    return _format_lines(method(symbols), indent=indent)
 
 def HostDataStart(symbols, indent=0):
     """
@@ -351,3 +352,176 @@ def UpdateHost(data, indent=0):
     method = _get_method(backend, 'update_host')
 
     return _format_lines(method(data), indent=indent)
+
+def StreamHandleKind():
+    """
+    Return the INTEGER kind specifier for a stream handle.
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'stream_handle_kind')
+
+    return _format_lines(method())
+
+def DataStart(**kwargs):
+    """
+    Start a `data` (or equivalent) region.
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'data_start')
+
+    indent = kwargs.pop('indent', 0)
+    return _format_lines(method(**kwargs), indent=indent, pragma=backend.pragma)
+
+def DataEnd(indent=0):
+    """
+    End a `data` (or equivalent) region.
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'data_end')
+
+    return _format_lines(method(), indent=indent)
+
+def DevMallocIntf(indent=0):
+    """
+    The ISO_C interface for a device memory allocation.
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'dev_malloc_intf')
+
+    return _format_lines(method(), indent=indent)
+
+def DevFreeIntf(indent=0):
+    """
+    The ISO_C interface for freeing device memory.
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'dev_free_intf')
+
+    return _format_lines(method(), indent=indent)
+
+def RuntimeErrorType(symbols, indent=0):
+    """
+    Declaration for the variable used to store the runtime API error status.
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'runtime_error_return_type')
+
+    return _format_lines(method(symbols), indent=indent)
+
+def DevMalloc(ptr, size, return_val="ISTAT", indent=0):
+    """
+    Allocate memory on device.
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'dev_malloc')
+
+    return _format_lines(method(ptr, size, return_val=return_val), indent=indent)
+
+def DevFree(ptr, return_val="ISTAT", indent=0):
+    """
+    Free device memory.
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'dev_free')
+
+    return _format_lines(method(ptr, return_val=return_val), indent=indent)
+
+def RegisterHostSetFlags(flag_var, val, indent=0):
+    """
+    Set flags for page-locking host memory.
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'register_host_set_flags')
+
+    return _format_lines(method(flag_var, val), indent=indent)
+
+def RegisterHostDeclFlags(flag_var, indent=0):
+    """
+    Declare variable used to store flags for controlling page-locking of host memory.
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'register_host_decl_flags')
+
+    return _format_lines(method(flag_var), indent=indent)
+
+def RegisterHost(ptr, size, flags, return_val="ISTAT", indent=0):
+    """
+    Page-lock host memory.
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'register_host')
+
+    return _format_lines(method(ptr, size, flags, return_val=return_val), indent=indent)
+
+def UnregisterHost(ptr, return_val="ISTAT", indent=0):
+    """
+    Unpin (i.e. undo page-locking) host memory.
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'unregister_host')
+
+    return _format_lines(method(ptr, return_val=return_val), indent=indent)
+
+def HostRegisterIntf(indent=0):
+    """
+    The ISO_C interface for page-locking host memory.
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'host_register_intf')
+
+    return _format_lines(method(), indent=indent)
+
+def HostUnregisterIntf(indent=0):
+    """
+    The ISO_C interface for un-pinning (i.e. undo page-locking) host memory.
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'host_unregister_intf')
+
+    return _format_lines(method(), indent=indent)
+
+def SetAsyncStream(id, stream, indent=0):
+    """
+    Set an asynchronous stream.
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'set_async_stream')
+
+    return _format_lines(method(id, stream), indent=indent)
+
+def Copy2D(src, src_pitch, dst, dst_pitch, width, height, return_val="ISTAT", indent=0):
+    """
+    Copy a strided memory region from source (src) to destination (dst).
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'copy_2D')
+
+    return _format_lines(method(src, src_pitch, dst, dst_pitch, width, height, return_val=return_val),
+                         indent=indent)
+
+def Copy2DAsync(src, src_pitch, dst, dst_pitch, width, height, stream, return_val="ISTAT", indent=0):
+    """
+    Asynchronously copy a strided memory region from source (src) to destination (dst).
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'copy_2D_async')
+
+    return _format_lines(method(src, src_pitch, dst, dst_pitch, width, height, stream, return_val=return_val),
+                         indent=indent)

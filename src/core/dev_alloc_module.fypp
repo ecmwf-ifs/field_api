@@ -53,15 +53,8 @@ END INTERFACE
 
 #:if defined('CUDA')
 INTERFACE
-  INTEGER FUNCTION CUDA_MALLOC (PTR,SIZ) BIND (C, NAME='cudaMalloc')
-    IMPORT :: C_PTR, C_SIZE_T
-    INTEGER (C_SIZE_T), VALUE, INTENT(IN) :: SIZ
-    TYPE (C_PTR), INTENT(OUT) :: PTR
-  END FUNCTION CUDA_MALLOC
-  INTEGER FUNCTION CUDA_FREE (PTR) BIND (C, NAME='cudaFree')
-    IMPORT :: C_PTR
-    TYPE (C_PTR), VALUE, INTENT(IN) :: PTR
-  END FUNCTION CUDA_FREE
+$:offload_macros.DevMallocIntf(indent=2)
+$:offload_macros.DevFreeIntf(indent=2)
 END INTERFACE
 #:endif
 
@@ -102,7 +95,7 @@ LOGICAL, INTENT(IN) :: MAP_DEVPTR
 TYPE (C_PTR) :: PTR
 INTEGER (C_SIZE_T) :: SIZ
 #:if defined('CUDA')
-INTEGER :: ISTAT
+$:offload_macros.RuntimeErrorType(symbols=['ISTAT',])
 #:endif
 
 ILBOUNDS = 1
@@ -117,7 +110,7 @@ IF(MAP_DEVPTR)THEN
   CALL DEV_MALLOC (SIZ, PTR)
 ELSE
 #:if defined('CUDA')
-  ISTAT = CUDA_MALLOC(PTR, SIZ)
+$:offload_macros.DevMalloc(ptr='PTR', size='SIZ', return_val='ISTAT')
 #:endif
 ENDIF
 
@@ -140,7 +133,7 @@ ${ft.type}$, POINTER :: DEV(${ft.shape}$)
 LOGICAL, INTENT(IN) :: MAP_DEVPTR
 TYPE (C_PTR) :: PTR
 #:if defined('CUDA')
-INTEGER :: ISTAT
+$:offload_macros.RuntimeErrorType(symbols=['ISTAT',])
 #:endif
 
 IF (ASSOCIATED (DEV)) THEN
@@ -154,7 +147,7 @@ IF (ASSOCIATED (DEV)) THEN
 $:offload_macros.HostMappedDevFree(data=['DEV',], indent=4)
   ELSE
 #:if defined('CUDA')
-    ISTAT = CUDA_FREE (PTR)
+$:offload_macros.DevFree(ptr='PTR', return_val='ISTAT')
 #:endif
   ENDIF
 

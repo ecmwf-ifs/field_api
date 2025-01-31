@@ -250,3 +250,26 @@ class NVHPCOpenACC():
         """
 
         return f"!$acc update self ({','.join(data)})"
+
+    @classmethod
+    def data_start(cls, **kwargs):
+        """
+        Pragma to mark the start of a `data` region.
+        """
+
+        _data_spec = ""
+        for attr in cls._data_attributes:
+            decl = kwargs.get(attr, None)
+            if decl:
+                _data_spec += f"{attr}({','.join(decl)}) "
+
+        return f"!$acc data {_data_spec}"
+
+    @classmethod
+    def data_end(cls):
+        """
+        Pragma to mark the end of a `data` region.
+        """
+
+
+        return "!$acc end data"
