@@ -54,4 +54,9 @@ macro( field_api_get_offload_model )
       set(FIELD_API_OFFLOAD_MODEL "NVHPCOpenACC")
    endif()
 
+   unset(FIELD_API_OFFLOAD_DEFINITIONS)
+   if( HAVE_ACC )
+      list(APPEND FIELD_API_OFFLOAD_DEFINITIONS WITH_GPU_OFFLOAD)
+   endif()
+
 endmacro()

@@ -64,7 +64,7 @@ INTERFACE
   END SUBROUTINE C_PTR_INCR
 END INTERFACE
 
-#:if defined('CUDA')
+#:if defined('WITH_HIC')
 INTERFACE
 $:offload_macros.HostRegisterIntf(indent=3)
 $:offload_macros.HostUnregisterIntf(indent=3)
@@ -117,7 +117,7 @@ SUBROUTINE MEM_BLOCK_INIT( SELF )
 
    CALL C_MALLOC(SELF%SIZE, SELF%DATA)
 
-#:if defined('CUDA')
+#:if defined('WITH_HIC')
    IF(INIT_PINNED_VALUE)THEN
      CALL PIN_ALLOCATION(SELF%DATA, SELF%SIZE)
    ENDIF
@@ -152,7 +152,7 @@ SUBROUTINE MEM_BLOCK_FINAL( SELF )
       PRINT *, "FIELD_API DETECTED UNFINALISED FIELDS, POTENTIAL DEVICE MEMORY LEAK"
    ENDIF
 
-#:if defined('CUDA')
+#:if defined('WITH_HIC')
    IF (INIT_PINNED_VALUE) THEN
      CALL UNPIN_ALLOCATION(SELF%DATA)
    ENDIF
@@ -248,7 +248,7 @@ SUBROUTINE MEM_POOL_REQUEST_MEM( SELF, ALLOC_SIZE, BLK, DATA, BLKID )
 
 END SUBROUTINE MEM_POOL_REQUEST_MEM
 
-#:if defined('CUDA')
+#:if defined('WITH_HIC')
 SUBROUTINE PIN_ALLOCATION(DATA, ARR_SIZE)
 
    TYPE(C_PTR), INTENT(INOUT) :: DATA
@@ -333,7 +333,7 @@ SUBROUTINE ${ft.name}$_HOST_ALLOC (HST, LBOUNDS, UBOUNDS, PINNED)
    IF(ARR_SIZE > 0)THEN
      CALL C_MALLOC(ARR_SIZE, DATA)
 
-#:if defined('CUDA')
+#:if defined('WITH_HIC')
      IF(PINNED)THEN
        CALL PIN_ALLOCATION(DATA, ARR_SIZE)
      ENDIF
@@ -361,7 +361,7 @@ SUBROUTINE ${ft.name}$_HOST_DEALLOC(HST, PINNED)
    IF(SIZE(HST) > 0)THEN
      DATA = C_LOC (HST (${ ', '.join (map (lambda i: 'LBOUND (HST, ' + str (i) + ')', range (1, ft.rank+1))) }$))
 
-#:if defined('CUDA')
+#:if defined('WITH_HIC')
      IF (PINNED) THEN
        CALL UNPIN_ALLOCATION(DATA)
      ENDIF

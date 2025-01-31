@@ -51,7 +51,7 @@ INTERFACE
 END INTERFACE
 #:endif
 
-#:if defined('CUDA')
+#:if defined('WITH_HIC')
 INTERFACE
 $:offload_macros.DevMallocIntf(indent=2)
 $:offload_macros.DevFreeIntf(indent=2)
@@ -63,7 +63,7 @@ CONTAINS
 
 #:for ft in fieldTypeList
 
-#:if defined('USE_BUDDY_MALLOC') or defined('CUDA')
+#:if defined('USE_BUDDY_MALLOC') or defined('WITH_HIC')
 
 SUBROUTINE ${ft.name}$_DEV_ALLOCATE_HST (DEV, HST, MAP_DEVPTR)
 
@@ -94,7 +94,7 @@ LOGICAL, INTENT(IN) :: MAP_DEVPTR
 
 TYPE (C_PTR) :: PTR
 INTEGER (C_SIZE_T) :: SIZ
-#:if defined('CUDA')
+#:if defined('WITH_HIC')
 $:offload_macros.RuntimeErrorType(symbols=['ISTAT',])
 #:endif
 
@@ -109,7 +109,7 @@ SIZ = SIZ * INT (UBOUNDS(${i}$)-ILBOUNDS(${i}$)+1, C_SIZE_T)
 IF(MAP_DEVPTR)THEN
   CALL DEV_MALLOC (SIZ, PTR)
 ELSE
-#:if defined('CUDA')
+#:if defined('WITH_HIC')
 $:offload_macros.DevMalloc(ptr='PTR', size='SIZ', return_val='ISTAT')
 #:endif
 ENDIF
@@ -132,7 +132,7 @@ USE FIELD_STATISTICS_MODULE
 ${ft.type}$, POINTER :: DEV(${ft.shape}$)
 LOGICAL, INTENT(IN) :: MAP_DEVPTR
 TYPE (C_PTR) :: PTR
-#:if defined('CUDA')
+#:if defined('WITH_HIC')
 $:offload_macros.RuntimeErrorType(symbols=['ISTAT',])
 #:endif
 
@@ -146,7 +146,7 @@ IF (ASSOCIATED (DEV)) THEN
     CALL DEV_FREE (PTR)
 $:offload_macros.HostMappedDevFree(data=['DEV',], indent=4)
   ELSE
-#:if defined('CUDA')
+#:if defined('WITH_HIC')
 $:offload_macros.DevFree(ptr='PTR', return_val='ISTAT')
 #:endif
   ENDIF
