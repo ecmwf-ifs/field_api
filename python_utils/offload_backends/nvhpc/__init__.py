@@ -8,3 +8,4 @@
 # nor does it submit to any jurisdiction.
 
 from offload_backends.nvhpc.openacc import *
+from offload_backends.nvhpc.openacc_cuda import *
