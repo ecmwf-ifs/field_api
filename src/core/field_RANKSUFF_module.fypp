@@ -19,9 +19,6 @@ USE HOST_ALLOC_MODULE
 USE FIELD_BASIC_MODULE
 USE FIELD_CONSTANTS_MODULE
 USE FIELD_DEFAULTS_MODULE
-#ifdef _OPENACC
-USE OPENACC
-#endif
 ${fieldType.useParkind1 ()}$
 
 #:for ft in fieldTypeList
@@ -187,7 +184,7 @@ CONTAINS
     IF(PRESENT(MAP_DEVPTR))THEN
       SELF%MAP_DEVPTR = MAP_DEVPTR
     ENDIF
-#:if not defined('CUDA')
+#:if not defined('WITH_HIC')
     IF(.NOT. SELF%MAP_DEVPTR)THEN
        CALL FIELD_ABORT ("${ftn}$_WRAPPER_INIT: CUDA backend needed to disable host-mapped device-pointer")
     ENDIF
@@ -235,7 +232,7 @@ CONTAINS
     IF (PRESENT (PERSISTENT)) LLPERSISTENT = PERSISTENT
 
     SELF%POOLED = POOL_OWNED_FIELDS
-#:if defined('CUDA')
+#:if defined('WITH_HIC')
     SELF%PINNED = INIT_PINNED_VALUE
 #:endif
     IF(PRESENT(PINNED))THEN
@@ -249,7 +246,7 @@ CONTAINS
     IF(PRESENT(MAP_DEVPTR))THEN
       SELF%MAP_DEVPTR = MAP_DEVPTR
     ENDIF
-#:if not defined('CUDA')
+#:if not defined('WITH_HIC')
     IF(.NOT. SELF%MAP_DEVPTR)THEN
        CALL FIELD_ABORT ("${ftn}$_OWNER_INIT: CUDA backend needed to disable host-mapped device-pointer")
     ENDIF
@@ -390,7 +387,7 @@ CONTAINS
 
   IF (.NOT. SELF%LOBJECT_COPIED) THEN
     SELF%LOBJECT_COPIED = .TRUE.
-#ifdef _OPENACC
+#ifdef WITH_GPU_OFFLOAD
     IF (ASSOCIATED (SELF%DEVPTR)) THEN
 $:offload_macros.AttachDevPtr(ptr='SELF%DEVPTR', indent=6)
     ENDIF
@@ -414,7 +411,7 @@ $:offload_macros.AttachDevPtr(ptr='SELF%DEVPTR', indent=6)
 
   IF (SELF%LOBJECT_COPIED) THEN
     SELF%LOBJECT_COPIED = .FALSE.
-#ifdef _OPENACC
+#ifdef WITH_GPU_OFFLOAD
     IF (ASSOCIATED (SELF%DEVPTR)) THEN
 $:offload_macros.DetachDevPtr(ptr='SELF%DEVPTR', indent=6)
     ENDIF

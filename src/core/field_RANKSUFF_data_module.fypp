@@ -66,7 +66,7 @@ CONTAINS
     ENDIF
 
     SELECT CASE (LAST_CONTIG_DIM)
-#:if defined('CUDA')
+#:if defined('WITH_HIC')
       CASE (${ft.rank}$)
         FUNC => ${ftn}$_COPY_DIM${ft.rank}$_CONTIGUOUS 
 #:for d1 in range (ft.rank)
@@ -111,9 +111,7 @@ CONTAINS
 
 #:for d in range (0, ft.rank+1)
   SUBROUTINE ${ftn}$_COPY_DIM${d}$_CONTIGUOUS (HST, DEV, MAP_DEVPTR, KDIR, QUEUE)
-#ifdef _OPENACC
 $:offload_macros.RuntimeApiImport(indent=2)
-#endif
   USE, INTRINSIC :: ISO_FORTRAN_ENV, ONLY : INT64
     ${ft.type}$, POINTER :: HST (${ft.shape}$), DEV (${ft.shape}$)
     LOGICAL,                       INTENT (IN) :: MAP_DEVPTR
@@ -121,9 +119,7 @@ $:offload_macros.RuntimeApiImport(indent=2)
     INTEGER (KIND=JPIM), OPTIONAL, INTENT (IN) :: QUEUE
     INTEGER (KIND=INT64)                       :: ISIZE
     INTEGER :: ${', '.join (['J'] + list (map (lambda i: 'J' + str (i+1), range (d, ft.rank))))}$
-#ifdef _OPENACC
 $:offload_macros.CDevptrDecl(symbols=['DEVPTR'], indent=4)
-#endif
 
   #:for e in range (ft.rank, d, -1)
     ${'  ' * (ft.rank - e)}$DO J${e}$ = LBOUND (HST, ${e}$), UBOUND (HST, ${e}$)
@@ -132,7 +128,7 @@ $:offload_macros.CDevptrDecl(symbols=['DEVPTR'], indent=4)
   #:set lbdiff = lambda i: f'LBOUND(DEV,{i}) - LBOUND (HST,{i})'
   #:set ard = ', '.join ([':'] * d  + ['J' + str(i+1) + ' + ' + lbdiff(i+1) for i in range (d, ft.rank)])
   #:set indent = '  ' * (ft.rank - e)
-#ifdef _OPENACC
+#ifdef WITH_GPU_OFFLOAD
     ${indent}$  IF(MAP_DEVPTR)THEN
 $:offload_macros.HostDataStart(symbols=[f'DEV ({ard})'], indent=ft.rank - e)
     ${indent}$    DEVPTR = ${offload_macros.DevptrCLOC(f'DEV ({ard})')}$
@@ -149,7 +145,7 @@ $:offload_macros.DataEnd(indent=ft.rank - e)
     ${indent}$  ISIZE = SIZEOF ( HST(${ar}$) )
     #:endif
     ${indent}$  IF (KDIR == NH2D) THEN
-#ifdef _OPENACC
+#ifdef WITH_GPU_OFFLOAD
     ${indent}$    IF(PRESENT(QUEUE))THEN
 $:offload_macros.CopyToDevice1DAsync(dev='DEVPTR', host=f'HST ({ar})', size='ISIZE', queue='QUEUE', indent=ft.rank - e + 10)
     ${indent}$    ELSE
@@ -159,7 +155,7 @@ $:offload_macros.CopyToDevice1D(dev='DEVPTR', host=f'HST ({ar})', size='ISIZE', 
     ${indent}$    DEV (${ard}$) = HST (${ar}$)
 #endif
     ${indent}$  ELSEIF (KDIR == ND2H) THEN
-#ifdef _OPENACC
+#ifdef WITH_GPU_OFFLOAD
     ${indent}$    IF(PRESENT(QUEUE))THEN
 $:offload_macros.CopyFromDevice1DAsync(dev='DEVPTR', host=f'HST ({ar})', size='ISIZE', queue='QUEUE', indent=ft.rank - e + 10)
     ${indent}$    ELSE
@@ -176,7 +172,7 @@ $:offload_macros.CopyFromDevice1D(dev='DEVPTR', host=f'HST ({ar})', size='ISIZE'
 
 #:endfor
 
-#:if defined('CUDA')
+#:if defined('WITH_HIC')
 #:for d1 in range (0, ft.rank)
 #:for d2 in range (d1+1, ft.rank+1)
     SUBROUTINE ${ftn}$_COPY_2D_DIM${d1}$_${d2}$_CONTIGUOUS (HST, DEV, MAP_DEVPTR, KDIR, QUEUE)
