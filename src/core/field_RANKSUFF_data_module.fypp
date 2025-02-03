@@ -22,7 +22,7 @@ PRIVATE
 #:for ft in fieldTypeList
 #:set ftn = ft.name
 
-PUBLIC :: ${ftn}$_COPY_ARRAY
+PUBLIC :: ${ftn}$_COPY
 PUBLIC :: ${ftn}$_COPY_FUNC
 PUBLIC :: ${ftn}$_COPY_INTF
 
@@ -92,7 +92,7 @@ CONTAINS
 
   END FUNCTION
 
-  SUBROUTINE ${ftn}$_COPY_ARRAY (HST, DEV, MAP_DEVPTR, KDIR, QUEUE)
+  SUBROUTINE ${ftn}$_COPY (HST, DEV, MAP_DEVPTR, KDIR, QUEUE)
 
     USE FIELD_ABORT_MODULE
 
