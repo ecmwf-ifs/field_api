@@ -108,7 +108,7 @@ def _get_method(backend, method):
     except AttributeError:
         return _empty_string
 
-def RuntimeApiImport(indent=0):
+def runtime_api_import(indent=0):
     """
     Import the runtime API.
     """
@@ -118,37 +118,37 @@ def RuntimeApiImport(indent=0):
 
     return _format_lines(method(), indent=indent)
 
-def CDevptrDecl(symbols, indent=0):
+def c_devptr_decl(symbols, indent=0):
     """
     Declare symbols of type `TYPE(C_DEVPTR)` (or equivalent).
     """
 
     backend = _get_offload_backend()
-    method = _get_method(backend, 'c_devptr_declaration')
+    method = _get_method(backend, 'c_devptr_decl')
 
     return _format_lines(method(symbols), indent=indent)
 
-def HostDataStart(symbols, indent=0):
+def host_data(use_device, indent=0):
     """
     Start a `host_data` (or equivalent) region.
     """
 
     backend = _get_offload_backend()
-    method = _get_method(backend, 'host_data_start')
+    method = _get_method(backend, 'host_data')
 
-    return _format_lines(method(symbols), indent=indent, pragma=backend.pragma)
+    return _format_lines(method(use_device), indent=indent, pragma=backend.pragma)
 
-def HostDataEnd(indent=0):
+def end_host_data(indent=0):
     """
     End a `host_data` (or equivalent) region.
     """
 
     backend = _get_offload_backend()
-    method = _get_method(backend, 'host_data_end')
+    method = _get_method(backend, 'end_host_data')
 
     return _format_lines(method(), indent=indent)
 
-def DevptrCLOC(symbol, indent=0):
+def devptr_cloc(symbol, indent=0):
     """
     Get the C address of a device variable.
     """
@@ -158,108 +158,108 @@ def DevptrCLOC(symbol, indent=0):
 
     return _format_lines(method(symbol))
 
-def CopyToDevice1D(dev, host, size, indent=0):
+def memcpy_to_device(dev, host, size, indent=0):
     """
     Copy a contiguous section of data from host to device.
     """
 
     backend = _get_offload_backend()
-    method = _get_method(backend, 'copy_to_device_1D')
+    method = _get_method(backend, 'memcpy_to_device')
 
     return _format_lines(method(dev, host, size), indent=indent)
 
-def CopyToDevice1DAsync(dev, host, size, queue, indent=0):
+def memcpy_to_device_async(dev, host, size, queue, indent=0):
     """
     Asynchronously copy a contiguous section of data from host to device.
     """
 
     backend = _get_offload_backend()
-    method = _get_method(backend, 'copy_to_device_1D_async')
+    method = _get_method(backend, 'memcpy_to_device_async')
 
     return _format_lines(method(dev, host, size, queue), indent=indent)
 
-def CopyFromDevice1D(dev, host, size, indent=0):
+def memcpy_from_device(dev, host, size, indent=0):
     """
     Copy a contiguous section of data from device to host.
     """
 
     backend = _get_offload_backend()
-    method = _get_method(backend, 'copy_from_device_1D')
+    method = _get_method(backend, 'memcpy_from_device')
 
     return _format_lines(method(dev, host, size), indent=indent)
 
-def CopyFromDevice1DAsync(dev, host, size, queue, indent=0):
+def memcpy_from_device_async(dev, host, size, queue, indent=0):
     """
     Asynchronously copy a contiguous section of data from device to host.
     """
 
     backend = _get_offload_backend()
-    method = _get_method(backend, 'copy_from_device_1D_async')
+    method = _get_method(backend, 'memcpy_from_device_async')
 
     return _format_lines(method(dev, host, size, queue), indent=indent)
 
-def HostMappedDevAlloc(data, indent=0):
+def create(symbols, indent=0):
     """
     Allocate host-mapped memory on device.
     """
 
     backend = _get_offload_backend()
-    method = _get_method(backend, 'host_mapped_dev_alloc')
+    method = _get_method(backend, 'create')
 
-    return _format_lines(method(data), indent=indent)
+    return _format_lines(method(symbols), indent=indent)
 
-def HostMappedDevFree(data, indent=0):
+def delete(symbols, indent=0):
     """
     Free host-mapped memory on device.
     """
 
     backend = _get_offload_backend()
-    method = _get_method(backend, 'host_mapped_dev_free')
+    method = _get_method(backend, 'delete')
 
-    return _format_lines(method(data), indent=indent)
+    return _format_lines(method(symbols), indent=indent)
 
-def AttachDevPtr(ptr, indent=0):
+def attach(ptr, indent=0):
     """
     Attach a device pointer to its target.
     """
 
     backend = _get_offload_backend()
-    method = _get_method(backend, 'attach_dev_ptr')
+    method = _get_method(backend, 'attach')
 
     return _format_lines(method(ptr), indent=indent)
 
-def DetachDevPtr(ptr, indent=0):
+def detach(ptr, indent=0):
     """
     Detach a device pointer from its target.
     """
 
     backend = _get_offload_backend()
-    method = _get_method(backend, 'detach_dev_ptr')
+    method = _get_method(backend, 'detach')
 
     return _format_lines(method(ptr), indent=indent)
 
-def LaunchParallelKernel(**kwargs):
+def kernels(**kwargs):
     """
     Launch an implicitly mapped parallel kernel on device.
     """
 
     backend = _get_offload_backend()
-    method = _get_method(backend, 'launch_kernel')
+    method = _get_method(backend, 'kernels')
 
     indent = kwargs.pop('indent', 0)
     return _format_lines(method(**kwargs), indent=indent)
 
-def EndParallelKernel(indent=0):
+def end_kernels(indent=0):
     """
     End an implicitly mapped parallel kernel on device.
     """
 
     backend = _get_offload_backend()
-    method = _get_method(backend, 'end_kernel')
+    method = _get_method(backend, 'end_kernels')
 
     return _format_lines(method(), indent=indent)
 
-def WaitAsyncStream(stream, indent=0):
+def async_wait(stream, indent=0):
     """
     Wait for the operations queued on a stream to complete.
     """
@@ -269,18 +269,18 @@ def WaitAsyncStream(stream, indent=0):
 
     return _format_lines(method(stream), indent=indent)
 
-def LaunchParallelLoop(**kwargs):
+def parallel_loop(**kwargs):
     """
     Launch an explicitly mapped parallel kernel on device.
     """
 
     backend = _get_offload_backend()
-    method = _get_method(backend, 'launch_parallel_loop')
+    method = _get_method(backend, 'parallel_loop')
 
     indent = kwargs.pop('indent', 0)
     return _format_lines(method(**kwargs), indent=indent)
 
-def EndParallelLoop(indent=0):
+def end_parallel_loop(indent=0):
     """
     End an explicitly mapped parallel kernel on device.
     """
@@ -290,18 +290,18 @@ def EndParallelLoop(indent=0):
 
     return _format_lines(method(), indent=indent)
 
-def AnnotateParallelLoop(**kwargs):
+def annotate_loop(**kwargs):
     """
     Annotate a loop in a device parallel region.
     """
 
     backend = _get_offload_backend()
-    method = _get_method(backend, 'annotate_parallel_loop')
+    method = _get_method(backend, 'annotate_loop')
 
     indent = kwargs.pop('indent', 0)
     return _format_lines(method(**kwargs), indent=indent)
 
-def Declare(**kwargs):
+def declare(**kwargs):
     """
     Issue a device declaration for a host-mapped symbol.
     """
@@ -312,7 +312,7 @@ def Declare(**kwargs):
     indent = kwargs.pop('indent', 0)
     return _format_lines(method(**kwargs), indent=indent)
 
-def LaunchSerialKernel(**kwargs):
+def serial(**kwargs):
     """
     Launch a serial kernel on device.
     """
@@ -323,7 +323,7 @@ def LaunchSerialKernel(**kwargs):
     indent = kwargs.pop('indent', 0)
     return _format_lines(method(**kwargs), indent=indent)
 
-def EndSerialKernel(indent=0):
+def end_serial(indent=0):
     """
     End a serial device kernel.
     """
@@ -333,7 +333,7 @@ def EndSerialKernel(indent=0):
 
     return _format_lines(method(), indent=indent)
 
-def UpdateDevice(data, indent=0):
+def update_device(symbols, indent=0):
     """
     Update host-mapped symbol on device.
     """
@@ -341,9 +341,9 @@ def UpdateDevice(data, indent=0):
     backend = _get_offload_backend()
     method = _get_method(backend, 'update_device')
 
-    return _format_lines(method(data), indent=indent)
+    return _format_lines(method(symbols), indent=indent)
 
-def UpdateHost(data, indent=0):
+def update_host(symbols, indent=0):
     """
     Update device-mapped symbol on host.
     """
@@ -351,9 +351,9 @@ def UpdateHost(data, indent=0):
     backend = _get_offload_backend()
     method = _get_method(backend, 'update_host')
 
-    return _format_lines(method(data), indent=indent)
+    return _format_lines(method(symbols), indent=indent)
 
-def StreamHandleKind():
+def stream_handle_kind():
     """
     Return the INTEGER kind specifier for a stream handle.
     """
@@ -363,18 +363,18 @@ def StreamHandleKind():
 
     return _format_lines(method())
 
-def DataStart(**kwargs):
+def data(**kwargs):
     """
     Start a `data` (or equivalent) region.
     """
 
     backend = _get_offload_backend()
-    method = _get_method(backend, 'data_start')
+    method = _get_method(backend, 'data')
 
     indent = kwargs.pop('indent', 0)
     return _format_lines(method(**kwargs), indent=indent, pragma=backend.pragma)
 
-def DataEnd(indent=0):
+def end_data(indent=0):
     """
     End a `data` (or equivalent) region.
     """
@@ -384,7 +384,7 @@ def DataEnd(indent=0):
 
     return _format_lines(method(), indent=indent)
 
-def DevMallocIntf(indent=0):
+def dev_malloc_intf(indent=0):
     """
     The ISO_C interface for a device memory allocation.
     """
@@ -394,7 +394,7 @@ def DevMallocIntf(indent=0):
 
     return _format_lines(method(), indent=indent)
 
-def DevFreeIntf(indent=0):
+def dev_free_intf(indent=0):
     """
     The ISO_C interface for freeing device memory.
     """
@@ -404,17 +404,17 @@ def DevFreeIntf(indent=0):
 
     return _format_lines(method(), indent=indent)
 
-def RuntimeErrorType(symbols, indent=0):
+def runtime_error_decl(symbols, indent=0):
     """
     Declaration for the variable used to store the runtime API error status.
     """
 
     backend = _get_offload_backend()
-    method = _get_method(backend, 'runtime_error_return_type')
+    method = _get_method(backend, 'runtime_error_return_type_decl')
 
     return _format_lines(method(symbols), indent=indent)
 
-def DevMalloc(ptr, size, return_val="ISTAT", indent=0):
+def dev_malloc(ptr, size, return_val="ISTAT", indent=0):
     """
     Allocate memory on device.
     """
@@ -424,7 +424,7 @@ def DevMalloc(ptr, size, return_val="ISTAT", indent=0):
 
     return _format_lines(method(ptr, size, return_val=return_val), indent=indent)
 
-def DevFree(ptr, return_val="ISTAT", indent=0):
+def dev_free(ptr, return_val="ISTAT", indent=0):
     """
     Free device memory.
     """
@@ -434,7 +434,7 @@ def DevFree(ptr, return_val="ISTAT", indent=0):
 
     return _format_lines(method(ptr, return_val=return_val), indent=indent)
 
-def RegisterHostSetFlags(flag_var, val, indent=0):
+def register_host_set_flags(flag_var, val, indent=0):
     """
     Set flags for page-locking host memory.
     """
@@ -444,7 +444,7 @@ def RegisterHostSetFlags(flag_var, val, indent=0):
 
     return _format_lines(method(flag_var, val), indent=indent)
 
-def RegisterHostDeclFlags(flag_var, indent=0):
+def register_host_decl_flags(flag_var, indent=0):
     """
     Declare variable used to store flags for controlling page-locking of host memory.
     """
@@ -454,7 +454,7 @@ def RegisterHostDeclFlags(flag_var, indent=0):
 
     return _format_lines(method(flag_var), indent=indent)
 
-def RegisterHost(ptr, size, flags, return_val="ISTAT", indent=0):
+def register_host(ptr, size, flags, return_val="ISTAT", indent=0):
     """
     Page-lock host memory.
     """
@@ -464,7 +464,7 @@ def RegisterHost(ptr, size, flags, return_val="ISTAT", indent=0):
 
     return _format_lines(method(ptr, size, flags, return_val=return_val), indent=indent)
 
-def UnregisterHost(ptr, return_val="ISTAT", indent=0):
+def unregister_host(ptr, return_val="ISTAT", indent=0):
     """
     Unpin (i.e. undo page-locking) host memory.
     """
@@ -474,7 +474,7 @@ def UnregisterHost(ptr, return_val="ISTAT", indent=0):
 
     return _format_lines(method(ptr, return_val=return_val), indent=indent)
 
-def HostRegisterIntf(indent=0):
+def host_register_intf(indent=0):
     """
     The ISO_C interface for page-locking host memory.
     """
@@ -484,7 +484,7 @@ def HostRegisterIntf(indent=0):
 
     return _format_lines(method(), indent=indent)
 
-def HostUnregisterIntf(indent=0):
+def host_unregister_intf(indent=0):
     """
     The ISO_C interface for un-pinning (i.e. undo page-locking) host memory.
     """
@@ -494,7 +494,7 @@ def HostUnregisterIntf(indent=0):
 
     return _format_lines(method(), indent=indent)
 
-def SetAsyncStream(id, stream, indent=0):
+def set_async_stream(queue, stream, indent=0):
     """
     Set an asynchronous stream.
     """
@@ -502,20 +502,20 @@ def SetAsyncStream(id, stream, indent=0):
     backend = _get_offload_backend()
     method = _get_method(backend, 'set_async_stream')
 
-    return _format_lines(method(id, stream), indent=indent)
+    return _format_lines(method(queue, stream), indent=indent)
 
-def Copy2D(src, src_pitch, dst, dst_pitch, width, height, return_val="ISTAT", indent=0):
+def memcpy_2D(src, src_pitch, dst, dst_pitch, width, height, return_val="ISTAT", indent=0):
     """
     Copy a strided memory region from source (src) to destination (dst).
     """
 
     backend = _get_offload_backend()
-    method = _get_method(backend, 'copy_2D')
+    method = _get_method(backend, 'memcpy_2D')
 
     return _format_lines(method(src, src_pitch, dst, dst_pitch, width, height, return_val=return_val),
                          indent=indent)
 
-def Copy2DAsync(src, src_pitch, dst, dst_pitch, width, height, stream, return_val="ISTAT", indent=0):
+def memcpy_2D_async(src, src_pitch, dst, dst_pitch, width, height, stream, return_val="ISTAT", indent=0):
     """
     Asynchronously copy a strided memory region from source (src) to destination (dst).
     """

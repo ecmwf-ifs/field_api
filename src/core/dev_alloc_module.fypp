@@ -53,8 +53,8 @@ END INTERFACE
 
 #:if defined('WITH_HIC')
 INTERFACE
-$:offload_macros.DevMallocIntf(indent=2)
-$:offload_macros.DevFreeIntf(indent=2)
+$:offload_macros.dev_malloc_intf(indent=2)
+$:offload_macros.dev_free_intf(indent=2)
 END INTERFACE
 #:endif
 
@@ -95,7 +95,7 @@ LOGICAL, INTENT(IN) :: MAP_DEVPTR
 TYPE (C_PTR) :: PTR
 INTEGER (C_SIZE_T) :: SIZ
 #:if defined('WITH_HIC')
-$:offload_macros.RuntimeErrorType(symbols=['ISTAT',])
+$:offload_macros.runtime_error_decl(symbols=['ISTAT',])
 #:endif
 
 ILBOUNDS = 1
@@ -110,7 +110,7 @@ IF(MAP_DEVPTR)THEN
   CALL DEV_MALLOC (SIZ, PTR)
 ELSE
 #:if defined('WITH_HIC')
-$:offload_macros.DevMalloc(ptr='PTR', size='SIZ', return_val='ISTAT')
+$:offload_macros.dev_malloc(ptr='PTR', size='SIZ', return_val='ISTAT')
 #:endif
 ENDIF
 
@@ -118,7 +118,7 @@ CALL C_F_POINTER (PTR, TMP, UBOUNDS-ILBOUNDS+1)
 DEV (${ ', '.join (map (lambda i: 'ILBOUNDS (' + str (i) + '):', range (1, ft.rank+1))) }$) => TMP
 
 IF(MAP_DEVPTR)THEN
-$:offload_macros.HostMappedDevAlloc(data=['DEV',])
+$:offload_macros.create(symbols=['DEV',])
 ENDIF
 
 IF (FIELD_STATISTICS_ENABLE) CALL FIELD_STATISTICS_DEVICE_ALLOCATE (SIZE (DEV, KIND=JPIB) * INT (KIND (DEV), KIND=JPIB))
@@ -133,7 +133,7 @@ ${ft.type}$, POINTER :: DEV(${ft.shape}$)
 LOGICAL, INTENT(IN) :: MAP_DEVPTR
 TYPE (C_PTR) :: PTR
 #:if defined('WITH_HIC')
-$:offload_macros.RuntimeErrorType(symbols=['ISTAT',])
+$:offload_macros.runtime_error_decl(symbols=['ISTAT',])
 #:endif
 
 IF (ASSOCIATED (DEV)) THEN
@@ -144,10 +144,10 @@ IF (ASSOCIATED (DEV)) THEN
   
   IF(MAP_DEVPTR)THEN
     CALL DEV_FREE (PTR)
-$:offload_macros.HostMappedDevFree(data=['DEV',], indent=4)
+$:offload_macros.delete(symbols=['DEV',], indent=4)
   ELSE
 #:if defined('WITH_HIC')
-$:offload_macros.DevFree(ptr='PTR', return_val='ISTAT')
+$:offload_macros.dev_free(ptr='PTR', return_val='ISTAT')
 #:endif
   ENDIF
 
@@ -174,7 +174,7 @@ ALLOCATE (DEV (${ ', '.join (map (lambda i: 'LBOUND (HST, ' + str (i) + '):UBOUN
 ALLOCATE (DEV, MOLD=HST)
 #endif
 
-$:offload_macros.HostMappedDevAlloc(data=['DEV',])
+$:offload_macros.create(symbols=['DEV',])
 
 IF (FIELD_STATISTICS_ENABLE) CALL FIELD_STATISTICS_DEVICE_ALLOCATE (SIZE (DEV, KIND=JPIB) * INT (KIND (DEV), KIND=JPIB))
 
@@ -191,7 +191,7 @@ IF (ASSOCIATED (DEV)) THEN
 
   IF (FIELD_STATISTICS_ENABLE) CALL FIELD_STATISTICS_DEVICE_DEALLOCATE (SIZE (DEV, KIND=JPIB) * INT (KIND (DEV), KIND=JPIB))
 
-$:offload_macros.HostMappedDevFree(data=['DEV',], indent=2)
+$:offload_macros.delete(symbols=['DEV',], indent=2)
   DEALLOCATE (DEV)
   NULLIFY (DEV)
 ENDIF
