@@ -69,7 +69,7 @@ class NVHPCOpenACCCUDA(NVHPCOpenACC):
         return intf.split('\n')
 
     @classmethod
-    def runtime_error_return_type(cls, symbols):
+    def runtime_error_return_type_decl(cls, symbols):
         """
         Declaration for the variable used to store the runtime API error status.
         """
@@ -157,15 +157,15 @@ class NVHPCOpenACCCUDA(NVHPCOpenACC):
         return intf.split('\n')
 
     @classmethod
-    def set_async_stream(cls, id, stream):
+    def set_async_stream(cls, queue, stream):
         """
         Set an asynchronous stream.
         """
 
-        return f"CALL ACC_SET_CUDA_STREAM({id}, {stream})"
+        return f"CALL ACC_SET_CUDA_STREAM({queue}, {stream})"
 
     @classmethod
-    def copy_2D(cls, src, src_pitch, dst, dst_pitch, width, height, return_val="ISTAT"):
+    def memcpy_2D(cls, src, src_pitch, dst, dst_pitch, width, height, return_val="ISTAT"):
         """
         Copy a strided memory region from source (src) to destination (dst).
         """
@@ -173,7 +173,7 @@ class NVHPCOpenACCCUDA(NVHPCOpenACC):
         return f"{return_val} = CUDAMEMCPY2D({dst}, {dst_pitch}, {src}, {src_pitch}, {width}, {height})"
 
     @classmethod
-    def copy_2D_async(cls, src, src_pitch, dst, dst_pitch, width, height, stream, return_val="ISTAT"):
+    def memcpy_2D_async(cls, src, src_pitch, dst, dst_pitch, width, height, stream, return_val="ISTAT"):
         """
         Asynchronously copy a strided memory region from source (src) to destination (dst).
         """

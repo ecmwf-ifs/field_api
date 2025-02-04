@@ -44,7 +44,7 @@ PUBLIC :: GET_${what}$_DATA_${mode}$
 
 #:for ft in fieldTypeList
 ${ft.type}$, TARGET, SAVE :: DUMMY_${ft.name}$ (${ ', '.join ([dumsize] * (ft.rank-1) + ['1']) }$)
-$:offload_macros.Declare(create=[f'DUMMY_{ft.name}',])
+$:offload_macros.declare(create=[f'DUMMY_{ft.name}',])
 
 #:endfor
 

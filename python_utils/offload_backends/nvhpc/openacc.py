@@ -30,7 +30,7 @@ class NVHPCOpenACC():
         return "USE OPENACC"
 
     @classmethod
-    def c_devptr_declaration(cls, symbols):
+    def c_devptr_decl(cls, symbols):
         """
         Type declaration for a `C_PTR` on device.
         """
@@ -38,7 +38,7 @@ class NVHPCOpenACC():
         return f"TYPE(C_DEVPTR) :: {','.join(symbols)}"
 
     @classmethod
-    def host_data_start(cls, symbols):
+    def host_data(cls, symbols):
         """
         Pragma to mark the start of a `host_data` region.
         """
@@ -46,7 +46,7 @@ class NVHPCOpenACC():
         return f"!$acc host_data use_device({','.join(symbols)})"
 
     @classmethod
-    def host_data_end(cls):
+    def end_host_data(cls):
         """
         Pragma to mark the end of a `host_data` region.
         """
@@ -62,7 +62,7 @@ class NVHPCOpenACC():
         return f"C_DEVLOC({symbol})"
 
     @classmethod
-    def copy_to_device_1D(cls, dev, host, size):
+    def memcpy_to_device(cls, dev, host, size):
         """
         Copy a contiguous section of data from host to device.
         """
@@ -70,7 +70,7 @@ class NVHPCOpenACC():
         return f"CALL ACC_MEMCPY_TO_DEVICE ({dev}, {host}, {size})"
 
     @classmethod
-    def copy_to_device_1D_async(cls, dev, host, queue, size):
+    def memcpy_to_device_async(cls, dev, host, queue, size):
         """
         Asynchornously copy a contiguous section of data from host to device.
         """
@@ -78,7 +78,7 @@ class NVHPCOpenACC():
         return f"CALL ACC_MEMCPY_TO_DEVICE_ASYNC ({dev}, {host}, {size}, {queue})"
 
     @classmethod
-    def copy_from_device_1D(cls, dev, host, size):
+    def memcpy_from_device(cls, dev, host, size):
         """
         Copy a contiguous section of data from device to host.
         """
@@ -86,7 +86,7 @@ class NVHPCOpenACC():
         return f"CALL ACC_MEMCPY_FROM_DEVICE ({host}, {dev}, {size})"
 
     @classmethod
-    def copy_from_device_1D_async(cls, dev, host, size, queue):
+    def memcpy_from_device_async(cls, dev, host, size, queue):
         """
         Asynchronously copy a contiguous section of data from device to host.
         """
@@ -94,23 +94,23 @@ class NVHPCOpenACC():
         return f"CALL ACC_MEMCPY_FROM_DEVICE_ASYNC ({host}, {dev}, {size}, {queue})"
 
     @classmethod
-    def host_mapped_dev_alloc(cls, data):
+    def create(cls, symbols):
         """
         Allocate host-mapped memory on device.
         """
 
-        return f"!$acc enter data create ({','.join(data)})"
+        return f"!$acc enter data create ({','.join(symbols)})"
 
     @classmethod
-    def host_mapped_dev_free(cls, data):
+    def delete(cls, symbols):
         """
         Free host-mapped memory on device.
         """
 
-        return f"!$acc exit data delete ({','.join(data)})"
+        return f"!$acc exit data delete ({','.join(symbols)})"
 
     @classmethod
-    def attach_dev_ptr(cls, ptr):
+    def attach(cls, ptr):
         """
         Attach device pointer to its target on device.
         """
@@ -118,7 +118,7 @@ class NVHPCOpenACC():
         return f"!$acc enter data attach ({ptr})"
 
     @classmethod
-    def detach_dev_ptr(cls, ptr):
+    def detach(cls, ptr):
         """
         Detach device pointer from its target on device.
         """
@@ -126,7 +126,7 @@ class NVHPCOpenACC():
         return f"!$acc exit data detach ({ptr})"
 
     @classmethod
-    def launch_kernel(cls, **kwargs):
+    def kernels(cls, **kwargs):
         """
         Launch an implicitly mapped parallel kernel on device.
         """
@@ -140,7 +140,7 @@ class NVHPCOpenACC():
         return f"!$acc kernels {_data_spec}"
 
     @classmethod
-    def end_kernel(cls):
+    def end_kernels(cls):
         """
         End an implicitly mapped parallel kernel on device.
         """
@@ -156,7 +156,7 @@ class NVHPCOpenACC():
         return f"!$acc wait ({stream})"
 
     @classmethod
-    def launch_parallel_loop(cls, **kwargs):
+    def parallel_loop(cls, **kwargs):
         """
         Launch an explicitly mapped parallel kernel on device.
         """
@@ -182,7 +182,7 @@ class NVHPCOpenACC():
         return "!$acc end parallel loop"
 
     @classmethod
-    def annotate_parallel_loop(cls, **kwargs):
+    def annotate_loop(cls, **kwargs):
         """
         Annotate a loop in a device parallel region.
         """
@@ -214,7 +214,7 @@ class NVHPCOpenACC():
         return f"!$acc declare {_decl_spec}"
 
     @classmethod
-    def launch_serial_kernel(cls, **kwargs):
+    def serial(cls, **kwargs):
         """
         Launch a serial kernel on device.
         """
@@ -228,7 +228,7 @@ class NVHPCOpenACC():
         return f"!$acc serial {_data_spec}"
 
     @classmethod
-    def end_serial_kernel(cls):
+    def end_serial(cls):
         """
         End a serial device kernel.
         """
@@ -252,7 +252,7 @@ class NVHPCOpenACC():
         return f"!$acc update self ({','.join(data)})"
 
     @classmethod
-    def data_start(cls, **kwargs):
+    def data(cls, **kwargs):
         """
         Pragma to mark the start of a `data` region.
         """

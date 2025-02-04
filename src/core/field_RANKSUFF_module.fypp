@@ -389,7 +389,7 @@ CONTAINS
     SELF%LOBJECT_COPIED = .TRUE.
 #ifdef WITH_GPU_OFFLOAD
     IF (ASSOCIATED (SELF%DEVPTR)) THEN
-$:offload_macros.AttachDevPtr(ptr='SELF%DEVPTR', indent=6)
+$:offload_macros.attach(ptr='SELF%DEVPTR', indent=6)
     ENDIF
 #endif
   ENDIF
@@ -413,7 +413,7 @@ $:offload_macros.AttachDevPtr(ptr='SELF%DEVPTR', indent=6)
     SELF%LOBJECT_COPIED = .FALSE.
 #ifdef WITH_GPU_OFFLOAD
     IF (ASSOCIATED (SELF%DEVPTR)) THEN
-$:offload_macros.DetachDevPtr(ptr='SELF%DEVPTR', indent=6)
+$:offload_macros.detach(ptr='SELF%DEVPTR', indent=6)
     ENDIF
 #endif
   ENDIF
@@ -558,9 +558,9 @@ $:offload_macros.DetachDevPtr(ptr='SELF%DEVPTR', indent=6)
     ELSEIF (IAND (SELF%GET_STATUS (), NDEVFRESH) /= 0) THEN
       CALL SELF%GET_DEVICE_DATA_RDONLY (PTR)
       ALLOCATE (ZZ, MOLD=PTR)
-$:offload_macros.LaunchParallelKernel(present=['PTR',], copyout=['ZZ',])
+$:offload_macros.kernels(present=['PTR',], copyout=['ZZ',])
       ZZ = PTR
-$:offload_macros.EndParallelKernel()
+$:offload_macros.end_kernels()
       ILEN = SIZE (ZZ) * KIND (ZZ)
       CALL CRC64 (ZZ, ILEN, ICRC)
     ENDIF

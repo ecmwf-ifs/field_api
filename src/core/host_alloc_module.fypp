@@ -66,8 +66,8 @@ END INTERFACE
 
 #:if defined('WITH_HIC')
 INTERFACE
-$:offload_macros.HostRegisterIntf(indent=3)
-$:offload_macros.HostUnregisterIntf(indent=3)
+$:offload_macros.host_register_intf(indent=3)
+$:offload_macros.host_unregister_intf(indent=3)
 END INTERFACE
 #:endif 
 
@@ -253,12 +253,12 @@ SUBROUTINE PIN_ALLOCATION(DATA, ARR_SIZE)
 
    TYPE(C_PTR), INTENT(INOUT) :: DATA
    INTEGER(C_SIZE_T), INTENT(IN) :: ARR_SIZE
-$:offload_macros.RuntimeErrorType(symbols=['ISTAT',], indent=3)
+$:offload_macros.runtime_error_decl(symbols=['ISTAT',], indent=3)
 
-$:offload_macros.RegisterHostDeclFlags(flag_var='FLAGS', indent=3)
+$:offload_macros.register_host_decl_flags(flag_var='FLAGS', indent=3)
 
-$:offload_macros.RegisterHostSetFlags(flag_var='FLAGS', val='2', indent=3)
-$:offload_macros.RegisterHost(ptr='DATA', size='ARR_SIZE', flags='FLAGS', return_val='ISTAT')
+$:offload_macros.register_host_set_flags(flag_var='FLAGS', val='2', indent=3)
+$:offload_macros.register_host(ptr='DATA', size='ARR_SIZE', flags='FLAGS', return_val='ISTAT')
 
    IF (ISTAT /= 0) THEN
      CALL FIELD_ABORT ("FAILED TO REGISTER IN PAGE-LOCKED MEMORY")
@@ -269,9 +269,9 @@ END SUBROUTINE PIN_ALLOCATION
 SUBROUTINE UNPIN_ALLOCATION(DATA)
 
    TYPE(C_PTR), INTENT(INOUT) :: DATA
-$:offload_macros.RuntimeErrorType(symbols=['ISTAT',], indent=3)
+$:offload_macros.runtime_error_decl(symbols=['ISTAT',], indent=3)
 
-$:offload_macros.UnregisterHost(ptr='DATA', return_val='ISTAT', indent=3)
+$:offload_macros.unregister_host(ptr='DATA', return_val='ISTAT', indent=3)
 
    IF (ISTAT /= 0) THEN
      CALL FIELD_ABORT ("FAILED TO UNREGISTER PAGE-LOCKED MEMORY")
