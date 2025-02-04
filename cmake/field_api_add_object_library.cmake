@@ -54,6 +54,7 @@ macro(field_api_add_object_library)
            ${_PAR_DEFINITIONS}
            $<$<NOT:${fiat_FOUND}>:${FIELD_API_DEFINITIONS}>
            $<${fiat_FOUND}:WITH_FIAT>
+           ${FIELD_API_OFFLOAD_DEFINITIONS}
         PRIVATE_LIBS
            ${_PAR_LIBRARIES}
            $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>

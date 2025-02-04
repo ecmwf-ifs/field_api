@@ -19,12 +19,6 @@ USE HOST_ALLOC_MODULE
 USE FIELD_BASIC_MODULE
 USE FIELD_CONSTANTS_MODULE
 USE FIELD_DEFAULTS_MODULE
-#:if defined('CUDA')
-USE CUDAFOR
-#:endif
-#ifdef _OPENACC
-USE OPENACC
-#endif
 ${fieldType.useParkind1 ()}$
 
 #:for ft in fieldTypeList
@@ -190,7 +184,7 @@ CONTAINS
     IF(PRESENT(MAP_DEVPTR))THEN
       SELF%MAP_DEVPTR = MAP_DEVPTR
     ENDIF
-#:if not defined('CUDA')
+#:if not defined('WITH_HIC')
     IF(.NOT. SELF%MAP_DEVPTR)THEN
        CALL FIELD_ABORT ("${ftn}$_WRAPPER_INIT: CUDA backend needed to disable host-mapped device-pointer")
     ENDIF
@@ -238,7 +232,7 @@ CONTAINS
     IF (PRESENT (PERSISTENT)) LLPERSISTENT = PERSISTENT
 
     SELF%POOLED = POOL_OWNED_FIELDS
-#:if defined('CUDA')
+#:if defined('WITH_HIC')
     SELF%PINNED = INIT_PINNED_VALUE
 #:endif
     IF(PRESENT(PINNED))THEN
@@ -252,7 +246,7 @@ CONTAINS
     IF(PRESENT(MAP_DEVPTR))THEN
       SELF%MAP_DEVPTR = MAP_DEVPTR
     ENDIF
-#:if not defined('CUDA')
+#:if not defined('WITH_HIC')
     IF(.NOT. SELF%MAP_DEVPTR)THEN
        CALL FIELD_ABORT ("${ftn}$_OWNER_INIT: CUDA backend needed to disable host-mapped device-pointer")
     ENDIF
@@ -393,9 +387,9 @@ CONTAINS
 
   IF (.NOT. SELF%LOBJECT_COPIED) THEN
     SELF%LOBJECT_COPIED = .TRUE.
-#ifdef _OPENACC
+#ifdef WITH_GPU_OFFLOAD
     IF (ASSOCIATED (SELF%DEVPTR)) THEN
-      !$acc enter data attach (SELF%DEVPTR)
+$:offload_macros.attach(ptr='SELF%DEVPTR', indent=6)
     ENDIF
 #endif
   ENDIF
@@ -417,9 +411,9 @@ CONTAINS
 
   IF (SELF%LOBJECT_COPIED) THEN
     SELF%LOBJECT_COPIED = .FALSE.
-#ifdef _OPENACC
+#ifdef WITH_GPU_OFFLOAD
     IF (ASSOCIATED (SELF%DEVPTR)) THEN
-      !$acc exit data detach (SELF%DEVPTR)
+$:offload_macros.detach(ptr='SELF%DEVPTR', indent=6)
     ENDIF
 #endif
   ENDIF
@@ -564,9 +558,9 @@ CONTAINS
     ELSEIF (IAND (SELF%GET_STATUS (), NDEVFRESH) /= 0) THEN
       CALL SELF%GET_DEVICE_DATA_RDONLY (PTR)
       ALLOCATE (ZZ, MOLD=PTR)
-!$acc kernels present (PTR) copyout (ZZ)
+$:offload_macros.kernels(present=['PTR',], copyout=['ZZ',])
       ZZ = PTR
-!$acc end kernels
+$:offload_macros.end_kernels()
       ILEN = SIZE (ZZ) * KIND (ZZ)
       CALL CRC64 (ZZ, ILEN, ICRC)
     ENDIF
