@@ -109,6 +109,8 @@ if(HAVE_FIELD_GANG)
   list( APPEND fypp_defines "-DHAVE_GANG")
 endif()
 
+ecbuild_info("========GOT HERE DEBUG PRINT===========")
+
 ## build precision independent srcs
 add_subdirectory(src)
 

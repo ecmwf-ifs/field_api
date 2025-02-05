@@ -107,6 +107,9 @@ jobs:
             git remote add origin ${{ github.server_url }}/$REPO
             git fetch origin $SHA
             git reset --hard FETCH_HEAD
+            echo "${{ github.server_url }}"
+            echo "${{ github.repository }}"
+            echo "${{ github.sha }}"
             popd
             cmake -G Ninja -S $REPO -B build \
               {% for name in dependencies %}
