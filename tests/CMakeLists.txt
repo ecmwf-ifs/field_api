@@ -73,6 +73,7 @@ list(APPEND TEST_FILES
         resize_owner2.F90
         sync_device.F90
         sync_host.F90
+        test_0_sized_transfer.F90
         test_async.F90
         test_bc.F90
         test_crc64.F90
