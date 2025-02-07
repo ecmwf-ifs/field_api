@@ -106,16 +106,20 @@ SIZ = KIND (DEV)
 SIZ = SIZ * INT (UBOUNDS(${i}$)-ILBOUNDS(${i}$)+1, C_SIZE_T)
 #:endfor
 
-IF(MAP_DEVPTR)THEN
-  CALL DEV_MALLOC (SIZ, PTR)
-ELSE
+IF(SIZ > 0)THEN
+   IF(MAP_DEVPTR)THEN
+     CALL DEV_MALLOC (SIZ, PTR)
+   ELSE
 #:if defined('WITH_HIC')
-$:offload_macros.dev_malloc(ptr='PTR', size='SIZ', return_val='ISTAT')
+$:offload_macros.dev_malloc(ptr='PTR', size='SIZ', return_val='ISTAT', indent=5)
 #:endif
+   ENDIF
+   
+   CALL C_F_POINTER (PTR, TMP, UBOUNDS-ILBOUNDS+1)
+   DEV (${ ', '.join (map (lambda i: 'ILBOUNDS (' + str (i) + '):', range (1, ft.rank+1))) }$) => TMP
+ELSE
+   ALLOCATE(DEV(${','.join(['0' for _ in range(1, ft.rank+1)])}$))
 ENDIF
-
-CALL C_F_POINTER (PTR, TMP, UBOUNDS-ILBOUNDS+1)
-DEV (${ ', '.join (map (lambda i: 'ILBOUNDS (' + str (i) + '):', range (1, ft.rank+1))) }$) => TMP
 
 IF(MAP_DEVPTR)THEN
 $:offload_macros.create(symbols=['DEV',])
@@ -140,15 +144,19 @@ IF (ASSOCIATED (DEV)) THEN
 
   IF (FIELD_STATISTICS_ENABLE) CALL FIELD_STATISTICS_DEVICE_DEALLOCATE (SIZE (DEV, KIND=JPIB) * INT (KIND (DEV), KIND=JPIB))
 
-  PTR = C_LOC (DEV (${ ', '.join (map (lambda i: 'LBOUND (DEV, ' + str (i) + ')', range (1, ft.rank+1))) }$))
-  
-  IF(MAP_DEVPTR)THEN
-    CALL DEV_FREE (PTR)
+  IF(SIZE(DEV) > 0)THEN
+    PTR = C_LOC (DEV (${ ', '.join (map (lambda i: 'LBOUND (DEV, ' + str (i) + ')', range (1, ft.rank+1))) }$))
+    
+    IF(MAP_DEVPTR)THEN
+      CALL DEV_FREE (PTR)
 $:offload_macros.delete(symbols=['DEV',], indent=4)
-  ELSE
+    ELSE
 #:if defined('WITH_HIC')
-$:offload_macros.dev_free(ptr='PTR', return_val='ISTAT')
+$:offload_macros.dev_free(ptr='PTR', return_val='ISTAT', indent=6)
 #:endif
+    ENDIF
+  ELSE
+    DEALLOCATE(DEV)
   ENDIF
 
   NULLIFY (DEV)
