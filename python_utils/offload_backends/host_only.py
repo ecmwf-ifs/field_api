@@ -7,14 +7,12 @@
 # granted to it by virtue of its status as an intergovernmental organisation
 # nor does it submit to any jurisdiction.
 
-# Download fypp preprocessor if not found.
 
-include(FetchContent)
+__all__ = ['HostOnly']
 
-FetchContent_Declare(
-   fypp
-   GIT_REPOSITORY https://github.com/aradi/fypp
-   GIT_TAG 3.1
-)
+class HostOnly():
+    """
+    A dummy class only to be used if GPU offload is disabled.
+    """
 
-FetchContent_MakeAvailable(fypp)
+    pragma = ''

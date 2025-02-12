@@ -8,7 +8,6 @@
 # nor does it submit to any jurisdiction.
 
 list(APPEND srcs
-     field_async_module.F90
      field_basic_module.F90
      field_defaults_module.F90
      dev_alloc.c
@@ -17,7 +16,7 @@ list(APPEND srcs
      field_abort_module.F90)
 
 list( APPEND ranksuff_srcs _data)
-list( APPEND non_ranksuff_srcs dev_alloc_module field_module host_alloc_module )
+list( APPEND non_ranksuff_srcs dev_alloc_module field_module host_alloc_module field_async_module )
 
 ## expand ranksuff sources
 field_api_expand_fypp_ranksuff(

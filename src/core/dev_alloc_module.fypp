@@ -13,15 +13,7 @@ MODULE DEV_ALLOC_MODULE
 
 ${fieldType.useParkind1 ()}$
 
-#:if defined('USE_BUDDY_MALLOC') or defined('CUDA')
-USE ISO_C_BINDING
-#:endif
-#ifdef _OPENACC
-USE OPENACC
-#endif
-#:if defined('CUDA')
-USE CUDAFOR
-#:endif
+USE, INTRINSIC :: ISO_C_BINDING
 
 IMPLICIT NONE
 
@@ -59,17 +51,10 @@ INTERFACE
 END INTERFACE
 #:endif
 
-#:if defined('CUDA')
+#:if defined('WITH_HIC')
 INTERFACE
-  INTEGER FUNCTION CUDA_MALLOC (PTR,SIZ) BIND (C, NAME='cudaMalloc')
-    IMPORT :: C_PTR, C_SIZE_T
-    INTEGER (C_SIZE_T), VALUE, INTENT(IN) :: SIZ
-    TYPE (C_PTR), INTENT(OUT) :: PTR
-  END FUNCTION CUDA_MALLOC
-  INTEGER FUNCTION CUDA_FREE (PTR) BIND (C, NAME='cudaFree')
-    IMPORT :: C_PTR
-    TYPE (C_PTR), VALUE, INTENT(IN) :: PTR
-  END FUNCTION CUDA_FREE
+$:offload_macros.dev_malloc_intf(indent=2)
+$:offload_macros.dev_free_intf(indent=2)
 END INTERFACE
 #:endif
 
@@ -78,7 +63,7 @@ CONTAINS
 
 #:for ft in fieldTypeList
 
-#:if defined('USE_BUDDY_MALLOC') or defined('CUDA')
+#:if defined('USE_BUDDY_MALLOC') or defined('WITH_HIC')
 
 SUBROUTINE ${ft.name}$_DEV_ALLOCATE_HST (DEV, HST, MAP_DEVPTR)
 
@@ -109,8 +94,8 @@ LOGICAL, INTENT(IN) :: MAP_DEVPTR
 
 TYPE (C_PTR) :: PTR
 INTEGER (C_SIZE_T) :: SIZ
-#:if defined('CUDA')
-INTEGER :: ISTAT
+#:if defined('WITH_HIC')
+$:offload_macros.runtime_error_decl(symbols=['ISTAT',])
 #:endif
 
 ILBOUNDS = 1
@@ -124,8 +109,8 @@ SIZ = SIZ * INT (UBOUNDS(${i}$)-ILBOUNDS(${i}$)+1, C_SIZE_T)
 IF(MAP_DEVPTR)THEN
   CALL DEV_MALLOC (SIZ, PTR)
 ELSE
-#:if defined('CUDA')
-  ISTAT = CUDA_MALLOC(PTR, SIZ)
+#:if defined('WITH_HIC')
+$:offload_macros.dev_malloc(ptr='PTR', size='SIZ', return_val='ISTAT')
 #:endif
 ENDIF
 
@@ -133,7 +118,7 @@ CALL C_F_POINTER (PTR, TMP, UBOUNDS-ILBOUNDS+1)
 DEV (${ ', '.join (map (lambda i: 'ILBOUNDS (' + str (i) + '):', range (1, ft.rank+1))) }$) => TMP
 
 IF(MAP_DEVPTR)THEN
-!$acc enter data create (DEV)
+$:offload_macros.create(symbols=['DEV',])
 ENDIF
 
 IF (FIELD_STATISTICS_ENABLE) CALL FIELD_STATISTICS_DEVICE_ALLOCATE (SIZE (DEV, KIND=JPIB) * INT (KIND (DEV), KIND=JPIB))
@@ -147,8 +132,8 @@ USE FIELD_STATISTICS_MODULE
 ${ft.type}$, POINTER :: DEV(${ft.shape}$)
 LOGICAL, INTENT(IN) :: MAP_DEVPTR
 TYPE (C_PTR) :: PTR
-#:if defined('CUDA')
-INTEGER :: ISTAT
+#:if defined('WITH_HIC')
+$:offload_macros.runtime_error_decl(symbols=['ISTAT',])
 #:endif
 
 IF (ASSOCIATED (DEV)) THEN
@@ -159,10 +144,10 @@ IF (ASSOCIATED (DEV)) THEN
   
   IF(MAP_DEVPTR)THEN
     CALL DEV_FREE (PTR)
-    !$acc exit data delete (DEV)
+$:offload_macros.delete(symbols=['DEV',], indent=4)
   ELSE
-#:if defined('CUDA')
-    ISTAT = CUDA_FREE (PTR)
+#:if defined('WITH_HIC')
+$:offload_macros.dev_free(ptr='PTR', return_val='ISTAT')
 #:endif
   ENDIF
 
@@ -189,7 +174,7 @@ ALLOCATE (DEV (${ ', '.join (map (lambda i: 'LBOUND (HST, ' + str (i) + '):UBOUN
 ALLOCATE (DEV, MOLD=HST)
 #endif
 
-!$acc enter data create (DEV)
+$:offload_macros.create(symbols=['DEV',])
 
 IF (FIELD_STATISTICS_ENABLE) CALL FIELD_STATISTICS_DEVICE_ALLOCATE (SIZE (DEV, KIND=JPIB) * INT (KIND (DEV), KIND=JPIB))
 
@@ -206,7 +191,7 @@ IF (ASSOCIATED (DEV)) THEN
 
   IF (FIELD_STATISTICS_ENABLE) CALL FIELD_STATISTICS_DEVICE_DEALLOCATE (SIZE (DEV, KIND=JPIB) * INT (KIND (DEV), KIND=JPIB))
 
-  !$acc exit data delete (DEV)
+$:offload_macros.delete(symbols=['DEV',], indent=2)
   DEALLOCATE (DEV)
   NULLIFY (DEV)
 ENDIF
