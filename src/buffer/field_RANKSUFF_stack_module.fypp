@@ -112,7 +112,7 @@ CONTAINS
 #:for i in range(member_dim-1)
         LLBOUNDS(${i+1}$) = LBOUNDS(${i+1}$)
 #:endfor
-#:for i in range(member_dim-1, ft.rank-1)
+#:for i in range(member_dim, ft.rank)
         LLBOUNDS(${i}$) = LBOUNDS(${i+1}$)
 #:endfor
 
