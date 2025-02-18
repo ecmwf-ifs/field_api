@@ -305,3 +305,8 @@ The field API library is licenced under the Apache licence, version 2.0.
 
 [buddy_alloc](https://github.com/spaskalev/buddy_alloc) is property of Stanislav Paskalev and licensed under the BSD Zero Clause License
 
+# Contributing
+
+Contributions to field API are welcome. 
+In order to do so, please open an issue where a feature request or bug can be discussed. 
+Then create a pull request with your contribution and sign the [contributors license agreement (CLA)](https://bol-claassistant.ecmwf.int/ecmwf-ifs/field_api).
