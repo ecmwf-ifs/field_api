@@ -208,40 +208,73 @@ init_debug_value_jpim* to a custom value.
 ```
 
 ## Data Transfers
-A field has ten type bound procedures that can be used to transfer data between the device and host.  Five `SYNC` methods that just copy the data using
-the specified access mode, and five `GET` methods that also additionally return a pointer to access the data:
-* ``SUBROUTINE SYNC_DEVICE_DATA_RDONLY (SELF)``
-* ``SUBROUTINE SYNC_DEVICE_DATA_WRONLY (SELF)``
-* ``SUBROUTINE SYNC_DEVICE_DATA_RDWR (SELF)``
-* ``SUBROUTINE SYNC_HOST_DATA_RDONLY (SELF)``
-* ``SUBROUTINE SYNC_HOST_DATA_RDWR (SELF)``
+There are two categories of data transfer methods in Field API. The *core API* consists of methods that internally keeps track of the status of a field and the *advanced API* which consists of methods that relies on the user to
+keep track of where the data is located. There is no benefit in using the advanced api if the default API can be used and it is recommended to only use the features from the advanced API when
+the same can't be achieved with the default API (e.g. for asynchronous data transfers).
 
+
+
+### Default API
+Each field defines eight type bound procedures that are part of the default API and can be used to transfer data between the device and host. Four `GET` methods:
 * ``SUBROUTINE GET_DEVICE_DATA_RDONLY (SELF, PPTR)``
 * ``SUBROUTINE GET_DEVICE_DATA_WRONLY (SELF, PPTR)``
 * ``SUBROUTINE GET_DEVICE_DATA_RDWR (SELF, PPTR)``
 * ``SUBROUTINE GET_HOST_DATA_RDONLY (SELF, PPTR)``
 * ``SUBROUTINE GET_HOST_DATA_RDWR (SELF, PPTR)``
 
-Where``DEVICE/HOST`` indicates the transfer direction and ``RDONLY/RDWR/WRONLY`` indicates the access specifier, e.g. data copied to device using a `RDONLY`
-access specifier will **not** be copied back to host if a subsequent ``RDWR`` host access is issued. The difference between the ``GET`` and ``SYNC`` method
-is just their interface. The ``GET`` methods are called with a pointer argument, which must have the same rank as the field, that will be associated with
-the transferred data at its destination. The ``SYNC`` method is called without any arguments and will only perform the data transfers and update the field's
-inner pointers.
+and four ``SYNC`` methods:
+* ``SUBROUTINE SYNC_DEVICE_RDONLY (SELF)``
+* ``SUBROUTINE SYNC_DEVICE_WRONLY (SELF)``
+* ``SUBROUTINE SYNC_DEVICE_RDWR (SELF)``
+* ``SUBROUTINE SYNC_HOST_RDONLY (SELF)``
+* ``SUBROUTINE SYNC_HOST_RDWR (SELF)``
 
-## Asynchronism
+Where``DEVICE/HOST`` indicates the transfer direction and ``RDONLY/WRONLY`` indicates the mode.
+The difference between the ``GET`` and ``SYNC`` method is their interface. The
+``GET`` methods are called with a pointer argument that will be associated with the transferred data at its destination. The ``SYNC`` method is called without any arguments and
+will only perform the data transfers and update the fields inner pointers.
+Depending on the status of the field the data transfer methods in the default API may not
+transfer data if it is already present and fresh on the intended destination location.
+All data transfers with the methods in the default API are synchronous. So every call to the
+procedures listed above will stop the program until the data transfer is completed.
 
-This functionnality is still being tested.
+### Advanced API
 
-By default all data transfers are synchronous. So every call to the subroutines
-GET\_HOST\_DATA, GET\_DEVICE\_DATA, SYNC\_HOST, SYNC\_DEVICE will stop the
-program until the data are actually transfered. But sometimes it is possible to
-interleave the data transfer with the computations. To do so you can add the
-QUEUE parameter, which must have a value greater than or equal to 1, when calling
-the aforementioned subroutines. With this QUEUE parameter the user will specify on
-which queue he wants the data transfer to happen, and the subroutines will return
-without waiting for the data transfer to finish. It is up to the user to be sure
-the data transfer has been done when he actually wants to use the data. This can
-be checked by using the WAIT\_FOR\_ASYNC\_QUEUE subroutine.
+**The advanced API cedes all responsibility for data synchronisation to the user and must therefore be used with caution.**
+
+There are use cases when it is neccessary to have fine grained control over the data
+transfers. For these use cases Field API provides an *advanced API* with
+four type bound procedures that will always trigger data copies.
+The advanced API consists of the four subroutines:
+* ``SUBROUTINE GET_HOST_DATA_FORCE(SELF, PTR, QUEUE)``
+* ``SUBROUTINE SYNC_HOST_FORCE(SELF, QUEUE)``
+* ``SUBROUTINE GET_DEVICE_DATA_FORCE(SELF, PTR, QUEUE)``
+* ``SUBROUTINE SYNC_HOST_FORCE(SELF, QUEUE)``
+
+A call to anyone of these routine will always transfer data between the host and
+the device and set the internal status of the field to ``UNDEFINED``.
+Furthermore, the routines above add an optional dummy argument ``QUEUE`` that
+can be used to invoke asynchronous data transfers (see more below).
+
+If any data transfer routine from the advanced API has been used,
+then the user must explicitly set the status of the field before the data
+transfer methods from the default API can be used.
+To this end, there are two methods that can be used to set the internal status of the
+field:
+* ``SET_DEVICE_FRESH`` - should be called if the device data is up to date.
+* ``SET_HOST_FRESH`` - should be called if the host data is up date.
+
+If the device and host data agrees both methods above should be called (the order of the calls doesn't matter) before returning to using the default API.
+
+
+#### Asynchronous data transfers
+Using the advanced API it is possible to asynchronously transfer data, i.e. issue a non-blocking instruction.
+To do so you can add the optional QUEUE parameter when calling the aforementioned subroutines.
+With this QUEUE parameter the user will specify on which queue he wants the data transfer to
+happen and the subroutines will return without waiting for the data transfer
+to finish. It is up to the user to be sure that the data transfer has been completed
+before the data is accessed. This can be checked by using the
+``WAIT_FOR_ASYNC_QUEUE`` subroutine.
 
 ```
 SUBROUTINE SUB(MYTEST)
@@ -256,7 +289,7 @@ CALL FIELD_NEW(FO2, /1,0/, /10,10/)
 
 !Do stuff with FO on GPUs
 !Then transfer data to CPU
-CALL FO%SYNC_HOST_RDONLY(QUEUE=2)
+CALL FO%SYNC_HOST_FORCE(QUEUE=2)
 
 !Do stuff with FO2 on GPUs
 !We didn't have to wait for the data transfer of FO to finish
@@ -394,19 +427,25 @@ SUBROUTINE FIELD_RESIZE(SELF, ...)
 SUBROUTINE FIELD_DELETE(SELF)
 SUBROUTINE DELETE_DEVICE
 FUNCTION GET_VIEW(SELF, BLOCK_INDEX, ZERO) RESULT(VIEW_PTR)
-SUBROUTINE GET_DEVICE_DATA_RDONLY (SELF, PPTR, QUEUE)
-SUBROUTINE GET_DEVICE_DATA_RDWR (SELF, PPTR, QUEUE)
-SUBROUTINE GET_DEVICE_DATA_WRONLY (SELF, PPTR, QUEUE)
-SUBROUTINE GET_HOST_DATA_RDONLY (SELF, PPTR, QUEUE)
-SUBROUTINE GET_HOST_DATA_RDWR (SELF, PPTR, QUEUE)
-SUBROUTINE SYNC_HOST_RDWR (SELF, QUEUE)
-SUBROUTINE SYNC_HOST_RDONLY (SELF, QUEUE)
-SUBROUTINE SYNC_DEVICE_RDWR (SELF, QUEUE)
-SUBROUTINE SYNC_DEVICE_RDONLY (SELF, QUEUE)
-SUBROUTINE SYNC_DEVICE_WRONLY (SELF, QUEUE)
+SUBROUTINE GET_DEVICE_DATA_RDONLY (SELF, PPTR)
+SUBROUTINE GET_DEVICE_DATA_WRONLY (SELF, PPTR)
+SUBROUTINE GET_DEVICE_DATA_RDWR (SELF, PPTR)
+SUBROUTINE GET_DEVICE_DATA_FORCE (SELF, PPTR, QUEUE)  ! Disables Field API internal status tracking
+SUBROUTINE GET_HOST_DATA_RDONLY (SELF, PPTR)
+SUBROUTINE GET_HOST_DATA_RDWR (SELF, PPTR)
+SUBROUTINE GET_HOST_DATA_FORCE (SELF, PPTR, QUEUE)    ! Disables Field API internal status tracking
+SUBROUTINE SYNC_HOST_RDWR (SELF)
+SUBROUTINE SYNC_HOST_RDONLY (SELF)
+SUBROUTINE SYNC_HOST_FORCE (SELF, QUEUE)              ! Disables Field API internal status tracking
+SUBROUTINE SYNC_DEVICE_RDWR (SELF)
+SUBROUTINE SYNC_DEVICE_RDONLY (SELF)
+SUBROUTINE SYNC_DEVICE_WRONLY (SELF)
+SUBROUTINE SYNC_DEVICE_FORCE (SELF, QUEUE)            ! Disables Field API internal status tracking
 SUBROUTINE COPY_OBJECT (SELF, LDCREATED)
 SUBROUTINE WIPE_OBJECT (SELF, LDDELETED)
 SUBROUTINE GET_DIMS (SELF, LBOUNDS, UBOUNDS)
+SUBROUTINE SET_DEVICE_FRESH(SELF)
+SUBROUTINE SET_HOST_FRESH(SELF)
 ```
 
 Utils:
