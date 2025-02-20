@@ -32,8 +32,9 @@ PROGRAM SYNC_HOST
         ENDDO
 !$ACC END KERNELS
 
-        CALL W%SYNC_HOST_RDONLY(4)
+        CALL W%SYNC_HOST_FORCE(4)
         CALL WAIT_FOR_ASYNC_QUEUE(4)
+        CALL W%SET_HOST_FRESH()
         DO I=1,10
         DO J=1,10
         IF (D(I,J) /= 7) THEN
