@@ -30,7 +30,6 @@ target_compile_definitions( main.x PRIVATE $<${HAVE_CUDA}:_CUDA> )
 
 ## Unit tests
 list(APPEND TEST_FILES
-        async_host.F90
         cpu_to_gpu.F90
         cpu_to_gpu_delayed_init_value.F90
         cpu_to_gpu_init_value.F90
@@ -74,6 +73,7 @@ list(APPEND TEST_FILES
         resize_owner2.F90
         sync_device.F90
         sync_host.F90
+        test_async.F90
         test_bc.F90
         test_crc64.F90
         test_field1d.F90

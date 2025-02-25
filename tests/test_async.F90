@@ -7,7 +7,7 @@
 ! granted to it by virtue of its status as an intergovernmental organisation
 ! nor does it submit to any jurisdiction.
 
-PROGRAM SYNC_HOST
+PROGRAM TEST_ASYNC
         USE FIELD_MODULE
         USE FIELD_ASYNC_MODULE
         USE FIELD_FACTORY_MODULE
@@ -23,6 +23,8 @@ PROGRAM SYNC_HOST
         ALLOCATE(D(10,10))
         D=3
         CALL FIELD_NEW(W, DATA=D)
+        CALL W%SYNC_DEVICE_RDWR(QUEUE=1)
+        CALL WAIT_FOR_ASYNC_QUEUE(1)
         CALL W%GET_DEVICE_DATA_RDWR(D_GPU)
 !$ACC KERNELS PRESENT(D_GPU)
         DO I=1,10
@@ -42,4 +44,4 @@ PROGRAM SYNC_HOST
         ENDDO
         ENDDO
         CALL FIELD_DELETE(W)
-END PROGRAM
+END PROGRAM TEST_ASYNC
