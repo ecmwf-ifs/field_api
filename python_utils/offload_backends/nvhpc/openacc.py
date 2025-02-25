@@ -70,7 +70,7 @@ class NVHPCOpenACC():
         return f"CALL ACC_MEMCPY_TO_DEVICE ({dev}, {host}, {size})"
 
     @classmethod
-    def memcpy_to_device_async(cls, dev, host, queue, size):
+    def memcpy_to_device_async(cls, dev, host, size, queue):
         """
         Asynchornously copy a contiguous section of data from host to device.
         """
