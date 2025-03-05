@@ -7,9 +7,9 @@
 # granted to it by virtue of its status as an intergovernmental organisation
 # nor does it submit to any jurisdiction.
 
-list( APPEND ranksuff_srcs _access _util _array _array_util)
+list( APPEND ranksuff_srcs _access _util _array _array_util _clone)
 list( APPEND non_ranksuff_srcs field_access_module field_array_module
-                      field_util_module field_array_util_module)
+                      field_util_module field_array_util_module field_clone_module)
 
 ## expand ranksuff sources
 field_api_expand_fypp_ranksuff(
@@ -38,4 +38,5 @@ field_api_add_object_library(
 set_source_files_properties( ${CMAKE_CURRENT_BINARY_DIR}/field_array_module.F90
                              ${CMAKE_CURRENT_BINARY_DIR}/field_array_util_module.F90
                              ${CMAKE_CURRENT_BINARY_DIR}/field_util_module.F90
+                             ${CMAKE_CURRENT_BINARY_DIR}/field_clone_module.F90
                              PROPERTIES HEADER_FILE_ONLY ON)
