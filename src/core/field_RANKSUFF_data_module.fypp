@@ -13,6 +13,7 @@ MODULE FIELD_${RANK}$${SUFF}$_DATA_MODULE
 #:set fieldTypeList = fieldType.getFieldTypeList (ranks=[RANK], kinds=['JP' + str (SUFF)])
 
 USE FIELD_CONSTANTS_MODULE
+USE FIELD_ABORT_MODULE
 ${fieldType.useParkind1 ()}$
 
 IMPLICIT NONE
@@ -177,7 +178,6 @@ $:offload_macros.memcpy_from_device(dev='DEVPTR', host=f'HST ({ar})', size='ISIZ
 #:for d2 in range (d1+1, ft.rank+1)
     SUBROUTINE ${ftn}$_COPY_2D_DIM${d1}$_${d2}$_CONTIGUOUS (HST, DEV, MAP_DEVPTR, KDIR, QUEUE)
 $:offload_macros.runtime_api_import(indent=4)
-    USE FIELD_ABORT_MODULE
 
     ${ft.type}$, POINTER :: HST (${ft.shape}$), DEV (${ft.shape}$)
     INTEGER (KIND=JPIM),           INTENT (IN) :: KDIR

@@ -179,3 +179,19 @@ class NVHPCOpenACCCUDA(NVHPCOpenACC):
         """
 
         return f"{return_val} = CUDAMEMCPY2DASYNC({dst}, {dst_pitch}, {src}, {src_pitch}, {width}, {height}, STREAM={stream})"
+
+    @classmethod
+    def memcpy_to_device_async(cls, dev, host, size, queue):
+        """
+        Asynchornously copy a contiguous section of data from host to device.
+        """
+
+        return f"CALL ACC_MEMCPY_TO_DEVICE_ASYNC ({dev}, {host}, {size}, {queue})"
+
+    @classmethod
+    def memcpy_from_device_async(cls, dev, host, size, queue):
+        """
+        Asynchronously copy a contiguous section of data from device to host.
+        """
+
+        return f"CALL ACC_MEMCPY_FROM_DEVICE_ASYNC ({host}, {dev}, {size}, {queue})"

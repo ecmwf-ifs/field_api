@@ -72,10 +72,12 @@ class NVHPCOpenACC():
     @classmethod
     def memcpy_to_device_async(cls, dev, host, size, queue):
         """
-        Asynchornously copy a contiguous section of data from host to device.
+        Copy a contiguous section of data from host to device.
+        In the absence of the CUDA backend, asynchronous copies
+        fallback to synchornous execution.
         """
 
-        return f"CALL ACC_MEMCPY_TO_DEVICE_ASYNC ({dev}, {host}, {size}, {queue})"
+        return f"CALL ACC_MEMCPY_TO_DEVICE ({dev}, {host}, {size})"
 
     @classmethod
     def memcpy_from_device(cls, dev, host, size):
@@ -88,10 +90,12 @@ class NVHPCOpenACC():
     @classmethod
     def memcpy_from_device_async(cls, dev, host, size, queue):
         """
-        Asynchronously copy a contiguous section of data from device to host.
+        Copy a contiguous section of data from device to host.
+        In the absence of the CUDA backend, asynchronous copies
+        fallback to synchornous execution.
         """
 
-        return f"CALL ACC_MEMCPY_FROM_DEVICE_ASYNC ({host}, {dev}, {size}, {queue})"
+        return f"CALL ACC_MEMCPY_FROM_DEVICE ({host}, {dev}, {size})"
 
     @classmethod
     def create(cls, symbols):
@@ -146,14 +150,6 @@ class NVHPCOpenACC():
         """
 
         return "!$acc end kernels"
-
-    @classmethod
-    def async_wait(cls, stream):
-        """
-        Wait for the operations queued on a stream to complete.
-        """
-
-        return f"!$acc wait ({stream})"
 
     @classmethod
     def parallel_loop(cls, **kwargs):
