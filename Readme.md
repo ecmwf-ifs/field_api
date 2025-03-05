@@ -207,12 +207,12 @@ By default all data transfers are synchronous. So every call to the subroutines
 GET\_HOST\_DATA, GET\_DEVICE\_DATA, SYNC\_HOST, SYNC\_DEVICE will stop the
 program until the data are actually transfered. But sometimes it is possible to
 interleave the data transfer with the computations. To do so you can add the
-QUEUE parameter when calling the aforementioned subroutines. With this QUEUE
-parameter the user will specify on which queue he wants the data transfer to
-happen, and the subroutines will return without waiting for the data transfer
-to finish. It is up to the user to be sure the data transfer has been done when
-he actually wants to use the data. This can be checked by using the
-WAIT\_FOR\_ASYNC\_QUEUE subroutine.
+QUEUE parameter, which must have a value greater than or equal to 1, when calling
+the aforementioned subroutines. With this QUEUE parameter the user will specify on
+which queue he wants the data transfer to happen, and the subroutines will return
+without waiting for the data transfer to finish. It is up to the user to be sure
+the data transfer has been done when he actually wants to use the data. This can
+be checked by using the WAIT\_FOR\_ASYNC\_QUEUE subroutine.
 
 ```
 SUBROUTINE SUB(MYTEST)
@@ -238,6 +238,9 @@ CALL WAIT_FOR_ASYNC_QUEUE(QUEUE=2)
 ...
 
 ```
+
+NB: Asynchronous offload requires the CUDA backend, which can be
+enabled by passing `-DENABLE_CUDA=ON` at build time.
 
 ## Statistics
 
