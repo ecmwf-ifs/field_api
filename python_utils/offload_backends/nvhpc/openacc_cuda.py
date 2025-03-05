@@ -30,12 +30,12 @@ class NVHPCOpenACCCUDA(NVHPCOpenACC):
         return _import
 
     @classmethod
-    def stream_handle_kind(cls):
+    def stream_decl(cls, symbols):
         """
-        Return the INTEGER kind specifier for a stream handle.
+        Declare variables used to store a CUDA stream.
         """
 
-        return "CUDA_STREAM_KIND"
+        return f"INTEGER(KIND=CUDA_STREAM_KIND) :: {','.join(symbols)}"
 
     @classmethod
     def dev_malloc_intf(cls):
@@ -157,14 +157,6 @@ class NVHPCOpenACCCUDA(NVHPCOpenACC):
         return intf.split('\n')
 
     @classmethod
-    def set_async_stream(cls, queue, stream):
-        """
-        Set an asynchronous stream.
-        """
-
-        return f"CALL ACC_SET_CUDA_STREAM({queue}, {stream})"
-
-    @classmethod
     def memcpy_2D(cls, src, src_pitch, dst, dst_pitch, width, height, return_val="ISTAT"):
         """
         Copy a strided memory region from source (src) to destination (dst).
@@ -195,3 +187,19 @@ class NVHPCOpenACCCUDA(NVHPCOpenACC):
         """
 
         return f"CALL ACC_MEMCPY_FROM_DEVICE_ASYNC ({host}, {dev}, {size}, {queue})"
+
+    @classmethod
+    def create_stream(cls, stream, queue):
+        """
+        Associate a CUDA stream with an ACC queue.
+        """
+
+        return f"{stream} = ACC_GET_CUDA_STREAM({queue})"
+
+    @classmethod
+    def async_wait(cls, stream, return_val):
+        """
+        Wait of all operations associated with a stream to complete.
+        """
+
+        return f"{return_val} = CUDASTREAMSYNCHRONIZE({stream})"

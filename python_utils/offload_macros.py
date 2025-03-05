@@ -259,7 +259,7 @@ def end_kernels(indent=0):
 
     return _format_lines(method(), indent=indent)
 
-def async_wait(stream, indent=0):
+def async_wait(stream, return_val='ISTAT', indent=0):
     """
     Wait for the operations queued on a stream to complete.
     """
@@ -267,7 +267,7 @@ def async_wait(stream, indent=0):
     backend = _get_offload_backend()
     method = _get_method(backend, 'async_wait')
 
-    return _format_lines(method(stream), indent=indent)
+    return _format_lines(method(stream=stream, return_val=return_val), indent=indent)
 
 def parallel_loop(**kwargs):
     """
@@ -353,15 +353,15 @@ def update_host(symbols, indent=0):
 
     return _format_lines(method(symbols), indent=indent)
 
-def stream_handle_kind():
+def stream_decl(symbols, indent=0):
     """
     Return the INTEGER kind specifier for a stream handle.
     """
 
     backend = _get_offload_backend()
-    method = _get_method(backend, 'stream_handle_kind')
+    method = _get_method(backend, 'stream_decl')
 
-    return _format_lines(method())
+    return _format_lines(method(symbols), indent=indent)
 
 def data(**kwargs):
     """
@@ -494,16 +494,6 @@ def host_unregister_intf(indent=0):
 
     return _format_lines(method(), indent=indent)
 
-def set_async_stream(queue, stream, indent=0):
-    """
-    Set an asynchronous stream.
-    """
-
-    backend = _get_offload_backend()
-    method = _get_method(backend, 'set_async_stream')
-
-    return _format_lines(method(queue, stream), indent=indent)
-
 def memcpy_2D(src, src_pitch, dst, dst_pitch, width, height, return_val="ISTAT", indent=0):
     """
     Copy a strided memory region from source (src) to destination (dst).
@@ -525,3 +515,13 @@ def memcpy_2D_async(src, src_pitch, dst, dst_pitch, width, height, stream, retur
 
     return _format_lines(method(src, src_pitch, dst, dst_pitch, width, height, stream, return_val=return_val),
                          indent=indent)
+
+def create_stream(stream, queue, indent=0):
+    """
+    Create asynchronous execution stream or associate an OpenACC queue with a stream.
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'create_stream')
+
+    return _format_lines(method(stream=stream, queue=queue), indent=indent)
