@@ -1,0 +1,40 @@
+#! (C) Copyright 2022- ECMWF.
+#! (C) Copyright 2022- Meteo-France.
+#!
+#! This software is licensed under the terms of the Apache Licence Version 2.0
+#! which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
+#! In applying this licence, ECMWF does not waive the privileges and immunities
+#! granted to it by virtue of its status as an intergovernmental organisation
+#! nor does it submit to any jurisdiction.
+
+MODULE FIELD_CLONE_MODULE
+
+#:set fieldTypeListOT = fieldType.getFieldTypeList (hasView=True, kinds=['JPIM', 'JPLM'])
+#:set fieldTypeListRM = fieldType.getFieldTypeList (hasView=True, kinds=['JPRM'])
+#:set fieldTypeListRB = fieldType.getFieldTypeList (hasView=True, kinds=['JPRB'])
+#:set fieldTypeListRD = fieldType.getFieldTypeList (hasView=True, kinds=['JPRD'])
+
+#:def useAliasRB (ftlRB, ftlTA, ftlOT)
+
+#:for fta, ftb in zip (ftlTA, ftlRB)
+USE ${fta.name}$_CLONE_MODULE, ONLY : &
+      & ${ftb.name}$_CLONE  => ${fta.name}$_CLONE,  &
+      & ${fta.name}$_CLONE
+#:endfor
+
+#:for fto in ftlOT
+USE ${fto.name}$_CLONE_MODULE
+#:endfor
+
+#:enddef
+
+#ifdef PARKIND1_SINGLE
+$:useAliasRB (fieldTypeListRB, fieldTypeListRM, fieldTypeListRD + fieldTypeListOT)
+#else
+$:useAliasRB (fieldTypeListRB, fieldTypeListRD, fieldTypeListRM + fieldTypeListOT)
+#endif
+${fieldType.useParkind1 ()}$
+
+IMPLICIT NONE
+
+END MODULE
