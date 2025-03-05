@@ -440,6 +440,7 @@ $:offload_macros.detach(ptr='SELF%DEVPTR', indent=6)
   END SUBROUTINE ${ftn}$_COPY_DATA
 
   SUBROUTINE ${ftn}$_GET_HOST_DATA (SELF, MODE, PTR, QUEUE)
+    USE FIELD_ASYNC_MODULE, ONLY: INIT_QUEUE
     CLASS(${ftn}$) :: SELF
     INTEGER (KIND=JPIM),           INTENT(IN)    :: MODE
 
@@ -447,6 +448,12 @@ $:offload_macros.detach(ptr='SELF%DEVPTR', indent=6)
     INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
 
     INTEGER(KIND=JPIM) :: LBOUNDS(${ft.rank}$)
+
+#:if defined('WITH_HIC')
+    IF (PRESENT(QUEUE)) THEN
+      CALL INIT_QUEUE(QUEUE)
+    ENDIF
+#:endif
 
     LBOUNDS=LBOUND(SELF%PTR)
     IF (IAND (SELF%GET_STATUS (), NHSTFRESH) == 0) THEN
@@ -520,11 +527,18 @@ $:offload_macros.detach(ptr='SELF%DEVPTR', indent=6)
   END SUBROUTINE
 
   SUBROUTINE ${ftn}$_GET_DEVICE_DATA (SELF, MODE, PTR, QUEUE)
+    USE FIELD_ASYNC_MODULE, ONLY: INIT_QUEUE
     CLASS(${ftn}$) :: SELF
     INTEGER (KIND=JPIM),           INTENT(IN)    :: MODE
     ${ft.type}$, POINTER,          INTENT(INOUT) :: PTR(${ft.shape}$)
     INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
     INTEGER(KIND=JPIM)                           :: LBOUNDS(${ft.rank}$)
+
+#:if defined('WITH_HIC')
+    IF (PRESENT(QUEUE)) THEN
+      CALL INIT_QUEUE(QUEUE)
+    ENDIF
+#:endif
 
     LBOUNDS=LBOUND(SELF%PTR)
     IF (.NOT. ASSOCIATED (SELF%DEVPTR)) THEN

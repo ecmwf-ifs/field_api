@@ -177,6 +177,7 @@ $:offload_macros.memcpy_from_device(dev='DEVPTR', host=f'HST ({ar})', size='ISIZ
 #:for d1 in range (0, ft.rank)
 #:for d2 in range (d1+1, ft.rank+1)
     SUBROUTINE ${ftn}$_COPY_2D_DIM${d1}$_${d2}$_CONTIGUOUS (HST, DEV, MAP_DEVPTR, KDIR, QUEUE)
+    USE FIELD_ASYNC_MODULE, ONLY : STREAMS
 $:offload_macros.runtime_api_import(indent=4)
 
     ${ft.type}$, POINTER :: HST (${ft.shape}$), DEV (${ft.shape}$)
@@ -188,7 +189,6 @@ $:offload_macros.runtime_api_import(indent=4)
   #:if d2 < ft.rank
     INTEGER :: ${', '.join (list (map (lambda i: 'J' + str (i+1), range (d2, ft.rank))))}$
   #:endif
-    INTEGER(KIND=${offload_macros.stream_handle_kind()}$) :: STREAM
     TYPE(C_PTR) :: HSTPTR
 $:offload_macros.c_devptr_decl(symbols=['DEVPTR'], indent=4)
 $:offload_macros.runtime_error_decl(symbols=['IRET',], indent=4)
@@ -222,9 +222,8 @@ $:offload_macros.end_data(indent=ft.rank - d2 - 1)
     ${indent}$  ENDIF
     ${indent}$  IF (KDIR == NH2D) THEN
     ${indent}$    IF(PRESENT(QUEUE)) THEN
-$:offload_macros.set_async_stream(queue='QUEUE', stream='STREAM', indent=ft.rank - d2 + 9)
 $:offload_macros.memcpy_2D_async(dst='DEVPTR', dst_pitch='IDEV_PITCH', src='HSTPTR', src_pitch='IHST_PITCH', &
-&                                width='IWIDTH', height='IHEIGHT', stream='STREAM', return_val='IRET', indent=ft.rank - d2 + 9)
+&                                width='IWIDTH', height='IHEIGHT', stream='STREAMS(QUEUE)%STREAM', return_val='IRET', indent=ft.rank - d2 + 9)
     ${indent}$    ELSE
 $:offload_macros.memcpy_2D(dst='DEVPTR', dst_pitch='IDEV_PITCH', src='HSTPTR', src_pitch='IHST_PITCH', &
 &                          width='IWIDTH', height='IHEIGHT', return_val='IRET', indent=ft.rank - d2 + 9)
@@ -234,9 +233,8 @@ $:offload_macros.memcpy_2D(dst='DEVPTR', dst_pitch='IDEV_PITCH', src='HSTPTR', s
     ${indent}$    ENDIF
     ${indent}$  ELSEIF (KDIR == ND2H) THEN
     ${indent}$    IF(PRESENT(QUEUE)) THEN
-$:offload_macros.set_async_stream(queue='QUEUE', stream='STREAM', indent=ft.rank - d2 + 9)
 $:offload_macros.memcpy_2D_async(dst='HSTPTR', dst_pitch='IHST_PITCH', src='DEVPTR', src_pitch='IDEV_PITCH', &
-&                                width='IWIDTH', height='IHEIGHT', stream='STREAM', return_val='IRET', indent=ft.rank - d2 + 9)
+&                                width='IWIDTH', height='IHEIGHT', stream='STREAMS(QUEUE)%STREAM', return_val='IRET', indent=ft.rank - d2 + 9)
     ${indent}$    ELSE
 $:offload_macros.memcpy_2D(dst='HSTPTR', dst_pitch='IHST_PITCH', src='DEVPTR', src_pitch='IDEV_PITCH', &
 &                          width='IWIDTH', height='IHEIGHT', return_val='IRET', indent=ft.rank - d2 + 9)
