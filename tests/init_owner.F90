@@ -19,7 +19,9 @@ PROGRAM INIT_OWNER
         USE FIELD_ABORT_MODULE
         IMPLICIT NONE
         CLASS(FIELD_2RB), POINTER :: O => NULL()
-        REAL(KIND=JPRB), POINTER :: PTR(:,:)
+        CLASS(FIELD_2RB), POINTER :: OFORCE => NULL()
+        REAL(KIND=JPRB), POINTER  :: PTR(:,:), DEVPTR(:,:)
+        INTEGER(KIND=JPIM)        :: I, J
 
         CALL FIELD_NEW(O, LBOUNDS=[10,1], UBOUNDS=[21,11])
         CALL O%GET_HOST_DATA_RDWR(PTR)
@@ -36,4 +38,50 @@ PROGRAM INIT_OWNER
                 CALL FIELD_ABORT ("ERROR")
         END IF 
         CALL FIELD_DELETE(O)
+
+        ! TEST THAT OWNER ALLOCATION ALSO WORKS WITH FORCE METHODS
+        CALL FIELD_NEW(OFORCE, LBOUNDS=[10,1], UBOUNDS=[21,11])
+        CALL OFORCE%GET_HOST_DATA_FORCE(PTR)
+        PTR=42
+
+        IF (SIZE(OFORCE%PTR,1) /= 12) THEN
+                CALL FIELD_ABORT ("ERROR ")
+        END IF
+
+        IF (SIZE(OFORCE%PTR,2) /= OMP_GET_MAX_THREADS()) THEN
+                CALL FIELD_ABORT ("ERROR")
+        END IF
+
+        IF (.NOT. ALL(OFORCE%PTR == 42)) THEN
+                CALL FIELD_ABORT ("ERROR")
+        END IF
+
+        CALL FIELD_DELETE(OFORCE)
+
+        CALL FIELD_NEW(OFORCE, LBOUNDS=[10,1], UBOUNDS=[21,11])
+        CALL OFORCE%GET_DEVICE_DATA_FORCE(DEVPTR)
+
+        !$acc serial present(DEVPTR)
+        DO J=1,11
+          DO I=10,21
+            DEVPTR(I,J)=45
+          END DO
+        END DO
+        !$acc end serial
+        CALL OFORCE%GET_HOST_DATA_FORCE(PTR)
+
+        IF (SIZE(OFORCE%PTR,1) /= 12) THEN
+                CALL FIELD_ABORT ("ERROR ")
+        END IF
+
+        IF (SIZE(OFORCE%PTR,2) /= OMP_GET_MAX_THREADS()) THEN
+                CALL FIELD_ABORT ("ERROR")
+        END IF
+
+        IF (.NOT. ALL(OFORCE%PTR == 45)) THEN
+                CALL FIELD_ABORT ("ERROR")
+        END IF
+
+        CALL FIELD_DELETE(OFORCE)
+
 END PROGRAM INIT_OWNER
