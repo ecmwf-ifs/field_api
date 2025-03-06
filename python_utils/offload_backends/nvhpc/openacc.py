@@ -18,8 +18,6 @@ class NVHPCOpenACC():
 
     pragma = '!$acc'
     _data_attributes = ['private', 'copy', 'copyout', 'copyin', 'present', 'create']
-    _loop_attributes = ['gang', 'vector', 'worker', 'seq']
-    _declare_attributes = ['create', 'device_resident', 'deviceptr']
 
     @classmethod
     def runtime_api_import(cls):
@@ -130,9 +128,27 @@ class NVHPCOpenACC():
         return f"!$acc exit data detach ({','.join(ptr)})"
 
     @classmethod
-    def kernels(cls, **kwargs):
+    def parallel_gang_vector_loop(cls, **kwargs):
         """
-        Launch an implicitly mapped parallel kernel on device.
+        Annotate a parallel gang vector loop.
+        """
+
+        _loop_spec = ""
+        collapse = kwargs.get('collapse', None)
+        if collapse:
+            _loop_spec += f"collapse ({collapse}) "
+
+        for attr in cls._data_attributes:
+            decl = kwargs.get(attr, None)
+            if decl:
+                _loop_spec += f"{attr}({','.join(decl)}) "
+
+        return f"!$acc parallel loop gang vector {_loop_spec}"
+
+    @classmethod
+    def parallel_gang_loop(cls, **kwargs):
+        """
+        Annotate a parallel gang loop.
         """
 
         _data_spec = ""
@@ -141,33 +157,7 @@ class NVHPCOpenACC():
             if decl:
                 _data_spec += f"{attr}({','.join(decl)}) "
 
-        return f"!$acc kernels {_data_spec}"
-
-    @classmethod
-    def end_kernels(cls):
-        """
-        End an implicitly mapped parallel kernel on device.
-        """
-
-        return "!$acc end kernels"
-
-    @classmethod
-    def parallel_loop(cls, **kwargs):
-        """
-        Launch an explicitly mapped parallel kernel on device.
-        """
-
-        _loop_spec = ""
-        for attr in cls._loop_attributes:
-            if kwargs.get(attr, None):
-                _loop_spec += f"{attr} "
-
-        for attr in cls._data_attributes:
-            decl = kwargs.get(attr, None)
-            if decl:
-                _loop_spec += f"{attr}({','.join(decl)}) "
-
-        return f"!$acc parallel loop {_loop_spec}"
+        return f"!$acc parallel loop gang {_data_spec}"
 
     @classmethod
     def end_parallel_loop(cls):
@@ -178,36 +168,26 @@ class NVHPCOpenACC():
         return "!$acc end parallel loop"
 
     @classmethod
-    def annotate_loop(cls, **kwargs):
+    def parallel_vector_loop(cls, **kwargs):
         """
-        Annotate a loop in a device parallel region.
+        Annotate a vector loop in a device parallel region.
         """
 
-        _loop_spec = ""
-        for attr in cls._loop_attributes:
-            if kwargs.get(attr, None):
-                _loop_spec += f"{attr} "
-
+        _data_spec = ""
         for attr in cls._data_attributes:
             decl = kwargs.get(attr, None)
             if decl:
-                _loop_spec += f"{attr}({','.join(decl)}) "
+                _data_spec += f"{attr}({','.join(decl)}) "
 
-        return f"!$acc loop {_loop_spec}"
+        return f"!$acc loop vector {_data_spec}"
 
     @classmethod
-    def declare(cls, **kwargs):
+    def declare(cls, symbols):
         """
         Issue a device declaration for a host-mapped symbol.
         """
 
-        _decl_spec = ""
-        for attr in cls._declare_attributes:
-            decl = kwargs.get(attr, None)
-            if decl:
-                _decl_spec += f"{attr}({','.join(decl)}) "
-
-        return f"!$acc declare {_decl_spec}"
+        return f"!$acc declare create({','.join(symbols)})"
 
     @classmethod
     def serial(cls, **kwargs):

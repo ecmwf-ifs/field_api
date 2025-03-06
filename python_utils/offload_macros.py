@@ -242,26 +242,16 @@ def detach(ptr, indent=0):
 
     return _format_lines(method(ptr), indent=indent)
 
-def kernels(**kwargs):
+def parallel_gang_vector_loop(**kwargs):
     """
-    Launch an implicitly mapped parallel kernel on device.
+    Annotate a parallel gang vector loop.
     """
 
     backend = _get_offload_backend()
-    method = _get_method(backend, 'kernels')
+    method = _get_method(backend, 'parallel_gang_vector_loop')
 
     indent = kwargs.pop('indent', 0)
     return _format_lines(method(**kwargs), indent=indent)
-
-def end_kernels(indent=0):
-    """
-    End an implicitly mapped parallel kernel on device.
-    """
-
-    backend = _get_offload_backend()
-    method = _get_method(backend, 'end_kernels')
-
-    return _format_lines(method(), indent=indent)
 
 def async_wait(stream, return_val='ISTAT', indent=0):
     """
@@ -273,20 +263,20 @@ def async_wait(stream, return_val='ISTAT', indent=0):
 
     return _format_lines(method(stream=stream, return_val=return_val), indent=indent)
 
-def parallel_loop(**kwargs):
+def parallel_gang_loop(**kwargs):
     """
-    Launch an explicitly mapped parallel kernel on device.
+    Annotate a parallel gang loop.
     """
 
     backend = _get_offload_backend()
-    method = _get_method(backend, 'parallel_loop')
+    method = _get_method(backend, 'parallel_gang_loop')
 
     indent = kwargs.pop('indent', 0)
     return _format_lines(method(**kwargs), indent=indent)
 
 def end_parallel_loop(indent=0):
     """
-    End an explicitly mapped parallel kernel on device.
+    End a parallel device loop.
     """
 
     backend = _get_offload_backend()
@@ -294,18 +284,18 @@ def end_parallel_loop(indent=0):
 
     return _format_lines(method(), indent=indent)
 
-def annotate_loop(**kwargs):
+def parallel_vector_loop(**kwargs):
     """
-    Annotate a loop in a device parallel region.
+    Annotate a vector loop in a device parallel region.
     """
 
     backend = _get_offload_backend()
-    method = _get_method(backend, 'annotate_loop')
+    method = _get_method(backend, 'parallel_vector_loop')
 
     indent = kwargs.pop('indent', 0)
     return _format_lines(method(**kwargs), indent=indent)
 
-def declare(**kwargs):
+def declare(create, indent=0):
     """
     Issue a device declaration for a host-mapped symbol.
     """
@@ -313,8 +303,7 @@ def declare(**kwargs):
     backend = _get_offload_backend()
     method = _get_method(backend, 'declare')
 
-    indent = kwargs.pop('indent', 0)
-    return _format_lines(method(**kwargs), indent=indent)
+    return _format_lines(method(create), indent=indent)
 
 def serial(**kwargs):
     """

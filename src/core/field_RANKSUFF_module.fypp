@@ -562,6 +562,7 @@ $:offload_macros.detach(ptr=['SELF%DEVPTR'], indent=6)
     ${ft.type}$, ALLOCATABLE :: ZZ(${ft.shape}$)
     INTEGER*8 :: ILEN
     EXTERNAL :: CRC64
+    INTEGER(KIND=JPIM) :: ${','.join([f'J{i}'.upper() for i in range(1, ft.rank+1)])}$
     
     ICRC = 0   
  
@@ -572,9 +573,27 @@ $:offload_macros.detach(ptr=['SELF%DEVPTR'], indent=6)
     ELSEIF (IAND (SELF%GET_STATUS (), NDEVFRESH) /= 0) THEN
       CALL SELF%GET_DEVICE_DATA_RDONLY (PTR)
       ALLOCATE (ZZ, MOLD=PTR)
-$:offload_macros.kernels(present=['PTR',], copyout=['ZZ',])
-      ZZ = PTR
-$:offload_macros.end_kernels()
+
+#:for i in range(ft.rank, 0, -1)
+#:set indent = ' ' * (5 + (ft.rank-i)*2)
+#:if i == ft.rank
+#:if i == 1
+$:offload_macros.parallel_gang_vector_loop(present=['PTR',], copyout=['ZZ',])
+#:else
+$:offload_macros.parallel_gang_loop(present=['PTR',], copyout=['ZZ',])
+#:endif
+#:endif
+#:if i == 1 and ft.rank > 1
+$:offload_macros.parallel_vector_loop()
+#:endif
+${indent}$ DO ${f'J{i}'.upper()}$ = LBOUND(ZZ,${i}$), UBOUND(ZZ,${i}$)
+#:endfor
+${' ' * (ft.rank * 2 + 5)}$ ZZ(${','.join([f'J{i}'.upper() for i in range(1, ft.rank+1)])}$) = PTR(${','.join([f'J{i}'.upper() for i in range(1, ft.rank+1)])}$)
+#:for i in range(1, ft.rank + 1)
+#:set indent = ' ' * (5 + (ft.rank-i)*2)
+${indent}$ ENDDO
+#:endfor
+
       ILEN = SIZE (ZZ) * KIND (ZZ)
       CALL CRC64 (ZZ, ILEN, ICRC)
     ENDIF

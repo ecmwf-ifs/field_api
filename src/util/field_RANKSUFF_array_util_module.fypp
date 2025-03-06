@@ -70,10 +70,10 @@ $:offload_macros.create(symbols=['SELF',], indent=2)
 $:offload_macros.update_device(symbols=['SELF',], indent=2)
 ENDIF
 
-$:offload_macros.kernels(present=['SELF',])
+$:offload_macros.host_data(use_device=['SELF'])
 NULLIFY (SELF%P)
 NULLIFY (SELF%F_P)
-$:offload_macros.end_kernels()
+$:offload_macros.end_host_data()
 
 IF (LLFIELDAPI .AND. ASSOCIATED (SELF%F_P)) THEN
   CALL COPY (SELF%F_P, LDCREATED)
