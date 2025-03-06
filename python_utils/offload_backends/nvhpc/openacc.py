@@ -62,7 +62,7 @@ class NVHPCOpenACC():
         return f"C_DEVLOC({symbol})"
 
     @classmethod
-    def memcpy_to_device(cls, dev, host, size):
+    def memcpy_to_device(cls, dev, host, size, **kwargs):
         """
         Copy a contiguous section of data from host to device.
         """
@@ -70,7 +70,7 @@ class NVHPCOpenACC():
         return f"CALL ACC_MEMCPY_TO_DEVICE ({dev}, {host}, {size})"
 
     @classmethod
-    def memcpy_to_device_async(cls, dev, host, size, queue):
+    def memcpy_to_device_async(cls, dev, host, size, **kwargs):
         """
         Copy a contiguous section of data from host to device.
         In the absence of the CUDA backend, asynchronous copies
@@ -80,7 +80,7 @@ class NVHPCOpenACC():
         return f"CALL ACC_MEMCPY_TO_DEVICE ({dev}, {host}, {size})"
 
     @classmethod
-    def memcpy_from_device(cls, dev, host, size):
+    def memcpy_from_device(cls, dev, host, size, **kwargs):
         """
         Copy a contiguous section of data from device to host.
         """
@@ -88,7 +88,7 @@ class NVHPCOpenACC():
         return f"CALL ACC_MEMCPY_FROM_DEVICE ({host}, {dev}, {size})"
 
     @classmethod
-    def memcpy_from_device_async(cls, dev, host, size, queue):
+    def memcpy_from_device_async(cls, dev, host, size, **kwargs):
         """
         Copy a contiguous section of data from device to host.
         In the absence of the CUDA backend, asynchronous copies
