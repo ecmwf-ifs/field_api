@@ -17,7 +17,7 @@ class NVHPCOpenACC():
     """
 
     pragma = '!$acc'
-    _data_attributes = ['private', 'copy', 'copyout', 'copyin', 'present', 'deviceptr', 'create']
+    _data_attributes = ['private', 'copy', 'copyout', 'copyin', 'present', 'create']
     _loop_attributes = ['gang', 'vector', 'worker', 'seq']
     _declare_attributes = ['create', 'device_resident', 'deviceptr']
 
@@ -262,9 +262,25 @@ class NVHPCOpenACC():
         return f"!$acc data {_data_spec}"
 
     @classmethod
-    def data_end(cls):
+    def data_deviceptr(cls, symbols):
+        """
+        Pragma to mark the start of a `data deviceptr` region.
+        """
+
+        return f"!$acc data deviceptr({','.join(symbols)})"
+
+    @classmethod
+    def end_data(cls):
         """
         Pragma to mark the end of a `data` region.
+        """
+
+        return "!$acc end data"
+
+    @classmethod
+    def end_data_deviceptr(cls):
+        """
+        Pragma to mark the end of a `data deviceptr` region.
         """
 
 
