@@ -77,8 +77,8 @@ PROGRAM TEST_FORCE_METHODS
 
   PTR_CPU(:,1) = 42
   PTR_CPU(:,2) = 42
-  ! Status should be device and no data movement should be triggered
-  CALL F_PTR%SET_DEVICE_FRESH()
+  ! Status should be device fresh and no data movement should be triggered
+  CALL F_PTR%SET_STATUS(NDEVFRESH)
 
   IF ( F_PTR%GET_STATUS() == UNDEFINED ) THEN
     CALL FIELD_ABORT("ERROR FIELD STATUS SHOULD NOT BE UNDEFINED")
