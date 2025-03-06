@@ -18,8 +18,10 @@ MODULE FIELD_CLONE_MODULE
 
 #:for fta, ftb in zip (ftlTA, ftlRB)
 USE ${fta.name}$_CLONE_MODULE, ONLY : &
-      & ${ftb.name}$_CLONE  => ${fta.name}$_CLONE,  &
-      & ${fta.name}$_CLONE
+      & ${ftb.name}$_CLONE_ON_HOST  => ${fta.name}$_CLONE_ON_HOST,  &
+      & ${fta.name}$_CLON_ON_HOSTE
+      & ${ftb.name}$_CLONE_ON_DEVICE  => ${fta.name}$_CLONE_ON_DEVICE,  &
+      & ${fta.name}$_CLONE_ON_DEVICE
 #:endfor
 
 #:for fto in ftlOT
