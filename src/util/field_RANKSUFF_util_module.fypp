@@ -161,10 +161,19 @@ CONTAINS
 SUBROUTINE LEGACY_${ft.name}$_ASSIGN (PTR_RHS, PTR_LHS)
 
 ${ft.type}$ :: PTR_RHS (${ft.shape}$), PTR_LHS (${ft.shape}$)
+INTEGER(KIND=JPIM) :: ${','.join([f'J{i}'.upper() for i in range(1, ft.rank+1)])}$
 
-$:offload_macros.kernels(present=['PTR_RHS', 'PTR_LHS'])
-PTR_RHS = PTR_LHS
-$:offload_macros.end_kernels()
+$:offload_macros.parallel_gang_vector_loop(present=['PTR_RHS', 'PTR_LHS'], collapse=ft.rank)
+#:for i in range(ft.rank, 0, -1)
+#:set indent = ' ' * (ft.rank-i)
+${indent}$ DO ${f'J{i}'.upper()}$ = LBOUND(PTR_RHS,${i}$), UBOUND(PTR_RHS,${i}$)
+#:endfor
+${' ' * ft.rank * 2}$ PTR_RHS(${','.join([f'J{i}'.upper() for i in range(1, ft.rank+1)])}$) = PTR_LHS(${','.join([f'J{i}'.upper() for i in range(1, ft.rank+1)])}$)
+#:for i in range(1, ft.rank + 1)
+#:set indent = ' ' * (ft.rank-i)
+${indent}$ ENDDO
+#:endfor
+$:offload_macros.end_parallel_loop()
 
 END SUBROUTINE
 
