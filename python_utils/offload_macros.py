@@ -158,7 +158,7 @@ def devptr_cloc(symbol, indent=0):
 
     return _format_lines(method(symbol))
 
-def memcpy_to_device(dev, host, size, indent=0):
+def memcpy_to_device(**kwargs):
     """
     Copy a contiguous section of data from host to device.
     """
@@ -166,9 +166,10 @@ def memcpy_to_device(dev, host, size, indent=0):
     backend = _get_offload_backend()
     method = _get_method(backend, 'memcpy_to_device')
 
-    return _format_lines(method(dev, host, size), indent=indent)
+    indent = kwargs.pop('indent', 0)
+    return _format_lines(method(**kwargs), indent=indent)
 
-def memcpy_to_device_async(dev, host, size, queue, indent=0):
+def memcpy_to_device_async(**kwargs):
     """
     Asynchronously copy a contiguous section of data from host to device.
     """
@@ -176,9 +177,10 @@ def memcpy_to_device_async(dev, host, size, queue, indent=0):
     backend = _get_offload_backend()
     method = _get_method(backend, 'memcpy_to_device_async')
 
-    return _format_lines(method(dev, host, size, queue), indent=indent)
+    indent = kwargs.pop('indent', 0)
+    return _format_lines(method(**kwargs), indent=indent)
 
-def memcpy_from_device(dev, host, size, indent=0):
+def memcpy_from_device(**kwargs):
     """
     Copy a contiguous section of data from device to host.
     """
@@ -186,9 +188,10 @@ def memcpy_from_device(dev, host, size, indent=0):
     backend = _get_offload_backend()
     method = _get_method(backend, 'memcpy_from_device')
 
-    return _format_lines(method(dev, host, size), indent=indent)
+    indent = kwargs.pop('indent', 0)
+    return _format_lines(method(**kwargs), indent=indent)
 
-def memcpy_from_device_async(dev, host, size, queue, indent=0):
+def memcpy_from_device_async(**kwargs):
     """
     Asynchronously copy a contiguous section of data from device to host.
     """
@@ -196,7 +199,8 @@ def memcpy_from_device_async(dev, host, size, queue, indent=0):
     backend = _get_offload_backend()
     method = _get_method(backend, 'memcpy_from_device_async')
 
-    return _format_lines(method(dev, host, size, queue), indent=indent)
+    indent = kwargs.pop('indent', 0)
+    return _format_lines(method(**kwargs), indent=indent)
 
 def create(symbols, indent=0):
     """
