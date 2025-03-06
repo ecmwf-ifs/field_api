@@ -260,8 +260,8 @@ then the user must explicitly set the status of the field before the data
 transfer methods from the default API can be used.
 To this end, there are two methods that can be used to set the internal status of the
 field:
-* ``SET_DEVICE_FRESH`` - should be called if the device data is up to date.
-* ``SET_HOST_FRESH`` - should be called if the host data is up date.
+* ``FORCE_DEVICE_FRESH`` - should be called if the device data is up to date.
+* ``FORCE_HOST_FRESH`` - should be called if the host data is up date.
 
 If the device and host data agrees both methods above should be called (the order of the calls doesn't matter) before returning to using the default API.
 
