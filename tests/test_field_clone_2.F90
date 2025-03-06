@@ -1,0 +1,49 @@
+! (C) Copyright 2022- ECMWF.
+! (C) Copyright 2022- Meteo-France.
+!
+! This software is licensed under the terms of the Apache Licence Version 2.0
+! which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
+! In applying this licence, ECMWF does not waive the privileges and immunities
+! granted to it by virtue of its status as an intergovernmental organisation
+! nor does it submit to any jurisdiction.
+
+PROGRAM TEST_FIELD_CLONE_2
+  !TEST IF CLONING WORKS CORRECTLY.
+  !IF THE CLONE IS MODIFIED IT SHOULD NOT MODIFY THE SOURCE OF THE COPY
+  !AND RECIPROCALLY
+
+  USE FIELD_MODULE
+  USE FIELD_FACTORY_MODULE
+  USE FIELD_CLONE_MODULE, ONLY: FIELD_CLONE_ON_HOST
+  USE PARKIND1
+  USE FIELD_ABORT_MODULE
+  IMPLICIT NONE
+  REAL(KIND=JPRB) :: D(10)
+  CLASS(FIELD_1RB), POINTER :: W => NULL()
+  CLASS(FIELD_1RB), POINTER :: MYCLONE => NULL()
+  REAL(KIND=JPRB), POINTER :: PTR(:), PTR2(:)
+
+  D = 7
+  CALL FIELD_NEW(W, DATA=D)
+  CALL W%GET_HOST_DATA_RDWR(PTR)
+
+  CALL FIELD_CLONE_ON_HOST(MYCLONE, W)
+
+  !UPDATE VALUES ON THE ORIGINAL
+  PTR = 42
+  !CHECK THAT THEY ARE STILL THE SAME IN THE CLONE
+  IF (.NOT. ALL(MYCLONE%PTR == 7)) THEN
+    CALL FIELD_ABORT ("ERROR")
+  END IF 
+
+  CALL MYCLONE%GET_HOST_DATA_RDWR(PTR2)
+  !UPDATE THE VALUES ON THE CLONE
+  PTR2 = 11
+  !CHECK THAT THEY ARE STILL THE SAME ON THE ORIGINAL
+  IF (.NOT. ALL(W%PTR == 42)) THEN
+    CALL FIELD_ABORT ("ERROR")
+  END IF 
+
+  CALL FIELD_DELETE(W)
+  CALL FIELD_DELETE(MYCLONE)
+END PROGRAM TEST_FIELD_CLONE_2
