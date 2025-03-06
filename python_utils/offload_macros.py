@@ -374,13 +374,33 @@ def data(**kwargs):
     indent = kwargs.pop('indent', 0)
     return _format_lines(method(**kwargs), indent=indent, pragma=backend.pragma)
 
+def data_deviceptr(symbols, indent=0):
+    """
+    Start a `data deviceptr` (or equivalent) region.
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'data_deviceptr')
+
+    return _format_lines(method(symbols), indent=indent, pragma=backend.pragma)
+
+def end_data_deviceptr(indent=0):
+    """
+    End a `data deviceptr` (or equivalent) region.
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'end_data_deviceptr')
+
+    return _format_lines(method(), indent=indent)
+
 def end_data(indent=0):
     """
     End a `data` (or equivalent) region.
     """
 
     backend = _get_offload_backend()
-    method = _get_method(backend, 'data_end')
+    method = _get_method(backend, 'end_data')
 
     return _format_lines(method(), indent=indent)
 
