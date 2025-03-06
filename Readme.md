@@ -265,6 +265,23 @@ field's data must be present on the host. It will not work if the data are on
 the device or if the field has not been allocated yet (when using the DELAY
 option).
 
+## Cloning fields with FIELD\_CLONE\_ON_
+
+The subroutines FIELD_CLONE_ON_HOST amd FIELD_CLONE_ON_DEVICE let a field be
+cloned into a newly created FIELD_OWNER. The subroutines takes two arguments YL
+and YL. YL is the field that will receive the copy and YR is the field to be
+copied. YR is optional and can also be null, if any of those cases YL is set to
+null and no cloning is done.
+
+```
+...
+  USE FIELD_CLONE_MODULE, ONLY: FIELD_CLONE_ON_HOST
+  CLASS(FIELD_1RB), POINTER :: MYCLONE => NULL()
+...
+  CALL FIELD_CLONE_ON_HOST(MYCLONE, FIELD_TO_BE_CLONED)
+...
+```
+
 # Public API
 
 For field api type:
@@ -292,6 +309,8 @@ Utils:
 ```
 SUBROUTINE WAIT_FOR_ASYNC_QUEUE(QUEUE)
 TYPE FIELD_*D_PTR
+SUBROUTINE FIELD_CLONE_ON_HOST(YL, YR)
+SUBROUTINE FIELD_CLONE_ON_DEVICE(YL, YR)
 ```
 
 Stats:
