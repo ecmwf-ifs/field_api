@@ -222,7 +222,7 @@ and four ``SYNC`` methods:
 Where``DEVICE/HOST`` indicates the transfer direction and ``RDONLY/WRONLY`` indicates the mode.
 The difference between the ``GET`` and ``SYNC`` method is their interface. The
 ``GET`` methods are called with a pointer argument that will be associated with the transferred data at its destination. The ``SYNC`` method is called without any arguments and
-will only perform the data transfers and update the fields inner pointers.
+will only perform the data transfers and update the field's inner pointers.
 Depending on the status of the field the data transfer methods in the default API may not
 transfer data if it is already present and fresh on the intended destination location.
 All data transfers with the methods in the default API are synchronous. So every call to the
@@ -241,7 +241,7 @@ The advanced API consists of the four subroutines:
 * ``SUBROUTINE GET_DEVICE_DATA_FORCE(SELF, PTR, QUEUE)``
 * ``SUBROUTINE SYNC_HOST_DATA_FORCE(SELF, QUEUE)``
 
-A call to anyone of these routine will always transfer data between the host and
+A call to any of these routines will always transfer data between the host and
 the device and set the internal status of the field to ``UNDEFINED``.
 Furthermore, the routines above add an optional dummy argument ``QUEUE`` that
 can be used to invoke asynchronous data transfers (see more below).
@@ -253,8 +253,6 @@ To this end, there are two methods that can be used to set the internal status o
 field:
 * ``FORCE_DEVICE_FRESH`` - should be called if the device data is up to date.
 * ``FORCE_HOST_FRESH`` - should be called if the host data is up date.
-
-If the device and host data agrees both methods above should be called (the order of the calls doesn't matter) before returning to using the default API.
 
 
 #### Asynchronous data transfers
@@ -338,8 +336,8 @@ SUBROUTINE SYNC_DEVICE_FORCE (SELF, QUEUE)
 SUBROUTINE COPY_OBJECT (SELF, LDCREATED)
 SUBROUTINE WIPE_OBJECT (SELF, LDDELETED)
 SUBROUTINE GET_DIMS (SELF, LBOUNDS, UBOUNDS)
-SUBROUTINE SET_DEVICE_FRESH(SELF)
-SUBROUTINE SET_HOST_FRESH(SELF)
+SUBROUTINE FORCE_DEVICE_FRESH(SELF)
+SUBROUTINE FORCE_HOST_FRESH(SELF)
 ```
 
 Utils:
