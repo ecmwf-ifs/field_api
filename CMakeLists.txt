@@ -90,9 +90,9 @@ endif()
 add_subdirectory(src)
 
 ## determine lib type
-cmake_dependent_option(BUILD_SHARED_LIBS "Dynamically link field_api" ON "NOT HAVE_ACC" OFF)
-if( HAVE_ACC )
-  ecbuild_warn("OpenACC builds force static linking.")
+cmake_dependent_option(BUILD_SHARED_LIBS "Dynamically link field_api" ON "NOT (HAVE_ACC OR HAVE_OMP_OFFLOAD)" OFF)
+if( HAVE_ACC OR HAVE_OMP_OFFLOAD )
+  ecbuild_warn("Enabling GPU offload forces static linking.")
 endif()
 
 ## specify precision dependent sources that must be compiled twice
@@ -134,6 +134,10 @@ foreach(prec ${precisions})
 
   if( HAVE_ACC AND CMAKE_Fortran_COMPILER_ID MATCHES "PGI|NVHPC")
      target_link_options( ${LIBNAME}_${prec} INTERFACE SHELL:${OpenACC_Fortran_FLAGS} )
+  endif()
+
+  if( HAVE_OMP_OFFLOAD )
+     target_link_options( ${LIBNAME}_${prec} INTERFACE SHELL:${OpenMP_Fortran_FLAGS} )
   endif()
 
   # export target usage interface
