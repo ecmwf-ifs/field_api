@@ -585,9 +585,7 @@ $:offload_macros.detach(ptr=['SELF%DEVPTR'], indent=6)
     INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN)   :: QUEUE
     ${ft.type}$, POINTER                        :: ZPTR(${ft.shape}$)
 
-    CALL SELF%SET_STATUS(UNDEFINED)
-    CALL SELF%GET_HOST_DATA (UNDEFINED, ZPTR, QUEUE)
-    CALL SELF%SET_STATUS(UNDEFINED)
+    CALL SELF%GET_HOST_DATA_FORCE (ZPTR, QUEUE)
 
   END SUBROUTINE ${ftn}$_SYNC_HOST_FORCE
 
@@ -783,9 +781,7 @@ $:offload_macros.parallel_gang_vector_loop(present=['SELF%DEVPTR'], copyin=['SEL
     INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
     ${ft.type}$, POINTER                        :: ZPTR(${ft.shape}$)
 
-    CALL SELF%SET_STATUS(UNDEFINED)
-    CALL SELF%GET_DEVICE_DATA (UNDEFINED, ZPTR, QUEUE)
-    CALL SELF%SET_STATUS(UNDEFINED)
+    CALL SELF%GET_DEVICE_DATA_FORCE (ZPTR, QUEUE)
 
   END SUBROUTINE ${ftn}$_SYNC_DEVICE_FORCE
 
