@@ -135,9 +135,9 @@ $:offload_macros.host_data(use_device=[f'DEV ({ard})'], indent=ft.rank - e)
     ${indent}$    DEVPTR = ${offload_macros.devptr_cloc(f'DEV ({ard})')}$
 $:offload_macros.end_host_data(indent=ft.rank - e)
     ${indent}$  ELSE
-$:offload_macros.data(deviceptr=['DEVPTR', 'DEV'], indent=ft.rank - e)
+$:offload_macros.data_deviceptr(symbols=['DEVPTR', 'DEV'], indent=ft.rank - e)
     ${indent}$    DEVPTR = ${offload_macros.devptr_cloc(f'DEV ({ard})')}$
-$:offload_macros.end_data(indent=ft.rank - e)
+$:offload_macros.end_data_deviceptr(indent=ft.rank - e)
     ${indent}$  ENDIF
 #endif
     #:if d == 0
@@ -216,9 +216,9 @@ $:offload_macros.host_data(use_device=['DEV',], indent=ft.rank - d2 - 1)
     ${indent}$     DEVPTR = ${offload_macros.devptr_cloc(symbol=f"DEV({ar('DEV')})")}$
 $:offload_macros.end_host_data(indent=ft.rank - d2 - 1)
     ${indent}$  ELSE
-$:offload_macros.data(deviceptr=['DEVPTR', 'DEV'], indent=ft.rank - d2 - 1)
+$:offload_macros.data_deviceptr(symbols=['DEVPTR', 'DEV'], indent=ft.rank - d2 - 1)
     ${indent}$     DEVPTR = ${offload_macros.devptr_cloc(symbol=f"DEV({ar('DEV')})")}$
-$:offload_macros.end_data(indent=ft.rank - d2 - 1)
+$:offload_macros.end_data_deviceptr(indent=ft.rank - d2 - 1)
     ${indent}$  ENDIF
     ${indent}$  IF (KDIR == NH2D) THEN
     ${indent}$    IF(PRESENT(QUEUE)) THEN
