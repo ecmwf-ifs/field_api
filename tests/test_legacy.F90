@@ -48,12 +48,24 @@ U => GET_DEVICE_DATA_RDWR (FU)
 V => GET_DEVICE_DATA_RDONLY (FV)
 T => GET_DEVICE_DATA_RDONLY (FT)
 
+#ifdef OMPGPU
+!$omp target map(to:U)
+#else
 !$acc kernels present (U)
-U = 1._JPRB
+#endif
+U(:,:,:) = 1._JPRB
+#ifdef OMPGPU
+!$omp end target
+#else
 !$acc end kernels
+#endif
 
+#ifdef OMPGPU
+!$omp target enter data map(to:GMV)
+#else
 !$acc enter data create (GMV)
 !$acc update device (GMV)
+#endif
 
 IADDRL = LOC (GMV (1,1,1,1))
 IADDRU = LOC (GMV(NPROMA,NFLEVG,NDIM,NGPBLKS))
@@ -62,7 +74,11 @@ CALL LEGACY_FIELD_3RB (FU, KADDRL=IADDRL, KADDRU=IADDRU, KDIR=NF2L)
 
 IERR = 0
 
+#ifdef OMPGPU
+!$omp target map(to:GMV) map(tofrom:IERR)
+#else
 !$acc serial present (GMV) copy (IERR)
+#endif
 
 DO JBLK = 1, NGPBLKS
   DO JLEV = 1, NFLEVG  
@@ -75,7 +91,11 @@ DO JBLK = 1, NGPBLKS
   ENDDO
 ENDDO
 
+#ifdef OMPGPU
+!$omp end target
+#else
 !$acc end serial
+#endif
 
 IF (IERR /= 0) CALL FIELD_ABORT ('VALUE MISMATCH: KDIR=NF2L')
 
@@ -87,7 +107,11 @@ T => GET_DEVICE_DATA_RDONLY (FT)
 
 IERR = 0
 
+#ifdef OMPGPU
+!$omp target map(to:U, V, T) map(tofrom:IERR)
+#else
 !$acc serial present (U, V, T) copy (IERR)
+#endif
 
 DO JBLK = 1, NGPBLKS
   DO JLEV = 1, NFLEVG  
@@ -109,11 +133,19 @@ DO JBLK = 1, NGPBLKS
   ENDDO
 ENDDO
 
+#ifdef OMPGPU
+!$omp end target
+#else
 !$acc end serial
+#endif
 
 IF (IERR /= 0) CALL FIELD_ABORT ('VALUE MISMATCH: KDIR=NL2F')
 
+#ifdef OMPGPU
+!$omp target exit data map(delete:GMV)
+#else
 !$acc exit data delete (GMV)
+#endif
 
 CALL FIELD_DELETE (FT)
 CALL FIELD_DELETE (FV)

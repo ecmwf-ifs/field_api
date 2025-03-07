@@ -27,7 +27,11 @@ PROGRAM TEST_GET_DEVICE_DATA_WRONLY
 
         CALL O%GET_DEVICE_DATA_WRONLY(PTR_GPU)
         OKAY=.TRUE.
+#ifdef OMPGPU
+        !$OMP TARGET MAP(TO:PTR_GPU) MAP(TOFROM:OKAY)
+#else
         !$ACC SERIAL PRESENT (PTR_GPU) COPY(OKAY)
+#endif
         DO I=10,21
         DO J=1,11
         IF(PTR_GPU(I,J) == 42) THEN
@@ -35,7 +39,11 @@ PROGRAM TEST_GET_DEVICE_DATA_WRONLY
         END IF
         END DO
         END DO
+#ifdef OMPGPU
+        !$OMP END TARGET
+#else
         !$ACC END SERIAL
+#endif
 
         IF (.NOT. OKAY) THEN
                 CALL FIELD_ABORT ("ERROR")

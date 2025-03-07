@@ -69,7 +69,11 @@ PROGRAM TEST_BC
 
         D4 => GET_DEVICE_DATA_RDWR (F4)
 
+#ifdef OMPGPU
+!$omp target map(to:D4)
+#else
 !$acc serial present (D4)
+#endif
         DO I4 = LBOUND (D4, 4), UBOUND (D4, 4)
           DO I3 = LBOUND (D4, 3), UBOUND (D4, 3)
             DO I2 = LBOUND (D4, 2), UBOUND (D4, 2)
@@ -85,7 +89,11 @@ PROGRAM TEST_BC
             ENDDO
           ENDDO
         ENDDO
+#ifdef OMPGPU
+!$omp end target
+#else
 !$acc end serial
+#endif
 
         H4 => GET_HOST_DATA_RDWR (F4)
 

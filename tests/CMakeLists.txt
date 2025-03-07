@@ -26,7 +26,7 @@ ecbuild_add_test(
 	ENVIRONMENT "DEV_ALLOC_SIZE=${dev_alloc_size}"
 )
 target_link_options( main.x PRIVATE $<${HAVE_CUDA}:-gpu=pinned> )
-target_compile_definitions( main.x PRIVATE $<${HAVE_CUDA}:_CUDA> )
+target_compile_definitions( main.x PRIVATE $<${HAVE_OMP_OFFLOAD}:OMPGPU> )
 
 ## Unit tests
 list(APPEND TEST_FILES
@@ -141,7 +141,9 @@ foreach(TEST_FILE ${TEST_FILES})
     )
 
     target_link_options( ${TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:-gpu=pinned> )
-    target_compile_definitions( ${TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:_CUDA> )
+    target_compile_definitions( ${TEST_NAME}.x PRIVATE
+                                $<${HAVE_OMP_OFFLOAD}:OMPGPU>
+                                $<${HAVE_CUDA}:_CUDA> )
 
     if( DEFAULT_PRECISION MATCHES sp )
        target_compile_definitions( ${TEST_NAME}.x PRIVATE PARKIND1_SINGLE )
@@ -191,10 +193,14 @@ ecbuild_add_test(
 
 ## Test presence of GPUs
 add_executable(check_gpu_num.x check_gpu_num.F90)
-target_link_libraries(check_gpu_num.x PRIVATE $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>)
+target_link_libraries(check_gpu_num.x PRIVATE $<${HAVE_ACC}:OpenACC::OpenACC_Fortran> OpenMP::OpenMP_Fortran)
 set_target_properties(check_gpu_num.x PROPERTIES LINKER_LANGUAGE Fortran)
+target_compile_definitions( check_gpu_num.x PRIVATE $<${HAVE_OMP_OFFLOAD}:OMPGPU> )
+if(HAVE_OMP_OFFLOAD)
+  target_link_options( check_gpu_num.x PRIVATE SHELL:${OpenMP_Fortran_FLAGS} )
+endif()
 
-if(HAVE_ACC)
+if(HAVE_ACC OR HAVE_OMP_OFFLOAD)
    add_test(NAME confirm_gpu_exists COMMAND check_gpu_num.x)
 else()
    add_test(NAME confirm_gpu_does_not_exist COMMAND check_gpu_num.x)

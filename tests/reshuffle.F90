@@ -80,9 +80,17 @@ DO JPASS = 1, 2
       ENDDO
     ENDDO
   ELSE
+#ifdef OMPGPU
+!$omp target teams distribute map(to:Z2)
+#else
 !$acc parallel loop gang present (Z2)
+#endif
     DO JBLK = 1, SIZE (Z2, 3)
+#ifdef OMPGPU
+!$omp parallel do
+#else
 !$acc loop vector
+#endif
       DO JLON = 1, SIZE (Z2, 1)
         DO JLEV = 1, NFLEVG
           Z2 (JLON, JLEV, JBLK) = (JPASS + 1) * Z2 (JLON, JLEV, JBLK)
