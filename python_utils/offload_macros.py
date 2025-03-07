@@ -8,7 +8,7 @@
 # nor does it submit to any jurisdiction.
 
 import fypp
-from offload_backends import NVHPCOpenACC, NVHPCOpenACCCUDA, HostOnly
+from offload_backends import NVHPCOpenACC, NVHPCOpenACCCUDA, HostOnly, NVHPCOpenMP
 
 """
 A common entry point for retrieving macros from the various GPU offload backends.
@@ -17,7 +17,8 @@ A common entry point for retrieving macros from the various GPU offload backends
 _offload_map = {
     'NVHPCOpenACC': NVHPCOpenACC,
     'HostOnly': HostOnly,
-    'NVHPCOpenACCCUDA': NVHPCOpenACCCUDA
+    'NVHPCOpenACCCUDA': NVHPCOpenACCCUDA,
+    'NVHPCOpenMP': NVHPCOpenMP
 }
 
 def _wrap_lines(input_str, ref_len, pragma='', indent=0):
@@ -538,3 +539,23 @@ def create_stream(stream, queue, indent=0):
     method = _get_method(backend, 'create_stream')
 
     return _format_lines(method(stream=stream, queue=queue), indent=indent)
+
+def get_device_id(dev_id, indent=0):
+    """
+    Get device number corresponding to GPU.
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'get_device_id')
+
+    return _format_lines(method(dev_id=dev_id), indent=indent)
+
+def get_host_id(hst_id, indent=0):
+    """
+    Get device number corresponding to CPU.
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'get_host_id')
+
+    return _format_lines(method(hst_id=hst_id), indent=indent)
