@@ -10,3 +10,4 @@
 from offload_backends.nvhpc.openacc import *
 from offload_backends.nvhpc.openacc_cuda import *
 from offload_backends.nvhpc.openmp import *
+from offload_backends.nvhpc.openmp_cuda import *

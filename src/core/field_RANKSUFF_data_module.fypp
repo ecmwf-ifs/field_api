@@ -16,6 +16,7 @@ USE FIELD_CONSTANTS_MODULE
 USE FIELD_ABORT_MODULE
 USE, INTRINSIC :: ISO_C_BINDING
 ${fieldType.useParkind1 ()}$
+$:offload_macros.runtime_api_import()
 
 IMPLICIT NONE
 
@@ -42,6 +43,13 @@ ABSTRACT INTERFACE
   END SUBROUTINE
 END INTERFACE
 #:endfor
+
+#:if defined('WITH_HIC')
+INTERFACE
+$:offload_macros.memcpy_async_intf()
+$:offload_macros.memcpy_2D_intf()
+END INTERFACE
+#:endif
 
 CONTAINS
 
@@ -113,7 +121,7 @@ CONTAINS
 
 #:for d in range (0, ft.rank+1)
   SUBROUTINE ${ftn}$_COPY_DIM${d}$_CONTIGUOUS (HST, DEV, MAP_DEVPTR, KDIR, QUEUE)
-$:offload_macros.runtime_api_import(indent=2)
+  USE FIELD_ASYNC_MODULE, ONLY : STREAMS
   USE, INTRINSIC :: ISO_FORTRAN_ENV, ONLY : INT64
     ${ft.type}$, POINTER :: HST (${ft.shape}$), DEV (${ft.shape}$)
     LOGICAL,                       INTENT (IN) :: MAP_DEVPTR
@@ -157,7 +165,8 @@ $:offload_macros.end_data_deviceptr(indent=ft.rank - e)
 #ifdef WITH_GPU_OFFLOAD
     ${indent}$    IF(PRESENT(QUEUE))THEN
 $:offload_macros.memcpy_to_device_async(dev='DEVPTR', host=f'HST ({ar})', size='ISIZE', queue='QUEUE', offset='OFFSET', &
-&                                       dev_id='DEV_ID', hst_id='HST_ID', return_val='ERR', indent=ft.rank - e + 10)
+&                                       dev_id='DEV_ID', hst_id='HST_ID', return_val='ERR', stream='STREAMS(QUEUE)%STREAM', &
+&                                       indent=ft.rank - e + 10)
     ${indent}$    ELSE
 $:offload_macros.memcpy_to_device(dev='DEVPTR', host=f'HST ({ar})', size='ISIZE', offset='OFFSET', &
 &                                 dev_id='DEV_ID', hst_id='HST_ID', return_val='ERR', indent=ft.rank - e + 10)
@@ -169,7 +178,8 @@ $:offload_macros.memcpy_to_device(dev='DEVPTR', host=f'HST ({ar})', size='ISIZE'
 #ifdef WITH_GPU_OFFLOAD
     ${indent}$    IF(PRESENT(QUEUE))THEN
 $:offload_macros.memcpy_from_device_async(dev='DEVPTR', host=f'HST ({ar})', size='ISIZE', queue='QUEUE', offset='OFFSET', &
-&                                         dev_id='DEV_ID', hst_id='HST_ID', return_val='ERR', indent=ft.rank - e + 10)
+&                                         dev_id='DEV_ID', hst_id='HST_ID', return_val='ERR', stream='STREAMS(QUEUE)%STREAM', &
+&                                         indent=ft.rank - e + 10)
     ${indent}$    ELSE
 $:offload_macros.memcpy_from_device(dev='DEVPTR', host=f'HST ({ar})', size='ISIZE', offset='OFFSET', &
 &                                   dev_id='DEV_ID', hst_id='HST_ID', return_val='ERR', indent=ft.rank - e + 10)
@@ -190,14 +200,13 @@ $:offload_macros.memcpy_from_device(dev='DEVPTR', host=f'HST ({ar})', size='ISIZ
 #:for d2 in range (d1+1, ft.rank+1)
     SUBROUTINE ${ftn}$_COPY_2D_DIM${d1}$_${d2}$_CONTIGUOUS (HST, DEV, MAP_DEVPTR, KDIR, QUEUE)
     USE FIELD_ASYNC_MODULE, ONLY : STREAMS
-$:offload_macros.runtime_api_import(indent=4)
 
     ${ft.type}$, POINTER :: HST (${ft.shape}$), DEV (${ft.shape}$)
     INTEGER (KIND=JPIM),           INTENT (IN) :: KDIR
     LOGICAL,                       INTENT (IN) :: MAP_DEVPTR
     INTEGER (KIND=JPIM), OPTIONAL, INTENT (IN) :: QUEUE
-    INTEGER (KIND=JPIM) :: IHST_PITCH, IDEV_PITCH
-    INTEGER (KIND=JPIM) :: IWIDTH, IHEIGHT, ISHP(${ft.rank+1}$)
+    INTEGER (C_SIZE_T) :: IHST_PITCH, IDEV_PITCH, IWIDTH, IHEIGHT
+    INTEGER (KIND=JPIM) :: ISHP(${ft.rank+1}$)
   #:if d2 < ft.rank
     INTEGER :: ${', '.join (list (map (lambda i: 'J' + str (i+1), range (d2, ft.rank))))}$
   #:endif
@@ -235,10 +244,11 @@ $:offload_macros.end_data_deviceptr(indent=ft.rank - d2 - 1)
     ${indent}$  IF (KDIR == NH2D) THEN
     ${indent}$    IF(PRESENT(QUEUE)) THEN
 $:offload_macros.memcpy_2D_async(dst='DEVPTR', dst_pitch='IDEV_PITCH', src='HSTPTR', src_pitch='IHST_PITCH', &
-&                                width='IWIDTH', height='IHEIGHT', stream='STREAMS(QUEUE)%STREAM', return_val='IRET', indent=ft.rank - d2 + 9)
+&                                width='IWIDTH', height='IHEIGHT', stream='STREAMS(QUEUE)%STREAM', kdir='H2D', &
+&                                return_val='IRET', indent=ft.rank - d2 + 9)
     ${indent}$    ELSE
 $:offload_macros.memcpy_2D(dst='DEVPTR', dst_pitch='IDEV_PITCH', src='HSTPTR', src_pitch='IHST_PITCH', &
-&                          width='IWIDTH', height='IHEIGHT', return_val='IRET', indent=ft.rank - d2 + 9)
+&                          width='IWIDTH', height='IHEIGHT', kdir='H2D', return_val='IRET', indent=ft.rank - d2 + 9)
     ${indent}$    ENDIF
     ${indent}$    IF (IRET /= 0) THEN
     ${indent}$       CALL FIELD_ABORT ("${ftn}$_COPY_2D_DIM${d1}$_${d2}$_CONTIGUOUS: HOST-TO-DEVICE TRANSFER FAILED")
@@ -246,10 +256,11 @@ $:offload_macros.memcpy_2D(dst='DEVPTR', dst_pitch='IDEV_PITCH', src='HSTPTR', s
     ${indent}$  ELSEIF (KDIR == ND2H) THEN
     ${indent}$    IF(PRESENT(QUEUE)) THEN
 $:offload_macros.memcpy_2D_async(dst='HSTPTR', dst_pitch='IHST_PITCH', src='DEVPTR', src_pitch='IDEV_PITCH', &
-&                                width='IWIDTH', height='IHEIGHT', stream='STREAMS(QUEUE)%STREAM', return_val='IRET', indent=ft.rank - d2 + 9)
+&                                width='IWIDTH', height='IHEIGHT', stream='STREAMS(QUEUE)%STREAM', kdir='D2H', &
+&                                return_val='IRET', indent=ft.rank - d2 + 9)
     ${indent}$    ELSE
 $:offload_macros.memcpy_2D(dst='HSTPTR', dst_pitch='IHST_PITCH', src='DEVPTR', src_pitch='IDEV_PITCH', &
-&                          width='IWIDTH', height='IHEIGHT', return_val='IRET', indent=ft.rank - d2 + 9)
+&                          width='IWIDTH', height='IHEIGHT', kdir='D2H', return_val='IRET', indent=ft.rank - d2 + 9)
     ${indent}$    ENDIF
     ${indent}$    IF (IRET /= 0) THEN
     ${indent}$       CALL FIELD_ABORT ("${ftn}$_COPY_2D_DIM${d1}$_${d2}$_CONTIGUOUS: DEVICE-TO-HOST TRANSFER FAILED")
