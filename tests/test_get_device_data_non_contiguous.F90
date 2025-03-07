@@ -28,7 +28,11 @@ PROGRAM TEST_GET_DEVICE_DATA_NON_CONTIGUOUS
 
         CALL W%GET_DEVICE_DATA_RDWR(PTR_GPU)
         OKAY=.TRUE.
+#ifdef OMPGPU
+        !$OMP TARGET MAP(TO:PTR_GPU) MAP(TOFROM:OKAY)
+#else
         !$ACC SERIAL PRESENT (PTR_GPU) COPY(OKAY)
+#endif
         DO I=-4,3
         DO J=-4,3
         IF(PTR_GPU(I,J) /= 42) THEN
@@ -36,7 +40,11 @@ PROGRAM TEST_GET_DEVICE_DATA_NON_CONTIGUOUS
         END IF
         END DO
         END DO
+#ifdef OMPGPU
+        !$OMP END TARGET
+#else
         !$ACC END SERIAL
+#endif
 
         IF (.NOT. OKAY) THEN
                 CALL FIELD_ABORT ("PTR_GPU differ from 42")

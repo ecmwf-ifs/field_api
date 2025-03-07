@@ -29,10 +29,14 @@ PROGRAM INIT_WRAPPER_GPU
         CALL FIELD_NEW(W, DATA=D)
 #endif
         CALL W%GET_DEVICE_DATA_RDONLY(D_GPU)
+#ifdef OMPGPU
+        !$OMP TARGET MAP(TO:D_GPU) MAP(TOFROM:RES)
+#else
 #ifdef _CUDA
         !$ACC SERIAL DEVICEPTR (D_GPU) COPY(RES)
 #else
         !$ACC SERIAL PRESENT (D_GPU) COPY(RES)
+#endif
 #endif
         RES=.TRUE.
         DO I=1,10
@@ -42,7 +46,11 @@ PROGRAM INIT_WRAPPER_GPU
         END IF
         END DO
         END DO
+#ifdef OMPGPU
+        !$OMP END TARGET
+#else
         !$ACC END SERIAL
+#endif
 
         IF (.NOT. RES) THEN
                 CALL FIELD_ABORT ("ERROR")

@@ -46,11 +46,19 @@ PROGRAM TEST_CRC64
 
         D => GET_DEVICE_DATA_RDWR (W)
 
+#ifdef OMPGPU
+!$omp target map(to:D)
+#else
 !$acc kernels present (D)
+#endif
 
-        D = 2.78
+        D(:,:) = 2.78
 
+#ifdef OMPGPU
+!$omp end target
+#else
 !$acc end kernels
+#endif
 
         ICRC = CRC64 (W)
 !       WRITE (*, '(Z16.16)') ICRC

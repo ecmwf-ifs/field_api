@@ -32,7 +32,11 @@ PROGRAM CPU_TO_GPU
         CALL O%GET_DEVICE_DATA_RDONLY(PTR_DEV)
 
         OKAY=.TRUE.
+#ifdef OMPGPU
+        !$OMP TARGET MAP(TO:PTR_DEV) MAP(TOFROM:OKAY)
+#else
         !$ACC PARALLEL PRESENT(PTR_DEV) COPY(OKAY)
+#endif
         DO I=1,11
         DO J=1,11
           IF(PTR_DEV(I,J)/=7)THEN
@@ -40,7 +44,11 @@ PROGRAM CPU_TO_GPU
           ENDIF
         ENDDO
         ENDDO
+#ifdef OMPGPU
+        !$OMP END TARGET
+#else
         !$ACC END PARALLEL
+#endif
         IF(OKAY .EQV. .FALSE.)THEN
                 CALL FIELD_ABORT ("ERROR")
         ENDIF

@@ -55,22 +55,38 @@ WRITE (*, '(B32.32)') YLF3%GET_STATUS ()
 CALL YLF3%GET_DEVICE_DATA_RDONLY (Z3)
 WRITE (*, '(B32.32)') YLF3%GET_STATUS ()
 
+#ifdef OMPGPU
+!$omp target map(to:Z3)
+#else
 !$acc serial present (Z3)
+#endif
 DO JLON = 1, NPROMA
   PRINT *, JLON, Z3 (JLON,1,1)
 ENDDO
+#ifdef OMPGPU
+!$omp end target
+#else
 !$acc end serial
+#endif
 
 PRINT *, '----------- DEVICE ----------- W '
 WRITE (*, '(B32.32)') YLF3%GET_STATUS ()
 CALL YLF3%GET_DEVICE_DATA_RDWR (Z3)
 WRITE (*, '(B32.32)') YLF3%GET_STATUS ()
 
+#ifdef OMPGPU
+!$omp target map(to:Z3)
+#else
 !$acc serial present (Z3)
+#endif
 DO JLON = 1, NPROMA
    Z3 (JLON,1,1) = REAL (JLON * JLON, 8)
 ENDDO
+#ifdef OMPGPU
+!$omp end target
+#else
 !$acc end serial
+#endif
 
 PRINT *, '-----------  HOST  ----------- R '
 WRITE (*, '(B32.32)') YLF3%GET_STATUS ()
@@ -95,11 +111,19 @@ ENDDO
 
 CALL YLF4%GET_DEVICE_DATA_RDWR (Z4)
 
+#ifdef OMPGPU
+!$omp target map(to:Z4)
+#else
 !$acc serial present (Z4)
+#endif
 PRINT *, Z4 (1, 0, 1, 1)
 PRINT *, Z4 (2, 1, 1, 1)
 Z4 (:,2,:,:) = 0.
+#ifdef OMPGPU
+!$omp end target
+#else
 !$acc end serial
+#endif
 
 CALL YLF4%GET_HOST_DATA_RDONLY (Z4)
 
