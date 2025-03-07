@@ -21,12 +21,20 @@ PROGRAM SYNC_HOST
         D=3
         CALL FIELD_NEW(W, DATA=D)
         CALL W%SYNC_DEVICE_RDWR()
+#ifdef OMPGPU
+        !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO MAP(TO:W,W%DEVPTR)
+#else
         !$ACC KERNELS COPYIN(W) PRESENT(W%DEVPTR)
+#endif
         DO I=1,10
         DO J=1,10
         W%DEVPTR(I,J) = 7
         ENDDO
         ENDDO
+#ifdef OMPGPU
+        !$OMP END TARGET TEAMS DISTRIBUTE PARALLEL DO
+#else
         !$ACC END KERNELS
+#endif
         CALL FIELD_DELETE(W)
 END PROGRAM

@@ -13,12 +13,18 @@ PROGRAM CHECK_GPU_NUM
 #ifdef _OPENACC
         USE OPENACC
 #endif
+#ifdef OMPGPU
+        USE OMP_LIB
+#endif
         IMPLICIT NONE
         INTEGER :: DEV_TYPE, NUM_GPUS = 0
 
 #ifdef _OPENACC
         DEV_TYPE = ACC_GET_DEVICE_TYPE()
         NUM_GPUS = ACC_GET_NUM_DEVICES(DEV_TYPE)
+#endif
+#ifdef OMPGPU
+        NUM_GPUS = OMP_GET_NUM_DEVICES()
 #endif
 
         IF(NUM_GPUS == 0)THEN

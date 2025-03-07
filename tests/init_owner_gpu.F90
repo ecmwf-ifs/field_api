@@ -31,10 +31,14 @@ PROGRAM INIT_OWNER_GPU
 
         CALL O%GET_DEVICE_DATA_RDONLY(PTR_GPU)
         OKAY=.TRUE.
+#ifdef OMPGPU
+        !$OMP TARGET MAP(TO:PTR_GPU) MAP(TOFROM:OKAY)
+#else
 #ifdef _CUDA
         !$ACC SERIAL DEVICEPTR (PTR_GPU) COPY(OKAY)
 #else
         !$ACC SERIAL PRESENT (PTR_GPU) COPY(OKAY)
+#endif
 #endif
         DO I=10,21
         DO J=1,11
@@ -43,7 +47,11 @@ PROGRAM INIT_OWNER_GPU
         END IF
         END DO
         END DO
+#ifdef OMPGPU
+        !$OMP END TARGET
+#else
         !$ACC END SERIAL
+#endif
 
         IF (.NOT. OKAY) THEN
                 CALL FIELD_ABORT ("ERROR")

@@ -80,9 +80,17 @@ IF ((LLINITIALIZED (JSOC) .OR. JINIT == 2) .NEQV. (W%STATS%TRANSFER_CPU_TO_GPU =
   CALL FIELD_ABORT ('A TRANSFER WAS EXPECTED')
 ENDIF
 
+#ifdef OMPGPU
+!$omp target map(to:DD) map(from:ZH)
+#else
 !$acc serial present (DD) copyout (ZH)
-ZH = DD
+#endif
+ZH(:,:) = DD(:,:)
+#ifdef OMPGPU
+!$omp end target
+#else
 !$acc end serial
+#endif
 
 IF (LLINITIALIZED (JSOC) .OR. JINIT == 2) THEN
   IF (ANY (ZH /= ZVAL1)) THEN
@@ -96,9 +104,17 @@ ELSE
   ENDIF
 ENDIF
 
+#ifdef OMPGPU
+!$omp target map(to:DD)
+#else
 !$acc serial present (DD)
-DD = ZVAL2
+#endif
+DD(:,:) = ZVAL2
+#ifdef OMPGPU
+!$omp end target
+#else
 !$acc end serial
+#endif
 
 CALL FIELD_DELETE (W)
 
@@ -173,9 +189,17 @@ IF ((LLINITIALIZED (JSOC) .OR. JINIT == 2) .NEQV. (YLF4%STATS%TRANSFER_CPU_TO_GP
   CALL FIELD_ABORT ('A TRANSFER WAS EXPECTED')
 ENDIF
 
+#ifdef OMPGPU
+!$omp target map(to:ZD4) map(from:ZH)
+#else
 !$acc serial present (ZD4) copyout (ZH)
-ZH = ZD4
+#endif
+ZH(:,:,:,:) = ZD4(:,:,:,:)
+#ifdef OMPGPU
+!$omp end target
+#else
 !$acc end serial
+#endif
 
 IF (LLINITIALIZED (JSOC) .OR. JINIT == 2) THEN
   IF (ANY (ZH /= ZVAL1)) THEN
@@ -189,15 +213,31 @@ ELSE
   ENDIF
 ENDIF
 
+#ifdef OMPGPU
+!$omp target map(to:ZD4)
+#else
 !$acc serial present (ZD4)
-ZD4 = ZVAL2
+#endif
+ZD4(:,:,:,:) = ZVAL2
+#ifdef OMPGPU
+!$omp end target
+#else
 !$acc end serial
+#endif
 
 ZD3 => GET_DEVICE_DATA_RDWR (YLF3L (1)%PTR)
 
+#ifdef OMPGPU
+!$omp target map(to:ZD3)
+#else
 !$acc serial present (ZD3)
-ZD3 = ZVAL3
+#endif
+ZD3(:,:,:) = ZVAL3
+#ifdef OMPGPU
+!$omp end target
+#else
 !$acc end serial
+#endif
 
 DEALLOCATE (YLF3L)
 CALL FIELD_DELETE (YLF4)

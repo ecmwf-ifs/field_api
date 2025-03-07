@@ -29,13 +29,21 @@ PROGRAM NO_TRANSFER
                 CALL FIELD_ABORT ("ERROR")
         ENDIF
 
+#ifdef OMPGPU
+        !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO MAP(TO:PTR)
+#else
         !$ACC PARALLEL LOOP PRESENT(PTR)
+#endif
         DO I=1,5
         DO J=1,5
         PTR(I,J)=7
         ENDDO
         ENDDO
+#ifdef OMPGPU
+        !$OMP END TARGET TEAMS DISTRIBUTE PARALLEL DO
+#else
         !$ACC END PARALLEL LOOP
+#endif
 
         CALL FIELD_DELETE(O)
 END PROGRAM NO_TRANSFER

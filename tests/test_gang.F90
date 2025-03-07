@@ -35,7 +35,11 @@ CHARACTER*8 :: CLENV
 INTEGER :: IERROR = 0
 
 REAL (KIND=JPRD) :: ZCOEF (NDIM)
+#ifdef OMPGPU
+!$omp target enter data map(to:ZCOEF)
+#else
 !$acc declare create (ZCOEF)
+#endif
 
 
 CALL GETENV ('GET_DEBUG_PRINT_CRC',      CLENV); GET_DEBUG_PRINT_CRC      = CLENV /= '0' .AND. CLENV /= ''
@@ -56,6 +60,10 @@ ENDDO
 IF (ASSOCIATED (YLF4)) THEN
   CALL DEL_YLF4
 ENDIF
+
+#ifdef OMPGPU
+!$omp target exit data map(delete:ZCOEF)
+#endif
 
 CONTAINS
 
@@ -219,7 +227,11 @@ END SUBROUTINE
 
 REAL (KIND=JPRD) FUNCTION FUNC (JLON_, JLEV_, JFLD_, JBLK_, PCOEF_)
 
+#ifdef OMPGPU
+!$omp declare target (FUNC)
+#else
 !$acc routine (FUNC) seq
+#endif
 
 INTEGER (KIND=JPIM) :: JLON_, JLEV_, JFLD_, JBLK_
 REAL (KIND=JPRD) :: PCOEF_ (NDIM)
@@ -438,10 +450,17 @@ ZDEVICE4 => GET_DEVICE_DATA_RDWR (YLF4)
 
 CALL CHECK_STATUS
 
-
+#ifdef OMPGPU
+!$omp target update to (ZCOEF)
+#else
 !$acc update device (ZCOEF)
+#endif
 
+#ifdef OMPGPU
+!$omp target map(to:ZDEVICE4)
+#else
 !$acc serial present (ZDEVICE4) 
+#endif
 DO JBLK = 1, NGPBLKS
   DO JFLD = 1, NDIM
     DO JLEV = 0, NFLEVG
@@ -451,7 +470,11 @@ DO JBLK = 1, NGPBLKS
     ENDDO
   ENDDO
 ENDDO
+#ifdef OMPGPU
+!$omp end target
+#else
 !$acc end serial
+#endif
 
 
 CALL CHECK_STATUS
@@ -514,10 +537,17 @@ ZDEVICE4 => GET_DEVICE_DATA_RDONLY (YLF4)
 
 CALL CHECK_DIMS_YLF4 (ZDEVICE4)
 
+#ifdef OMPGPU
+!$omp target update to (ZCOEF)
+#else
 !$acc update device (ZCOEF)
+#endif
 
+#ifdef OMPGPU
+!$omp target map(to:ZDEVICE4)
+#else
 !$acc serial present (ZDEVICE4) 
-
+#endif
 DO JBLK = 1, NGPBLKS
   DO JFLD = 1, NDIM
     DO JLEV = 0, NFLEVG
@@ -533,7 +563,11 @@ DO JBLK = 1, NGPBLKS
   ENDDO
 ENDDO
 
+#ifdef OMPGPU
+!$omp end target
+#else
 !$acc end serial
+#endif
 
 CALL CHECK_STATUS
 
@@ -636,10 +670,17 @@ DO JDIM = 1, SIZE (KFLD)
 
   CALL CHECK_DIMS_YLF3 (ZDEVICE3)
 
+#ifdef OMPGPU
+!$omp target update to (ZCOEF)
+#else
 !$acc update device (ZCOEF)
+#endif
 
+#ifdef OMPGPU
+!$omp target map(to:ZDEVICE3)
+#else
 !$acc serial present (ZDEVICE3) 
-
+#endif
   DO JBLK = 1, NGPBLKS
     DO JLEV = 0, NFLEVG
       DO JLON = 1, NPROMA
@@ -648,7 +689,11 @@ DO JDIM = 1, SIZE (KFLD)
     ENDDO
   ENDDO
 
+#ifdef OMPGPU
+!$omp end target
+#else
 !$acc end serial
+#endif
 
 
   CALL CHECK_STATUS
@@ -679,10 +724,17 @@ DO JDIM = 1, SIZE (KFLD)
   CALL CHECK_DIMS_YLF3 (ZDEVICE3)
 
 
+#ifdef OMPGPU
+!$omp target update to (ZCOEF)
+#else
 !$acc update device (ZCOEF)
+#endif
 
+#ifdef OMPGPU
+!$omp target map(to:ZDEVICE3)
+#else
 !$acc serial present (ZDEVICE3) 
-
+#endif
   DO JBLK = 1, NGPBLKS
     DO JLEV = 0, NFLEVG
       DO JLON = 1, NPROMA
@@ -695,7 +747,11 @@ DO JDIM = 1, SIZE (KFLD)
     ENDDO
   ENDDO
 
+#ifdef OMPGPU
+!$omp end target
+#else
 !$acc end serial
+#endif
 
 
   CALL CHECK_STATUS
@@ -794,7 +850,11 @@ SUBROUTINE ABOR1_ACC (CDMESS)
 
 CHARACTER (LEN=*), INTENT (IN) :: CDMESS
 
+#ifdef OMPGPU
+!$omp declare target (ABOR1_ACC)
+#else
 !$acc routine (ABOR1_ACC) seq
+#endif
 
 PRINT *, CDMESS
 STOP 1

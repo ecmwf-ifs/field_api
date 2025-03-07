@@ -35,9 +35,17 @@ PROGRAM TEST_FIELD1D
 
         DD => GET_DEVICE_DATA_RDWR (W)
 
+#ifdef OMPGPU
+!$omp target map(to:DD)
+#else
 !$acc serial present (DD)
-        DD = 22
+#endif
+        DD(:) = 22
+#ifdef OMPGPU
+!$omp end target
+#else
 !$acc end serial
+#endif
 
         DD => GET_HOST_DATA_RDONLY (W)
 

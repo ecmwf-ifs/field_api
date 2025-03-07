@@ -23,11 +23,19 @@ PROGRAM INIT_OWNER_INIT_DELAYED_VALUE_GPU
         CALL O%GET_DEVICE_DATA_RDONLY(PTR)
 
         OKAY=.TRUE.
+#ifdef OMPGPU
+        !$OMP TARGET MAP(TO:PTR) MAP(TOFROM:OKAY)
+#else
         !$ACC SERIAL PRESENT(PTR) COPY(OKAY)
+#endif
         IF(.NOT. ALL(PTR == 7))THEN
                 OKAY=.FALSE.
         ENDIF
+#ifdef OMPGPU
+        !$OMP END TARGET
+#else
         !$ACC END SERIAL
+#endif
 
         IF(OKAY .EQV. .FALSE.)THEN
                 CALL FIELD_ABORT ("ERROR")

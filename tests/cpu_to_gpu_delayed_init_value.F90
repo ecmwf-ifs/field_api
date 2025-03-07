@@ -46,7 +46,11 @@ PROGRAM CPU_TO_GPU_DELAYED_INIT_VALUE
                 CALL FIELD_ABORT ("ERROR")
         ENDIF
         OKAY=.TRUE.
+#ifdef OMPGPU
+        !$OMP TARGET MAP(TO:PTR_DEV) MAP(TOFROM:OKAY)
+#else
         !$ACC PARALLEL PRESENT(PTR_DEV) COPY(OKAY)
+#endif
         DO I=1,5
         DO J=1,5
         IF (PTR_DEV(I,J) /= 3)THEN
@@ -54,7 +58,11 @@ PROGRAM CPU_TO_GPU_DELAYED_INIT_VALUE
         ENDIF
         ENDDO
         ENDDO
+#ifdef OMPGPU
+        !$OMP END TARGET
+#else
         !$ACC END PARALLEL
+#endif
         IF(OKAY .EQV. .FALSE.)THEN
                 CALL FIELD_ABORT ("ERROR")
         ENDIF
