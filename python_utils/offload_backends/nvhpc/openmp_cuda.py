@@ -8,15 +8,20 @@
 # nor does it submit to any jurisdiction.
 
 
-__all__ = ['NVHPCOpenACCCUDA']
+__all__ = ['NVHPCOpenMPCUDA']
 
-from offload_backends.nvhpc import NVHPCOpenACC
+from offload_backends.nvhpc import NVHPCOpenMP
 
-class NVHPCOpenACCCUDA(NVHPCOpenACC):
+class NVHPCOpenMPCUDA(NVHPCOpenMP):
     """
     A class that defines the macros needed for GPU offload using Nvidia's
-    OpenACC implementation and CUDA runtime API.
+    OpenMP implementation and CUDA runtime API.
     """
+
+    _kdir_map = {
+        'H2D': 'cudaMemcpyHostToDevice',
+        'D2H': 'cudaMemcpyDeviceToHost'
+    }
 
     @classmethod
     def runtime_api_import(cls):
@@ -162,7 +167,8 @@ class NVHPCOpenACCCUDA(NVHPCOpenACC):
         Copy a strided memory region from source (src) to destination (dst).
         """
 
-        return f"{return_val} = CUDAMEMCPY2D({dst}, {dst_pitch}, {src}, {src_pitch}, {width}, {height})"
+        kind = cls._kdir_map[kdir]
+        return f"{return_val} = CUDA_MEMCPY_2D({dst}, {dst_pitch}, {src}, {src_pitch}, {width}, {height}, {kind})"
 
     @classmethod
     def memcpy_2D_async(cls, src, src_pitch, dst, dst_pitch, width, height, stream, kdir, return_val="ISTAT"):
@@ -170,31 +176,32 @@ class NVHPCOpenACCCUDA(NVHPCOpenACC):
         Asynchronously copy a strided memory region from source (src) to destination (dst).
         """
 
-        return f"{return_val} = CUDAMEMCPY2DASYNC({dst}, {dst_pitch}, {src}, {src_pitch}, {width}, {height}, STREAM={stream})"
+        kind = cls._kdir_map[kdir]
+        return f"{return_val} = CUDA_MEMCPY_2D_ASYNC({dst}, {dst_pitch}, {src}, {src_pitch}, {width}, {height}, {kind}, {stream})"
 
     @classmethod
-    def memcpy_to_device_async(cls, dev, host, size, queue, **kwargs):
+    def memcpy_to_device_async(cls, dev, host, size, stream, return_val, **kwargs):
         """
         Asynchornously copy a contiguous section of data from host to device.
         """
 
-        return f"CALL ACC_MEMCPY_TO_DEVICE_ASYNC ({dev}, {host}, {size}, {queue})"
+        return f"{return_val} = CUDA_MEMCPY_ASYNC ({dev}, c_loc({host}), {size}, cudaMemcpyHostToDevice, {stream})"
 
     @classmethod
-    def memcpy_from_device_async(cls, dev, host, size, queue, **kwargs):
+    def memcpy_from_device_async(cls, dev, host, size, stream, return_val, **kwargs):
         """
         Asynchronously copy a contiguous section of data from device to host.
         """
 
-        return f"CALL ACC_MEMCPY_FROM_DEVICE_ASYNC ({host}, {dev}, {size}, {queue})"
+        return f"{return_val} = CUDA_MEMCPY_ASYNC (c_loc({host}), {dev}, {size}, cudaMemcpyDeviceToHost, {stream})"
 
     @classmethod
-    def create_stream(cls, stream, queue, **kwargs):
+    def create_stream(cls, stream, return_val, **kwargs):
         """
-        Associate a CUDA stream with an ACC queue.
+        Create a CUDA stream.
         """
 
-        return f"{stream} = ACC_GET_CUDA_STREAM({queue})"
+        return f"{return_val} = CUDASTREAMCREATE({stream})"
 
     @classmethod
     def async_wait(cls, stream, return_val):
@@ -203,3 +210,56 @@ class NVHPCOpenACCCUDA(NVHPCOpenACC):
         """
 
         return f"{return_val} = CUDASTREAMSYNCHRONIZE({stream})"
+
+    @classmethod
+    def memcpy_async_intf(cls):
+        """
+        The ISO_C interface for the runtime function that asynchornously copies a
+        contiguous section of data from host to device.
+        """
+
+        intf = """
+   INTEGER FUNCTION CUDA_MEMCPY_ASYNC (DST, SRC, COUNT, KIND, STREAM) BIND (C, NAME='cudaMemcpyAsync')
+     IMPORT :: C_PTR, C_SIZE_T, C_INT, CUDA_STREAM_KIND
+     TYPE (C_PTR), VALUE, INTENT(IN) :: DST
+     TYPE (C_PTR), VALUE, INTENT(IN) :: SRC
+     INTEGER (C_SIZE_T), VALUE, INTENT(IN) :: COUNT
+     INTEGER (C_INT), VALUE, INTENT(IN) :: KIND
+     INTEGER (KIND=CUDA_STREAM_KIND), VALUE, INTENT(IN) :: STREAM
+   END FUNCTION CUDA_MEMCPY_ASYNC
+  """
+
+        return intf.split('\n')
+
+    @classmethod
+    def memcpy_2D_intf(cls):
+        """
+        The ISO_C interface for the runtime function to copy a discontiguous section of memory
+        from host to device and vice versa.
+        """
+
+        intf = """
+   INTEGER FUNCTION CUDA_MEMCPY_2D(DST, DSTPITCH, SRC, SRCPITCH, WIDTH, HEIGHT, KIND) BIND (C, NAME='cudaMemcpy2D')
+     IMPORT :: C_PTR, C_SIZE_T, C_INT
+     TYPE (C_PTR), VALUE, INTENT(IN) :: DST
+     INTEGER (C_SIZE_T), VALUE, INTENT(IN) :: DSTPITCH
+     TYPE (C_PTR), VALUE, INTENT(IN) :: SRC
+     INTEGER (C_SIZE_T), VALUE, INTENT(IN) :: SRCPITCH
+     INTEGER (C_SIZE_T), VALUE, INTENT(IN) :: WIDTH
+     INTEGER (C_SIZE_T), VALUE, INTENT(IN) :: HEIGHT
+     INTEGER (C_INT), VALUE, INTENT(IN) :: KIND
+   END FUNCTION CUDA_MEMCPY_2D
+   INTEGER FUNCTION CUDA_MEMCPY_2D_ASYNC(DST, DSTPITCH, SRC, SRCPITCH, WIDTH, HEIGHT, KIND, STREAM) BIND (C, NAME='cudaMemcpy2DAsync')
+     IMPORT :: C_PTR, C_SIZE_T, C_INT, CUDA_STREAM_KIND
+     TYPE (C_PTR), VALUE, INTENT(IN) :: DST
+     INTEGER (C_SIZE_T), VALUE, INTENT(IN) :: DSTPITCH
+     TYPE (C_PTR), VALUE, INTENT(IN) :: SRC
+     INTEGER (C_SIZE_T), VALUE, INTENT(IN) :: SRCPITCH
+     INTEGER (C_SIZE_T), VALUE, INTENT(IN) :: WIDTH
+     INTEGER (C_SIZE_T), VALUE, INTENT(IN) :: HEIGHT
+     INTEGER (C_INT), VALUE, INTENT(IN) :: KIND
+     INTEGER (KIND=CUDA_STREAM_KIND), VALUE, INTENT(IN) :: STREAM
+   END FUNCTION CUDA_MEMCPY_2D_ASYNC
+  """
+
+        return intf.split('\n')

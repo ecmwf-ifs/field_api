@@ -8,7 +8,7 @@
 # nor does it submit to any jurisdiction.
 
 import fypp
-from offload_backends import NVHPCOpenACC, NVHPCOpenACCCUDA, HostOnly, NVHPCOpenMP
+from offload_backends import NVHPCOpenACC, NVHPCOpenACCCUDA, HostOnly, NVHPCOpenMP, NVHPCOpenMPCUDA
 
 """
 A common entry point for retrieving macros from the various GPU offload backends.
@@ -18,7 +18,8 @@ _offload_map = {
     'NVHPCOpenACC': NVHPCOpenACC,
     'HostOnly': HostOnly,
     'NVHPCOpenACCCUDA': NVHPCOpenACCCUDA,
-    'NVHPCOpenMP': NVHPCOpenMP
+    'NVHPCOpenMP': NVHPCOpenMP,
+    'NVHPCOpenMPCUDA': NVHPCOpenMPCUDA
 }
 
 def _wrap_lines(input_str, ref_len, pragma='', indent=0):
@@ -508,7 +509,7 @@ def host_unregister_intf(indent=0):
 
     return _format_lines(method(), indent=indent)
 
-def memcpy_2D(src, src_pitch, dst, dst_pitch, width, height, return_val="ISTAT", indent=0):
+def memcpy_2D(src, src_pitch, dst, dst_pitch, width, height, kdir, return_val="ISTAT", indent=0):
     """
     Copy a strided memory region from source (src) to destination (dst).
     """
@@ -516,10 +517,10 @@ def memcpy_2D(src, src_pitch, dst, dst_pitch, width, height, return_val="ISTAT",
     backend = _get_offload_backend()
     method = _get_method(backend, 'memcpy_2D')
 
-    return _format_lines(method(src, src_pitch, dst, dst_pitch, width, height, return_val=return_val),
+    return _format_lines(method(src, src_pitch, dst, dst_pitch, width, height, kdir, return_val=return_val),
                          indent=indent)
 
-def memcpy_2D_async(src, src_pitch, dst, dst_pitch, width, height, stream, return_val="ISTAT", indent=0):
+def memcpy_2D_async(src, src_pitch, dst, dst_pitch, width, height, stream, kdir, return_val="ISTAT", indent=0):
     """
     Asynchronously copy a strided memory region from source (src) to destination (dst).
     """
@@ -527,10 +528,10 @@ def memcpy_2D_async(src, src_pitch, dst, dst_pitch, width, height, stream, retur
     backend = _get_offload_backend()
     method = _get_method(backend, 'copy_2D_async')
 
-    return _format_lines(method(src, src_pitch, dst, dst_pitch, width, height, stream, return_val=return_val),
+    return _format_lines(method(src, src_pitch, dst, dst_pitch, width, height, stream, kdir, return_val=return_val),
                          indent=indent)
 
-def create_stream(stream, queue, indent=0):
+def create_stream(stream, queue, return_val="ISTAT", indent=0):
     """
     Create asynchronous execution stream or associate an OpenACC queue with a stream.
     """
@@ -538,7 +539,7 @@ def create_stream(stream, queue, indent=0):
     backend = _get_offload_backend()
     method = _get_method(backend, 'create_stream')
 
-    return _format_lines(method(stream=stream, queue=queue), indent=indent)
+    return _format_lines(method(stream=stream, queue=queue, return_val=return_val), indent=indent)
 
 def get_device_id(dev_id, indent=0):
     """
@@ -559,3 +560,25 @@ def get_host_id(hst_id, indent=0):
     method = _get_method(backend, 'get_host_id')
 
     return _format_lines(method(hst_id=hst_id), indent=indent)
+
+def memcpy_async_intf(indent=0):
+    """
+    The ISO_C interface for the runtime function that asynchornously copies a
+    contiguous section of data from host to device.
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'memcpy_async_intf')
+
+    return _format_lines(method(), indent=indent)
+
+def memcpy_2D_intf(indent=0):
+    """
+    The ISO_C interface for the runtime function to copy a discontiguous section of memory
+    from host to device and vice versa.
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'memcpy_2D_intf')
+
+    return _format_lines(method(), indent=indent)
