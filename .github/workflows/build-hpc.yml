@@ -30,6 +30,7 @@ jobs:
 
       matrix:
         cuda: [False, True]
+        openmp: [False, True]
         name:
           - ac-gpu nvhpc
 
@@ -60,12 +61,14 @@ jobs:
               - ninja
               - ecbuild
               - prgenv/nvidia
+              - nvidia/24.5
               - python3
             cmake_options:
-              - -DENABLE_ACC=ON
+              - -DENABLE_OMP_OFFLOAD=${{ matrix.openmp }}
               - -DENABLE_CUDA=${{ matrix.cuda }}
               - -DENABLE_SINGLE_PRECISION=ON
               - -DENABLE_DOUBLE_PRECISION=ON
+              - -DCMAKE_TOOLCHAIN_FILE=arch/ecmwf/hpc2020/nvhpc/24.5/toolchain.cmake
             dependencies:
               ecmwf/fckit:
                 version: 0.13.0
