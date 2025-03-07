@@ -119,7 +119,7 @@ class NVHPCOpenACC():
         Attach device pointer to its target on device.
         """
 
-        return f"!$acc enter data attach ({ptr})"
+        return f"!$acc enter data attach ({','.join(ptr)})"
 
     @classmethod
     def detach(cls, ptr):
@@ -127,7 +127,7 @@ class NVHPCOpenACC():
         Detach device pointer from its target on device.
         """
 
-        return f"!$acc exit data detach ({ptr})"
+        return f"!$acc exit data detach ({','.join(ptr)})"
 
     @classmethod
     def kernels(cls, **kwargs):
