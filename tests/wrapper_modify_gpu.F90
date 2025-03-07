@@ -26,14 +26,22 @@ PROGRAM WRAPPER_MODIFY_GPU
         CALL FIELD_NEW(W, DATA=D)
         CALL W%GET_DEVICE_DATA_RDWR(D_GPU)
 
+#ifdef OMPGPU
+        !$OMP TARGET MAP(TO:D_GPU) MAP(TOFROM:RES)
+#else
         !$ACC SERIAL PRESENT(D_GPU) COPY(RES)
+#endif
         RES=.TRUE.
         DO I=1,10
         DO J=1,10
         D_GPU(J,I)=I*J
         END DO
         END DO
+#ifdef OMPGPU
+        !$OMP END TARGET
+#else
         !$ACC END SERIAL
+#endif
 
 
         ! DATA SHOULD ALL BE 7 BECAUSE THEY HAVEN'T MOVED BACK FROM GPU
