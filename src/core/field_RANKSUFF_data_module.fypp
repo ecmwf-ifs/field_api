@@ -14,6 +14,7 @@ MODULE FIELD_${RANK}$${SUFF}$_DATA_MODULE
 
 USE FIELD_CONSTANTS_MODULE
 USE FIELD_ABORT_MODULE
+USE, INTRINSIC :: ISO_C_BINDING
 ${fieldType.useParkind1 ()}$
 
 IMPLICIT NONE
@@ -119,8 +120,15 @@ $:offload_macros.runtime_api_import(indent=2)
     INTEGER (KIND=JPIM),           INTENT (IN) :: KDIR
     INTEGER (KIND=JPIM), OPTIONAL, INTENT (IN) :: QUEUE
     INTEGER (KIND=INT64)                       :: ISIZE
+    INTEGER (KIND=C_INT)                       :: ERR, HST_ID, DEV_ID
+    INTEGER (KIND=C_SIZE_T)                    :: OFFSET
     INTEGER :: ${', '.join (['J'] + list (map (lambda i: 'J' + str (i+1), range (d, ft.rank))))}$
 $:offload_macros.c_devptr_decl(symbols=['DEVPTR'], indent=4)
+
+
+    OFFSET = 0
+$:offload_macros.get_device_id(dev_id='DEV_ID', indent=4)
+$:offload_macros.get_host_id(hst_id='HST_ID', indent=4)
 
   #:for e in range (ft.rank, d, -1)
     ${'  ' * (ft.rank - e)}$DO J${e}$ = LBOUND (HST, ${e}$), UBOUND (HST, ${e}$)
@@ -148,9 +156,11 @@ $:offload_macros.end_data_deviceptr(indent=ft.rank - e)
     ${indent}$  IF (KDIR == NH2D) THEN
 #ifdef WITH_GPU_OFFLOAD
     ${indent}$    IF(PRESENT(QUEUE))THEN
-$:offload_macros.memcpy_to_device_async(dev='DEVPTR', host=f'HST ({ar})', size='ISIZE', queue='QUEUE', indent=ft.rank - e + 10)
+$:offload_macros.memcpy_to_device_async(dev='DEVPTR', host=f'HST ({ar})', size='ISIZE', queue='QUEUE', offset='OFFSET', &
+&                                       dev_id='DEV_ID', hst_id='HST_ID', return_val='ERR', indent=ft.rank - e + 10)
     ${indent}$    ELSE
-$:offload_macros.memcpy_to_device(dev='DEVPTR', host=f'HST ({ar})', size='ISIZE', indent=ft.rank - e + 10)
+$:offload_macros.memcpy_to_device(dev='DEVPTR', host=f'HST ({ar})', size='ISIZE', offset='OFFSET', &
+&                                 dev_id='DEV_ID', hst_id='HST_ID', return_val='ERR', indent=ft.rank - e + 10)
     ${indent}$    ENDIF
 #else
     ${indent}$    DEV (${ard}$) = HST (${ar}$)
@@ -158,9 +168,11 @@ $:offload_macros.memcpy_to_device(dev='DEVPTR', host=f'HST ({ar})', size='ISIZE'
     ${indent}$  ELSEIF (KDIR == ND2H) THEN
 #ifdef WITH_GPU_OFFLOAD
     ${indent}$    IF(PRESENT(QUEUE))THEN
-$:offload_macros.memcpy_from_device_async(dev='DEVPTR', host=f'HST ({ar})', size='ISIZE', queue='QUEUE', indent=ft.rank - e + 10)
+$:offload_macros.memcpy_from_device_async(dev='DEVPTR', host=f'HST ({ar})', size='ISIZE', queue='QUEUE', offset='OFFSET', &
+&                                         dev_id='DEV_ID', hst_id='HST_ID', return_val='ERR', indent=ft.rank - e + 10)
     ${indent}$    ELSE
-$:offload_macros.memcpy_from_device(dev='DEVPTR', host=f'HST ({ar})', size='ISIZE', indent=ft.rank - e + 10)
+$:offload_macros.memcpy_from_device(dev='DEVPTR', host=f'HST ({ar})', size='ISIZE', offset='OFFSET', &
+&                                   dev_id='DEV_ID', hst_id='HST_ID', return_val='ERR', indent=ft.rank - e + 10)
     ${indent}$    ENDIF
 #else
     ${indent}$    HST (${ar}$) = DEV (${ard}$)
