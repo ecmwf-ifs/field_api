@@ -106,7 +106,6 @@ list(APPEND obj_libs
         field_api_core
         field_api_debug
         field_api_factory
-        field_api_buffer
         field_api_util
         field_api_shuffle
 )
