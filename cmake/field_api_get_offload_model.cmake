@@ -56,11 +56,15 @@ macro( field_api_get_offload_model )
    check_language(CUDA)
    ecbuild_add_option( FEATURE CUDA
        DESCRIPTION "CUDA" DEFAULT ON
-       CONDITION CMAKE_CUDA_COMPILER AND HAVE_ACC )
+       CONDITION CMAKE_CUDA_COMPILER AND (HAVE_ACC OR HAVE_OMP_OFFLOAD) )
 
    set(FIELD_API_OFFLOAD_MODEL "HostOnly")
    if( HAVE_OMP_OFFLOAD )
-     set(FIELD_API_OFFLOAD_MODEL "NVHPCOpenMP")
+     if( HAVE_CUDA )
+        set(FIELD_API_OFFLOAD_MODEL "NVHPCOpenMPCUDA")
+     else()
+        set(FIELD_API_OFFLOAD_MODEL "NVHPCOpenMP")
+     endif()
    else()
      if( HAVE_CUDA )
         set(FIELD_API_OFFLOAD_MODEL "NVHPCOpenACCCUDA")
