@@ -537,7 +537,7 @@ $:offload_macros.detach(ptr=['SELF%DEVPTR'], indent=6)
     ${ft.type}$, POINTER,         INTENT(INOUT) :: PPTR(${ft.shape}$)
     INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN)   :: QUEUE
 
-    IF ( SELF%IS_UNINITIALIZED() ) THEN
+    IF ( SELF%IS_UNINITIALIZED() .OR. (.NOT. ASSOCIATED(SELF%DEVPTR)) ) THEN
       CALL SELF%FORCE_HOST_FRESH()
     ELSE
       CALL SELF%FORCE_UNDEFINED()
