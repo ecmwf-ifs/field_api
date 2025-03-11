@@ -89,7 +89,11 @@ PROGRAM TEST_FORCE_METHODS
 
   CALL F_PTR%GET_DEVICE_DATA_RDONLY(PTR_GPU)
 
+#ifdef OMPGPU
+  !$omp target map(to:PTR_GPU) map(tofrom:OKAY)
+#else
   !$acc serial, present(PTR_GPU), copy(OKAY)
+#endif
   DO I=1,128
     DO J = 1,2
       IF ( PTR_GPU(I,J) /= 32 ) THEN
@@ -98,7 +102,11 @@ PROGRAM TEST_FORCE_METHODS
       PTR_GPU(I,J) = 45
     END DO
   END DO
+#ifdef OMPGPU
+  !$omp end target
+#else
   !$acc end serial
+#endif
 
   IF (.NOT. OKAY) THEN
     CALL FIELD_ABORT("ERROR GPU DATA SHOULD NOT HAVE BEEN UPDATED")
@@ -116,5 +124,48 @@ PROGRAM TEST_FORCE_METHODS
   IF (.NOT. OKAY) THEN
     CALL FIELD_ABORT("ERROR CPU DATA SHOULD HAVE BEEN UPDATED")
   END  IF
+
+
+  CALL F_PTR%DELETE_DEVICE_DATA()
+  CALL F_PTR%GET_DEVICE_DATA_FORCE(PTR_GPU)
+#ifdef OMPGPU
+  !$omp target map(to:PTR_GPU) map(tofrom:OKAY)
+#else
+  !$acc serial, present(PTR_GPU), copy(OKAY)
+#endif
+  DO I=1,128
+    DO J = 1,2
+      IF ( PTR_GPU(I,J) /= 45 ) THEN
+        OKAY = .FALSE.
+      END IF
+      PTR_GPU(I,J) = 46
+    END DO
+  END DO
+#ifdef OMPGPU
+  !$omp end target
+#else
+  !$acc end serial
+#endif
+  IF (.NOT. OKAY) THEN
+    CALL FIELD_ABORT("ERROR GPU DATA NOT UPDATED")
+  END  IF
+
+
+  CALL F_PTR%DELETE_DEVICE_DATA()
+  ! No copy should be triggered after deleting device data
+  CALL F_PTR%GET_HOST_DATA_FORCE(PTR_CPU)
+
+  DO I=1,128
+    DO J = 1,2
+      IF ( PTR_CPU(I,J) /= 45 ) THEN
+        OKAY =.FALSE.
+      END IF
+    END DO
+  END DO
+
+  IF (.NOT. OKAY) THEN
+    CALL FIELD_ABORT("ERROR CPU DATA SHOULD HAVE BEEN UPDATED")
+  END  IF
+
 
 END PROGRAM TEST_FORCE_METHODS
