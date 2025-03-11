@@ -98,17 +98,18 @@ CONTAINS
     INTEGER (KIND=JPIM),           INTENT(IN)    :: MODE
     ${ft1.type}$, POINTER,         INTENT(INOUT) :: PTR(${ft1.shape}$)
     INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
-    INTEGER(KIND=JPIM)                           :: LBOUNDS(${ft1.rank}$)
 
-    IF (ASSOCIATED (SELF%PARENT)) THEN
-      IF (IAND (MODE, NWR) /= 0) THEN
-        CALL SELF%PARENT%SYNC_${what}$_RDWR (QUEUE)
-      ELSEIF (IAND (MODE, NRD) /= 0) THEN
-        CALL SELF%PARENT%SYNC_${what}$_RDONLY (QUEUE)
+    IF (SELF%GET_STATUS() /= UNDEFINED) THEN
+      IF (ASSOCIATED (SELF%PARENT)) THEN
+        IF (IAND (MODE, NWR) /= 0) THEN
+          CALL SELF%PARENT%SYNC_${what}$_RDWR ()
+        ELSEIF (IAND (MODE, NRD) /= 0) THEN
+          CALL SELF%PARENT%SYNC_${what}$_RDONLY ()
+        ENDIF
       ENDIF
     ENDIF
 
-    CALL SELF%${ftn1}$_WRAPPER%GET_${what}$_DATA (MODE, PTR, QUEUE)
+    CALL SELF%${ftn1}$_WRAPPER%GET_${what}$_POINTER(PTR)
 
   END SUBROUTINE 
 
