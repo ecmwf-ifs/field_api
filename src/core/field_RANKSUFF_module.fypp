@@ -33,7 +33,7 @@ PRIVATE
 #:set ftn = ft.name
 TYPE, ABSTRACT, EXTENDS (FIELD_BASIC) :: ${ftn}$
   ${ft.type}$, POINTER :: PTR(${ft.shape}$) => NULL()
-#ifdef _CRAYFTN
+#if (defined(_CRAYFTN) || defined(IS_LLVM_FLANG))
   ${ft.type}$, POINTER :: DEVPTR(${ft.shape}$) => NULL()
 #else
   ${ft.type}$, POINTER, CONTIGUOUS :: DEVPTR(${ft.shape}$) => NULL()

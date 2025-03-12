@@ -70,6 +70,7 @@ field_api_add_object_library(
     LIBNAME        field_api_core
     SRCS           ${srcs}
     LIBRARIES      field_api_debug field_api_defaults_${DEFAULT_PRECISION}
+    DEFINITIONS    ${FIELD_API_COMPILE_DEFINITIONS}
 )
 
 
