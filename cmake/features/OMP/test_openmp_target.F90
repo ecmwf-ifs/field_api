@@ -2,11 +2,13 @@ program test_openmp_target
    
     implicit none
 
-    integer :: a(32)
+    integer :: a(32), i
 
     a = 1
     !$omp target map(tofrom:a)
-    a = a + 2
+    do i=1,32
+      a(i) = a(i) + 2
+    enddo
     !$omp end target
 
     if (.not. all(a == 3)) error stop

@@ -26,7 +26,10 @@ macro( field_api_get_offload_model )
    ecbuild_add_option( FEATURE OMP_OFFLOAD 
                        DEFAULT OFF
                        DESCRIPTION "Enable GPU offload via OpenMP"
-                       CONDITION CMAKE_Fortran_COMPILER_ID MATCHES "PGI|NVHPC" AND ${_HAVE_OMP_OFFLOAD} )
+                       CONDITION
+                         (CMAKE_Fortran_COMPILER_ID MATCHES "PGI|NVHPC" OR  CMAKE_Fortran_COMPILER MATCHES "amdflang")
+                         AND ${_HAVE_OMP_OFFLOAD}
+   )
 
    if( HAVE_OMP_OFFLOAD )
       set( FIELD_API_ENABLE_ACC OFF )
@@ -60,10 +63,14 @@ macro( field_api_get_offload_model )
 
    set(FIELD_API_OFFLOAD_MODEL "HostOnly")
    if( HAVE_OMP_OFFLOAD )
-     if( HAVE_CUDA )
-        set(FIELD_API_OFFLOAD_MODEL "NVHPCOpenMPCUDA")
-     else()
-        set(FIELD_API_OFFLOAD_MODEL "NVHPCOpenMP")
+     if( CMAKE_Fortran_COMPILER_ID MATCHES "PGI|NVHPC")
+       if( HAVE_CUDA )
+          set(FIELD_API_OFFLOAD_MODEL "NVHPCOpenMPCUDA")
+       else()
+          set(FIELD_API_OFFLOAD_MODEL "NVHPCOpenMP")
+       endif()
+     elseif( CMAKE_Fortran_COMPILER MATCHES "amdflang")
+       set(FIELD_API_OFFLOAD_MODEL "ROCMAFAROpenMP")
      endif()
    else()
      if( HAVE_CUDA )
