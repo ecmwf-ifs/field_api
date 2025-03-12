@@ -14,6 +14,7 @@ if(OpenMP_FOUND)
        ${CMAKE_CURRENT_BINARY_DIR}
        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/features/OMP/test_openmp_target.F90
        LINK_LIBRARIES OpenMP::OpenMP_Fortran
+       LINK_OPTIONS SHELL:${OpenMP_Fortran_FLAGS}
        OUTPUT_VARIABLE _HAVE_OMP_OFFLOAD_OUTPUT
    )
 
