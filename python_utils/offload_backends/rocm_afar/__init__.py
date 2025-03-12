@@ -7,6 +7,4 @@
 # granted to it by virtue of its status as an intergovernmental organisation
 # nor does it submit to any jurisdiction.
 
-from offload_backends.nvhpc import *
-from offload_backends.host_only import *
-from offload_backends.rocm_afar import *
+from offload_backends.rocm_afar.openmp import *

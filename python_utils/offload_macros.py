@@ -8,7 +8,9 @@
 # nor does it submit to any jurisdiction.
 
 import fypp
-from offload_backends import NVHPCOpenACC, NVHPCOpenACCCUDA, HostOnly, NVHPCOpenMP, NVHPCOpenMPCUDA
+from offload_backends import (
+    NVHPCOpenACC, NVHPCOpenACCCUDA, HostOnly, NVHPCOpenMP, NVHPCOpenMPCUDA, ROCMAFAROpenMP
+)
 
 """
 A common entry point for retrieving macros from the various GPU offload backends.
@@ -19,7 +21,8 @@ _offload_map = {
     'HostOnly': HostOnly,
     'NVHPCOpenACCCUDA': NVHPCOpenACCCUDA,
     'NVHPCOpenMP': NVHPCOpenMP,
-    'NVHPCOpenMPCUDA': NVHPCOpenMPCUDA
+    'NVHPCOpenMPCUDA': NVHPCOpenMPCUDA,
+    'ROCMAFAROpenMP': ROCMAFAROpenMP
 }
 
 def _wrap_lines(input_str, ref_len, pragma='', indent=0):
