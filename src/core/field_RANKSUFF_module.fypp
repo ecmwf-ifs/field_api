@@ -415,7 +415,9 @@ $:offload_macros.reinit_gpu_context(indent=6)
     SELF%LOBJECT_COPIED = .TRUE.
 #ifdef WITH_GPU_OFFLOAD
     IF (ASSOCIATED (SELF%DEVPTR)) THEN
-$:offload_macros.attach(ptr=['SELF%DEVPTR'], indent=6)
+      ASSOCIATE(DEVPTR => SELF%DEVPTR)
+$:offload_macros.attach(ptr=['DEVPTR'], indent=8)
+      END ASSOCIATE
     ENDIF
 #endif
   ENDIF
@@ -439,7 +441,9 @@ $:offload_macros.attach(ptr=['SELF%DEVPTR'], indent=6)
     SELF%LOBJECT_COPIED = .FALSE.
 #ifdef WITH_GPU_OFFLOAD
     IF (ASSOCIATED (SELF%DEVPTR)) THEN
-$:offload_macros.detach(ptr=['SELF%DEVPTR'], indent=6)
+      ASSOCIATE(DEVPTR => SELF%DEVPTR)
+$:offload_macros.detach(ptr=['DEVPTR'], indent=8)
+      END ASSOCIATE
     ENDIF
 #endif
   ENDIF
