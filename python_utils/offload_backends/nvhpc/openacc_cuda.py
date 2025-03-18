@@ -101,12 +101,12 @@ class NVHPCOpenACCCUDA(NVHPCOpenACC):
         return f"{return_val} = CUDA_HOST_REGISTER({ptr}, {size}, {flags})"
 
     @classmethod
-    def register_host_set_flags(cls, flag_var, val):
+    def register_host_set_flags(cls, flag_var):
         """
         Set flags used to control page-locking of host memory.
         """
 
-        return f"{flag_var} = {val} !... Corresponds to cudaHostRegisterMapped"
+        return f"{flag_var} = 2 !... Corresponds to cudaHostRegisterMapped"
 
     @classmethod
     def register_host_decl_flags(cls, flag_var):

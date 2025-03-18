@@ -54,6 +54,16 @@ macro( field_api_get_offload_model )
                        REQUIRED_PACKAGES "OpenACC COMPONENTS Fortran" 
                        CONDITION CMAKE_Fortran_COMPILER_ID MATCHES "PGI|NVHPC")
 
+   ## check for HIP
+   find_package(hipfort COMPONENTS hip)
+   ecbuild_add_option( FEATURE HIPFORT
+                       DEFAULT OFF
+                       DESCRIPTION "Support for the HIP Fortran runtime API"
+                       CONDITION hipfort_FOUND AND HAVE_OMP_OFFLOAD )
+   if( HAVE_HIPFORT )
+      set( FIELD_API_ENABLE_CUDA OFF )
+   endif()
+
    ## check for CUDA
    include(CheckLanguage)
    check_language(CUDA)
@@ -70,7 +80,11 @@ macro( field_api_get_offload_model )
           set(FIELD_API_OFFLOAD_MODEL "NVHPCOpenMP")
        endif()
      elseif( CMAKE_Fortran_COMPILER MATCHES "amdflang")
-       set(FIELD_API_OFFLOAD_MODEL "ROCMAFAROpenMP")
+       if( HAVE_HIPFORT )
+          set(FIELD_API_OFFLOAD_MODEL "ROCMAFAROpenMPHIP")
+       else()
+          set(FIELD_API_OFFLOAD_MODEL "ROCMAFAROpenMP")
+       endif()
      endif()
    else()
      if( HAVE_CUDA )
