@@ -23,6 +23,7 @@ ecbuild_add_test(
         OpenMP::OpenMP_Fortran
         $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
         $<$<BOOL:${HAVE_IO}>:HDF5::HDF5>
+        $<${HAVE_HIPFORT}:hipfort::hip>
     LINKER_LANGUAGE Fortran
 	ENVIRONMENT "DEV_ALLOC_SIZE=${dev_alloc_size}"
 )
@@ -238,6 +239,7 @@ foreach(TEST_FILE ${TEST_FILES})
            OpenMP::OpenMP_Fortran
            $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
            $<$<BOOL:${HAVE_IO}>:HDF5::HDF5>
+           $<${HAVE_HIPFORT}:hipfort::hip>
         LINKER_LANGUAGE Fortran
         OMP ${omp_num_threads}
         ENVIRONMENT "DEV_ALLOC_SIZE=${dev_alloc_size}"
@@ -257,7 +259,8 @@ foreach(TEST_FILE ${TEST_FILES})
     target_compile_definitions( ${TEST_NAME}.x PRIVATE
                                 $<$<BOOL:${HAVE_IO}>:HDF5::HDF5>
                                 $<${HAVE_OMP_OFFLOAD}:OMPGPU>
-                                $<${HAVE_CUDA}:_CUDA> )
+                                $<${HAVE_CUDA}:_CUDA> 
+                                $<${HAVE_HIPFORT}:_HIP> )
 
     if( DEFAULT_PRECISION MATCHES sp )
        target_compile_definitions( ${TEST_NAME}.x PRIVATE PARKIND1_SINGLE )
@@ -271,6 +274,7 @@ foreach(FAILING_TEST_FILE ${FAILING_TEST_FILES})
     target_link_libraries(${FAILING_TEST_NAME}.x PRIVATE OpenMP::OpenMP_Fortran)
     target_link_libraries(${FAILING_TEST_NAME}.x PRIVATE $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>)
     target_link_libraries(${FAILING_TEST_NAME}.x PRIVATE $<$<BOOL:${HAVE_IO}>:HDF5::HDF5>)
+    target_link_libraries(${FAILING_TEST_NAME}.x PRIVATE $<${HAVE_HIPFORT}:hipfort::hip>)
     set_target_properties(${FAILING_TEST_NAME}.x PROPERTIES LINKER_LANGUAGE Fortran)
     add_test(NAME ${FAILING_TEST_NAME} COMMAND ${FAILING_TEST_NAME}.x)
     set_property(TEST ${FAILING_TEST_NAME} PROPERTY WILL_FAIL TRUE)
@@ -283,6 +287,7 @@ foreach(FAILING_TEST_FILE ${FAILING_TEST_FILES})
       endif()
     endif()
     target_compile_definitions( ${FAILING_TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:_CUDA> )
+    target_compile_definitions( ${FAILING_TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:_CUDA> $<${HAVE_HIPFORT}:_HIP> )
 endforeach()
 
 foreach(ABOR1_TEST_FILE ${ABOR1_TEST_FILES})
@@ -292,6 +297,7 @@ foreach(ABOR1_TEST_FILE ${ABOR1_TEST_FILES})
     target_link_libraries(${ABOR1_TEST_NAME}.x PRIVATE OpenMP::OpenMP_Fortran)
     target_link_libraries(${ABOR1_TEST_NAME}.x PRIVATE $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>)
     target_link_libraries(${ABOR1_TEST_NAME}.x PRIVATE $<$<BOOL:${HAVE_IO}>:HDF5::HDF5>)
+    target_link_libraries(${ABOR1_TEST_NAME}.x PRIVATE $<${HAVE_HIPFORT}:hipfort::hip>)
     set_target_properties(${ABOR1_TEST_NAME}.x PROPERTIES LINKER_LANGUAGE Fortran)
     add_test(NAME ${ABOR1_TEST_NAME} COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/abor1catcher.sh "./${ABOR1_TEST_NAME}.x")
     set_property(TEST ${ABOR1_TEST_NAME} PROPERTY ENVIRONMENT "OMP_NUM_THREADS=${omp_num_threads};DEV_ALLOC_SIZE=${dev_alloc_size}")
@@ -303,6 +309,7 @@ foreach(ABOR1_TEST_FILE ${ABOR1_TEST_FILES})
       endif()
     endif()
     target_compile_definitions( ${ABOR1_TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:_CUDA> )
+    target_compile_definitions( ${ABOR1_TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:_CUDA> $<${HAVE_HIPFORT}:_HIP> )
 endforeach()
 
 if(fiat_FOUND)
@@ -317,6 +324,7 @@ if(fiat_FOUND)
         OpenMP::OpenMP_Fortran
         $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
         $<$<BOOL:${HAVE_IO}>:HDF5::HDF5>
+        $<${HAVE_HIPFORT}:hipfort::hip>
       LINKER_LANGUAGE Fortran
       CONDITION ${HAVE_SINGLE_PRECISION}
   )
@@ -324,7 +332,11 @@ endif()
 
 ## Test presence of GPUs
 add_executable(check_gpu_num.x check_gpu_num.F90)
-target_link_libraries(check_gpu_num.x PRIVATE $<${HAVE_ACC}:OpenACC::OpenACC_Fortran> OpenMP::OpenMP_Fortran)
+target_link_libraries(check_gpu_num.x PRIVATE
+                      $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
+                      OpenMP::OpenMP_Fortran
+                      $<${HAVE_HIPFORT}:hipfort::hip>
+)
 set_target_properties(check_gpu_num.x PROPERTIES LINKER_LANGUAGE Fortran)
 target_compile_definitions( check_gpu_num.x PRIVATE $<${HAVE_OMP_OFFLOAD}:OMPGPU> )
 if(HAVE_OMP_OFFLOAD)

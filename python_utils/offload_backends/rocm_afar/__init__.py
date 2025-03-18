@@ -8,3 +8,4 @@
 # nor does it submit to any jurisdiction.
 
 from offload_backends.rocm_afar.openmp import *
+from offload_backends.rocm_afar.openmp_hip import *

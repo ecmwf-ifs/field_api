@@ -9,7 +9,8 @@
 
 import fypp
 from offload_backends import (
-    NVHPCOpenACC, NVHPCOpenACCCUDA, HostOnly, NVHPCOpenMP, NVHPCOpenMPCUDA, ROCMAFAROpenMP
+    NVHPCOpenACC, NVHPCOpenACCCUDA, HostOnly, NVHPCOpenMP, NVHPCOpenMPCUDA, ROCMAFAROpenMP,
+    ROCMAFAROpenMPHIP
 )
 
 """
@@ -22,7 +23,8 @@ _offload_map = {
     'NVHPCOpenACCCUDA': NVHPCOpenACCCUDA,
     'NVHPCOpenMP': NVHPCOpenMP,
     'NVHPCOpenMPCUDA': NVHPCOpenMPCUDA,
-    'ROCMAFAROpenMP': ROCMAFAROpenMP
+    'ROCMAFAROpenMP': ROCMAFAROpenMP,
+    'ROCMAFAROpenMPHIP': ROCMAFAROpenMPHIP
 }
 
 def _wrap_lines(input_str, ref_len, pragma='', indent=0):
@@ -452,7 +454,7 @@ def dev_free(ptr, return_val="ISTAT", indent=0):
 
     return _format_lines(method(ptr, return_val=return_val), indent=indent)
 
-def register_host_set_flags(flag_var, val, indent=0):
+def register_host_set_flags(flag_var, indent=0):
     """
     Set flags for page-locking host memory.
     """
@@ -460,7 +462,7 @@ def register_host_set_flags(flag_var, val, indent=0):
     backend = _get_offload_backend()
     method = _get_method(backend, 'register_host_set_flags')
 
-    return _format_lines(method(flag_var, val), indent=indent)
+    return _format_lines(method(flag_var), indent=indent)
 
 def register_host_decl_flags(flag_var, indent=0):
     """
