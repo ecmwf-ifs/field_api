@@ -7,17 +7,25 @@
 ! granted to it by virtue of its status as an intergovernmental organisation
 ! nor does it submit to any jurisdiction.
 
-PROGRAM SYNC_HOST
+PROGRAM TEST_HDF5_OUTPUT
         USE FIELD_MODULE
         USE FIELD_FACTORY_MODULE
         USE PARKIND1
         USE FIELD_ABORT_MODULE
+        USE HDF5
         IMPLICIT NONE
 
         CLASS(FIELD_2RB), POINTER :: W => NULL()
         REAL(KIND=JPRB), ALLOCATABLE :: D(:,:)
         REAL(KIND=JPRB), POINTER :: D_GPU(:,:)
+        REAL(KIND=JPRB), POINTER :: D_CPU(:,:)
+        TYPE(C_PTR) :: D_CPUPTR 
         INTEGER :: I, J
+
+        ! HDF5 variables
+        INTEGER(HID_T) :: file_id, dset_id, space_id
+        INTEGER(HSIZE_T), DIMENSION(2) :: dims
+        INTEGER :: hdferr
 
         ALLOCATE(D(10,10))
         D=3
@@ -39,5 +47,19 @@ PROGRAM SYNC_HOST
         ENDIF
         ENDDO
         ENDDO
+
+
+        dims = SHAPE(D)  ! Get dimensions of the array
+        CALL W%GET_HOST_DATA_RDWR(D_CPU)
+        D_CPUPTR = C_LOC(D_CPU)
+        CALL H5Screate_simple_f(2, dims, space_id, hdferr)
+        CALL H5Fcreate_F("field_data.h5", H5F_ACC_TRUNC_F, file_id, hdferr)
+        CALL H5Dcreate_f(file_id, "Field2D", H5T_NATIVE_REAL, space_id, dset_id, hdferr)
+        CALL H5Dwrite_f(dset_id, H5T_NATIVE_REAL, D_CPUPTR, hdferr)
+
+        CALL H5Dclose_f(dset_id, hdferr)
+        CALL H5Sclose_F(space_id, hdferr)
+        CALL H5Fclose_F(file_id, hdferr)
+
         CALL FIELD_DELETE(W)
 END PROGRAM

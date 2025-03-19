@@ -82,6 +82,7 @@ list(APPEND TEST_FILES
         test_field_delete_on_null.F90
         test_get_device_data_wronly.F90
         test_get_device_data_non_contiguous.F90
+        test_hdf5_rw_serial_field2d.F90
         test_host_mem_pool.F90
         test_lastdim.F90
         test_legacy.F90
@@ -120,6 +121,7 @@ foreach(TEST_FILE ${TEST_FILES})
            parkind_${DEFAULT_PRECISION}
            fiat
            OpenMP::OpenMP_Fortran
+	       HDF5::HDF5
            $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
         DEFINITIONS
            $<${HAVE_FIELD_GANG}:HAVE_FIELD_GANG>
@@ -133,6 +135,7 @@ foreach(TEST_FILE ${TEST_FILES})
     )
 
     target_link_options( ${TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:-gpu=pinned> )
+    #target_link_libraries( ${TEST_NAME}.x PRIVATE HDF5::HDF5)
     target_compile_definitions( ${TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:_CUDA> )
 
     if( DEFAULT_PRECISION MATCHES sp )
