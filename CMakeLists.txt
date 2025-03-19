@@ -72,6 +72,12 @@ ecbuild_add_option( FEATURE FIELD_GANG
     CONDITION (NOT CMAKE_Fortran_COMPILER_ID MATCHES "Cray")
 )
 
+### HDF5
+ecbuild_add_option( FEATURE HDF5
+    DESCRIPTION "Use HDF5 to read input and reference data"
+    REQUIRED_PACKAGES "HDF5 COMPONENTS Fortran"
+    DEFAULT ON )
+
 ## fypp preprocessor flags
 if(HAVE_BUDDY_MALLOC)
   list( APPEND fypp_defines "-DUSE_BUDDY_MALLOC")
