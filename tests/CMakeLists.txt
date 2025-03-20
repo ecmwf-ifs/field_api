@@ -79,9 +79,14 @@ list(APPEND TEST_FILES
         test_crc64.F90
         test_field1d.F90
         test_field_array.F90
+        test_field_clone.F90
+        test_field_clone_2.F90
+        test_field_clone_device.F90
+        test_field_clone_null.F90
+        test_field_clone_optional.F90
         test_field_delete_on_null.F90
-        test_get_device_data_wronly.F90
         test_get_device_data_non_contiguous.F90
+        test_get_device_data_wronly.F90
         test_host_mem_pool.F90
         test_lastdim.F90
         test_legacy.F90
