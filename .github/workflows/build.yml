@@ -124,8 +124,10 @@ jobs:
           echo "SDKROOT=$(xcrun --show-sdk-path)"         >> $GITHUB_ENV
           brew install libomp
           brew install coreutils
+          brew install hdf5
         else
           sudo apt-get update
+          sudo apt-get install libhdf5-dev libhdf5-serial-dev 
         fi
 
         printenv
