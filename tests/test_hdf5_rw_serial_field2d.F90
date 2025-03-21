@@ -52,10 +52,11 @@ PROGRAM TEST_HDF5_OUTPUT
         dims = SHAPE(D)  ! Get dimensions of the array
         CALL W%GET_HOST_DATA_RDWR(D_CPU)
         D_CPUPTR = C_LOC(D_CPU)
+        CALL h5open_f(hdferr)
         CALL H5Screate_simple_f(2, dims, space_id, hdferr)
-        CALL H5Fcreate_F("field_data.h5", H5F_ACC_TRUNC_F, file_id, hdferr)
-        CALL H5Dcreate_f(file_id, "Field2D", H5T_NATIVE_REAL, space_id, dset_id, hdferr)
-        CALL H5Dwrite_f(dset_id, H5T_NATIVE_REAL, D_CPUPTR, hdferr)
+        CALL H5Fcreate_F("field_data.hdf5", H5F_ACC_TRUNC_F, file_id, hdferr)
+        CALL H5Dcreate_f(file_id, "Field2D", H5T_NATIVE_DOUBLE, space_id, dset_id, hdferr)
+        CALL H5Dwrite_f(dset_id, H5T_NATIVE_DOUBLE, D_CPUPTR, hdferr)
 
         CALL H5Dclose_f(dset_id, hdferr)
         CALL H5Sclose_F(space_id, hdferr)
