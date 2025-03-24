@@ -166,6 +166,7 @@ jobs:
       run: |
         ${FIELD_API_TOOLS}/install-nvhpc.sh --prefix /opt/nvhpc --version 23.5
         source /opt/nvhpc/env.sh
+        FC=pgf90 .github/tools/install-hdf5.sh
         echo "${NVHPC_DIR}/compilers/bin"                   >> $GITHUB_PATH
 
     - name: Download Intel compiler
