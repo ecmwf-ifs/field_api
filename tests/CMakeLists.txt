@@ -121,7 +121,7 @@ foreach(TEST_FILE ${TEST_FILES})
            parkind_${DEFAULT_PRECISION}
            fiat
            OpenMP::OpenMP_Fortran
-	       HDF5::HDF5
+	     HDF5::HDF5
            $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
         DEFINITIONS
            $<${HAVE_FIELD_GANG}:HAVE_FIELD_GANG>

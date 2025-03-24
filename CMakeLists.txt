@@ -29,6 +29,7 @@ include( field_api_macros )
 
 ## find required packages
 ecbuild_find_package(OpenMP COMPONENTS Fortran REQUIRED)
+#ecbuild_find_package(HDF5 REQUIRED)
 
 ## find fypp
 field_api_find_fypp()

@@ -127,7 +127,11 @@ jobs:
           brew install hdf5
         else
           sudo apt-get update
-          sudo apt-get install libhdf5-dev libhdf5-serial-dev 
+          if [[ "${{ matrix.compiler }}" =~ gnu ]]; then 
+             sudo apt-get install libhdf5-dev libhdf5-serial-dev 
+          else
+              export HDF5_ROOT=${GITHUB_WORKSPACE}/hdf5-install
+          fi
         fi
 
         printenv
@@ -167,6 +171,7 @@ jobs:
         ${FIELD_API_TOOLS}/install-nvhpc.sh --prefix /opt/nvhpc --version 23.5
         source /opt/nvhpc/env.sh
         FC=pgf90 .github/tools/install-hdf5.sh
+        echo "HDF5_ROOT=${GITHUB_WORKSPACE}/hdf5-install"    >> $GITHUB_ENV
         echo "${NVHPC_DIR}/compilers/bin"                   >> $GITHUB_PATH
 
     - name: Download Intel compiler
