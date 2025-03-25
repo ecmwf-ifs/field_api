@@ -318,7 +318,7 @@ def serial(**kwargs):
     """
 
     backend = _get_offload_backend()
-    method = _get_method(backend, 'launch_serial_kernel')
+    method = _get_method(backend, 'serial')
 
     indent = kwargs.pop('indent', 0)
     return _format_lines(method(**kwargs), indent=indent)
@@ -329,7 +329,7 @@ def end_serial(indent=0):
     """
 
     backend = _get_offload_backend()
-    method = _get_method(backend, 'end_serial_kernel')
+    method = _get_method(backend, 'end_serial')
 
     return _format_lines(method(), indent=indent)
 
