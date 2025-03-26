@@ -193,6 +193,8 @@ jobs:
           intel-oneapi-mkl-2023.2.0
         source /opt/intel/oneapi/setvars.sh
         printenv >> $GITHUB_ENV
+        FC=ifort .github/tools/install-hdf5.sh
+        echo "HDF5_ROOT=${GITHUB_WORKSPACE}/hdf5-install"    >> $GITHUB_ENV
         echo "CACHE_SUFFIX=$CC-$($CC -dumpversion)" >> $GITHUB_ENV
 
     - name: Install Intel modern compiler
@@ -202,6 +204,8 @@ jobs:
         sudo apt install intel-hpckit
         source /opt/intel/oneapi/setvars.sh
         printenv >> $GITHUB_ENV
+        .github/tools/install-hdf5.sh
+        echo "HDF5_ROOT=${GITHUB_WORKSPACE}/hdf5-install"    >> $GITHUB_ENV
         echo "CACHE_SUFFIX=$CC-$($CC -dumpversion)" >> $GITHUB_ENV
 
     - name: Build & Test
