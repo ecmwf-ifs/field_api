@@ -134,6 +134,8 @@ foreach(prec ${precisions})
          $<${fiat_FOUND}:fiat>
          $<${fiat_FOUND}:parkind_${prec}>
          OpenMP::OpenMP_Fortran
+      PUBLIC_LIBS
+         HDF5::HDF5
       )
 
   set_property(TARGET ${LIBNAME}_${prec} PROPERTY C_STANDARD 99)

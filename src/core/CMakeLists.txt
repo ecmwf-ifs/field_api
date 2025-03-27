@@ -15,7 +15,7 @@ list(APPEND srcs
      field_constants_module.F90
      field_abort_module.F90)
 
-list( APPEND ranksuff_srcs _data _hdf5_data)
+list( APPEND ranksuff_srcs _data )
 list( APPEND non_ranksuff_srcs dev_alloc_module field_module host_alloc_module field_async_module )
 
 ## expand ranksuff sources
@@ -50,6 +50,7 @@ field_api_add_object_library(
     LIBNAME        field_api_core
     SRCS           ${srcs}
     LIBRARIES      field_api_debug
+                   HDF5 
 )
 
 set_source_files_properties( ${CMAKE_CURRENT_BINARY_DIR}/dev_alloc_module.F90 PROPERTIES COMPILE_OPTIONS $<${HAVE_CUDA}:-cuda>)
