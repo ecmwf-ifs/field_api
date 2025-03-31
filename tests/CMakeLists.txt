@@ -81,6 +81,7 @@ list(APPEND TEST_FILES
         test_field1d.F90
         test_field_array.F90
         test_field_delete_on_null.F90
+        test_force_async_acc.F90
         test_force_methods.F90
         test_get_device_data_bounds.F90
         test_get_device_data_wronly.F90
