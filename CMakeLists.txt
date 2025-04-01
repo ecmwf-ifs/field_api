@@ -75,9 +75,10 @@ ecbuild_add_option( FEATURE FIELD_GANG
 
 ### HDF5
 ecbuild_add_option( FEATURE HDF5
-    DESCRIPTION "Use HDF5 to read input and reference data"
+    DESCRIPTION "Use HDF5 to read and write FielAPI variables"
     REQUIRED_PACKAGES "HDF5 COMPONENTS Fortran"
-    DEFAULT ON )
+    DEFAULT ON
+)
 
 ## fypp preprocessor flags
 if(HAVE_BUDDY_MALLOC)
@@ -122,6 +123,10 @@ if( HAVE_FIELD_GANG )
    list(APPEND obj_libs field_api_buffer)
 endif()
 
+if( HAVE_HDF5 )
+   list(APPEND obj_libs field_api_hdf5io)
+endif()
+
 ## add field_api targets
 foreach(prec ${precisions})
   ecbuild_add_library(
@@ -135,7 +140,7 @@ foreach(prec ${precisions})
          $<${fiat_FOUND}:parkind_${prec}>
          OpenMP::OpenMP_Fortran
       PUBLIC_LIBS
-         HDF5::HDF5
+      $<${HAVE_HDF5}:HDF5::HDF5>
       )
 
   set_property(TARGET ${LIBNAME}_${prec} PROPERTY C_STANDARD 99)
