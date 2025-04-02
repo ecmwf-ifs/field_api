@@ -18,13 +18,13 @@ field_api_expand_fypp_ranksuff(
    OUTPUT_SRCS            srcs
 )
 
-### expand non ranksuff sources
-#field_api_expand_fypp(
-#   PYTHON_MODULE_DIR      ${PROJECT_SOURCE_DIR}/python_utils
-#   SOURCE_DIR             ${CMAKE_CURRENT_SOURCE_DIR}
-#   INPUT_SRCS             ${non_ranksuff_srcs}
-#   OUTPUT_SRCS            srcs
-#)
+## expand non ranksuff sources
+field_api_expand_fypp(
+   PYTHON_MODULE_DIR      ${PROJECT_SOURCE_DIR}/python_utils
+   SOURCE_DIR             ${CMAKE_CURRENT_SOURCE_DIR}
+   INPUT_SRCS             ${non_ranksuff_srcs}
+   OUTPUT_SRCS            srcs
+)
 
 ## define object library
 field_api_add_object_library(
