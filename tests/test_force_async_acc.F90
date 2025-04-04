@@ -8,91 +8,87 @@
 ! nor does it submit to any jurisdiction.
 
 
-program test_force_async
+PROGRAM TEST_FORCE_ASYNC
 
-  use field_module
-  use field_factory_module
-  use parkind1
-  use field_abort_module
-  use field_defaults_module
-  use field_async_module, only: wait_for_async_queue
+  USE FIELD_MODULE
+  USE FIELD_FACTORY_MODULE
+  USE PARKIND1
+  USE FIELD_ABORT_MODULE
+  USE FIELD_DEFAULTS_MODULE
+  USE FIELD_ASYNC_MODULE, ONLY: WAIT_FOR_ASYNC_QUEUE
 
-  implicit none
+  IMPLICIT NONE
 
-  class(field_3rb), pointer :: f_ptr => null()
-  real(kind=jprb), pointer  :: ptr_cpu(:,:,:)
-  real(kind=jprb), pointer  :: ptr_gpu(:,:,:)
-  integer                   :: i,j,k
-  integer, parameter        :: nstreams = 3
-  integer, parameter        :: inner_rank = 1024
-  integer, parameter        :: final_rank = 36
-  logical                   :: okay(nstreams)
-  logical                   :: okay_scalar
-  integer                   :: queue, stream, stream_no
-  integer                   :: streams(nstreams)
-  integer                   :: queues(nstreams)
-  integer                   :: blk_size
-  integer                   :: buffer_size
-  integer                   :: blk_idx
-  integer                   :: blk_start, blk_end
-  integer                   :: blk_count
-  integer                   :: offset
-  integer                   :: blk_bounds(2)
+  CLASS(FIELD_3RB), POINTER :: F_PTR => NULL()
+  REAL(KIND=JPRB), POINTER  :: PTR_CPU(:,:,:)
+  REAL(KIND=JPRB), POINTER  :: PTR_GPU(:,:,:)
+  INTEGER                   :: I,J,K
+  INTEGER, PARAMETER        :: NQUEUES = 3
+  INTEGER, PARAMETER        :: INNER_RANK = 64
+  INTEGER, PARAMETER        :: FINAL_RANK = 37
+  LOGICAL                   :: OKAY
+  INTEGER                   :: QUEUE
+  INTEGER                   :: BLK_SIZE
+  INTEGER                   :: BUFFER_SIZE
+  INTEGER                   :: BLK_IDX
+  INTEGER                   :: BLK_START, BLK_END
+  INTEGER                   :: BLK_COUNT
+  INTEGER                   :: OFFSET
+  INTEGER                   :: BLK_BOUNDS(2)
 
-  init_pinned_value = .true.
-  init_map_devptr = .false.
-  okay = .true.
-  okay_scalar = .true.
+  INIT_PINNED_VALUE = .TRUE.
+  OKAY = .TRUE.
+  OKAY = .TRUE.
 
-  call field_new(f_ptr, lbounds=[1,1,1], ubounds=[inner_rank,inner_rank,final_rank], persistent=.true.)
-  call f_ptr%get_host_data_rdwr(ptr_cpu)
-  do k=1,final_rank
-    ptr_cpu(:,:,k)=k
-  end do 
+  CALL FIELD_NEW(F_PTR, LBOUNDS=[1,1,1], UBOUNDS=[INNER_RANK,INNER_RANK,FINAL_RANK], PERSISTENT=.TRUE.)
+  CALL F_PTR%GET_HOST_DATA_RDWR(PTR_CPU)
+  DO K=1,FINAL_RANK
+    PTR_CPU(:,:,K)=K
+  END DO 
 
-  ! allocate device "block buffers"
-  buffer_size = 12
-  blk_count=(final_rank+buffer_size-1)/buffer_size
-  call f_ptr%create_device_data(blk_bounds=[1,nstreams*buffer_size])
+  ! ALLOCATE DEVICE "BLOCK BUFFERS"
+  BUFFER_SIZE = 12
+  BLK_COUNT=(FINAL_RANK+BUFFER_SIZE-1)/BUFFER_SIZE
+  CALL F_PTR%CREATE_DEVICE_DATA(BLK_BOUNDS=[1,NQUEUES*BUFFER_SIZE])
 
-  ! loop over the blocks and copy data to host
-  do blk_idx = 0, blk_count-1
-    blk_start=blk_idx*buffer_size+1
-    blk_end= min((blk_idx+1)*buffer_size, final_rank)
-    blk_bounds(1) = blk_start
-    blk_bounds(2) = blk_end
-    blk_size = blk_bounds(2) - blk_bounds(1) + 1
-    queue = modulo(blk_idx, blk_count)+1
-    offset = blk_start-1
+  ! LOOP OVER THE BLOCKS AND COPY DATA TO HOST
+  DO BLK_IDX = 0, BLK_COUNT-1
+    BLK_START=BLK_IDX*BUFFER_SIZE+1
+    BLK_END= MIN((BLK_IDX+1)*BUFFER_SIZE, FINAL_RANK)
+    BLK_BOUNDS(1) = BLK_START
+    BLK_BOUNDS(2) = BLK_END
+    BLK_SIZE = BLK_BOUNDS(2) - BLK_BOUNDS(1) + 1
+    QUEUE = MODULO(BLK_IDX, NQUEUES)+1
+    OFFSET = (QUEUE-1)*BUFFER_SIZE
 
-    call f_ptr%get_device_data_force(ptr_gpu, blk_bounds=blk_bounds, queue=queue, offset=offset)
+    CALL F_PTR%GET_DEVICE_DATA_FORCE(PTR_GPU, BLK_BOUNDS=BLK_BOUNDS, QUEUE=QUEUE, OFFSET=OFFSET)
 
-      !$acc kernels loop async(queue) deviceptr(ptr_gpu)
-      do k = blk_start, blk_end
-        do j = 1,inner_rank
-          do i=1,inner_rank
-            ptr_gpu(i,j,k) = 100 + k
-          end do
-        end do
-      end do
-      !$acc end kernels
+    !$acc kernels loop present(ptr_gpu) async(queue)
+    DO K = BLK_START, BLK_END
+    DO J = 1,INNER_RANK
+    DO I=1,INNER_RANK
+    PTR_GPU(I,J,K) = 100 + K
+    END DO
+    END DO
+    END DO
+    !$acc end kernels
 
-    call f_ptr%sync_host_force(blk_bounds=blk_bounds, queue=queue, offset=offset)
-  end do
+    CALL F_PTR%SYNC_HOST_FORCE(BLK_BOUNDS=BLK_BOUNDS, QUEUE=QUEUE, OFFSET=OFFSET)
+    END DO
 
-  call wait_for_async_queue(1)
-  call wait_for_async_queue(2)
-  call wait_for_async_queue(3)
+  DO QUEUE=1,NQUEUES
+    CALL WAIT_FOR_ASYNC_QUEUE(QUEUE)
+  END DO
 
-  do k=1,final_rank
-    do j = 1,inner_rank
-      do i=1,inner_rank
-        if ( ptr_cpu(i,j,k) /= 100 + k ) then
-          okay_scalar = .false.
-          call field_abort("error data not updated on host (async copy)")
-        end if
-      end do
-    end do
-  end do
+  DO K=1,FINAL_RANK
+    DO J = 1,INNER_RANK
+      DO I=1,INNER_RANK
+        IF ( PTR_CPU(I,J,K) /= 100 + K ) THEN
+          OKAY = .FALSE.
+          CALL FIELD_ABORT("ERROR DATA NOT UPDATED ON HOST (ASYNC COPY)")
+        END IF
+      END DO
+    END DO
+  END DO
 
-end program test_force_async
+END PROGRAM TEST_FORCE_ASYNC

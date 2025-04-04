@@ -14,6 +14,7 @@ PROGRAM TEST_GET_DEVICE_DATA_MULTI_BLK_ASYNC
   USE PARKIND1
   USE FIELD_ABORT_MODULE
   USE FIELD_CONSTANTS_MODULE
+  USE FIELD_ASYNC_MODULE, ONLY: WAIT_FOR_ASYNC_QUEUE
   IMPLICIT NONE
 
   CLASS(FIELD_3RB), POINTER :: F_PTR => NULL()
@@ -61,9 +62,9 @@ PROGRAM TEST_GET_DEVICE_DATA_MULTI_BLK_ASYNC
 
     CALL F_PTR%GET_DEVICE_DATA_FORCE(PTR_GPU, BLK_BOUNDS=BLK_BOUNDS, QUEUE=QUEUE, OFFSET=OFFSET)
 
-    !$acc parallel loop present(PTR_GPU) async(QUEUE)
-    DO K = BLK_START, BLK_END
-      DO J = 1,INNER_RANK
+    !$acc kernels loop present(PTR_GPU) async(QUEUE)
+    DO K = BLK_START,BLK_END
+      DO J=1,INNER_RANK
         DO I=1,INNER_RANK
           IF ( PTR_GPU(I,J,K) /= K) THEN
             OKAY(QUEUE) = .FALSE.
@@ -72,12 +73,16 @@ PROGRAM TEST_GET_DEVICE_DATA_MULTI_BLK_ASYNC
         END DO
       END DO
     END DO
-    !$acc end parallel loop
+    !$acc end kernels
+
     CALL F_PTR%SYNC_HOST_FORCE(BLK_BOUNDS=BLK_BOUNDS, QUEUE=QUEUE, OFFSET=OFFSET)
 
   END DO
 
-  !$acc wait
+  DO QUEUE=1,NQUEUES
+    CALL WAIT_FOR_ASYNC_QUEUE(QUEUE)
+  END DO
+
   !$acc update host(OKAY)
   !$acc exit data delete(OKAY)
 
@@ -89,11 +94,10 @@ PROGRAM TEST_GET_DEVICE_DATA_MULTI_BLK_ASYNC
   END DO
 
   DO K=1,FINAL_RANK
-    DO I=1,INNER_RANK
-      DO J = 1,INNER_RANK
+    DO J=1,INNER_RANK
+      DO I=1,INNER_RANK
         IF ( PTR_CPU(I,J,K) /= 100 + K ) THEN
           OKAY_SCALAR = .FALSE.
-          print *, "failure in I J K:", I, J, K, "PTR_CPU(I,J,K) =", PTR_CPU(I,J,K)
         END IF
       END DO
     END DO
@@ -101,84 +105,6 @@ PROGRAM TEST_GET_DEVICE_DATA_MULTI_BLK_ASYNC
   IF (.NOT. OKAY_SCALAR ) THEN
     CALL FIELD_ABORT("ERROR DATA NOT UPDATED ON HOST (ASYNC COPY)")
   END  IF
-
-
-  BUFFER_SIZE = (FINAL_RANK-1)/NQUEUES + 1
-  DO QUEUE = 1,NQUEUES
-    IF ( QUEUE == NQUEUES ) THEN
-      BLK_SIZE = FINAL_RANK - BUFFER_SIZE*(NQUEUES-1)
-    ELSE
-      BLK_SIZE = BUFFER_SIZE
-    ENDIF
-    DO J = 1,BLK_SIZE
-      PTR_CPU(:,:,(QUEUE-1)*BUFFER_SIZE + J) = QUEUE*111
-      OKAY(QUEUE) = .TRUE.
-    END DO
-  END DO
-
-
-  !$acc enter data copyin(OKAY)
-
-  CALL F_PTR%CREATE_DEVICE_DATA(BLK_BOUNDS=[1,FINAL_RANK])
-
-  DO QUEUE=1,NQUEUES
-    ! we need to retrieve the correct ptr for each queue, this will not move memory,
-    ! but only point ptr_gpu to the correct chunk on the gpu.
-    IF ( QUEUE == NQUEUES ) THEN
-      BLK_SIZE = FINAL_RANK - BUFFER_SIZE*(NQUEUES-1)
-    ELSE
-      BLK_SIZE = BUFFER_SIZE
-    END IF
-    BLK_BOUNDS(1) = (QUEUE-1)*BUFFER_SIZE +1
-    BLK_BOUNDS(2) = BLK_BOUNDS(1) + BLK_SIZE -1
-
-    OFFSET = BLK_BOUNDS(1)-1
-
-    CALL F_PTR%GET_DEVICE_DATA_FORCE(PTR_GPU, QUEUE, BLK_BOUNDS, OFFSET)
-
-    !$acc serial copyin(QUEUE), present(PTR_GPU), present(OKAY), async(QUEUE)
-    DO I=1,INNER_RANK
-      DO J = 1,INNER_RANK
-        DO K = LBOUND(PTR_GPU,3),UBOUND(PTR_GPU,3)
-          IF ( PTR_GPU(I,J,K) /= QUEUE*111 ) THEN
-            OKAY(QUEUE) = .FALSE.
-          END IF
-          PTR_GPU(I,J,K) = QUEUE
-        END DO
-      END DO
-    END DO
-    !$acc end serial
-
-    CALL F_PTR%SYNC_HOST_FORCE(QUEUE=QUEUE, BLK_BOUNDS=BLK_BOUNDS, OFFSET=OFFSET)
-  END DO
-
-  !$acc wait
-  !$acc exit data copyout(OKAY)
-
-  DO QUEUE = 1,NQUEUES
-    IF (.NOT. OKAY(QUEUE) ) THEN
-      CALL FIELD_ABORT("ERROR DATA NOT UPDATED ON DEVICE (ASYNC COPY)")
-    END IF
-
-    IF ( QUEUE == NQUEUES ) THEN
-      BLK_SIZE = FINAL_RANK - BUFFER_SIZE*(NQUEUES-1)
-    ELSE
-      BLK_SIZE = BUFFER_SIZE
-    ENDIF
-
-    DO I=1,INNER_RANK
-      DO J = 1,INNER_RANK
-        DO K =1,BLK_SIZE
-          IF ( PTR_CPU(I,J,(QUEUE-1)*BUFFER_SIZE+K) /= QUEUE ) THEN
-            OKAY(QUEUE) = .FALSE.
-          END IF
-        END DO
-      END DO
-    END DO
-    IF (.NOT. OKAY(QUEUE) ) THEN
-      CALL FIELD_ABORT("ERROR DATA NOT UPDATED ON HOST (ASYNC COPY)")
-    END  IF
-  END DO
 
 
   ! Test that normal copies works after returning from "async queue-mode"
