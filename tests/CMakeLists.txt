@@ -49,7 +49,6 @@ list(APPEND TEST_FILES
         final_wrapper_gpu.F90
         gather_scatter.F90
         gather_scatter_lastdim.F90
-        get_device_data_multi_blk_async.F90
         get_dims.F90
         get_stats.F90
         get_view.F90
@@ -108,7 +107,6 @@ list(APPEND TEST_FILES
         test_field_clone_null.F90
         test_field_clone_optional.F90
         test_field_delete_on_null.F90
-        test_force_async_acc.F90
         test_force_methods.F90
         test_get_device_data_bounds.F90
         test_get_device_data_non_contiguous.F90
@@ -132,6 +130,13 @@ set(FAILING_TEST_FILES
 set(ABOR1_TEST_FILES
 	resize_wrapper.F90
 	)
+
+if(HAVE_ACC)
+  list(APPEND TEST_FILES
+       get_device_data_multi_blk_async.F90
+       test_force_async_acc.F90
+      )
+endif()
 
 if(HAVE_IO)
   list(APPEND HDF5_TEST_FILES
