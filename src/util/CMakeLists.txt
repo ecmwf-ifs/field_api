@@ -38,5 +38,4 @@ field_api_add_object_library(
 set_source_files_properties( ${CMAKE_CURRENT_BINARY_DIR}/field_array_module.F90
                              ${CMAKE_CURRENT_BINARY_DIR}/field_array_util_module.F90
                              ${CMAKE_CURRENT_BINARY_DIR}/field_util_module.F90
-                             ${CMAKE_CURRENT_BINARY_DIR}/field_clone_module.F90
                              PROPERTIES HEADER_FILE_ONLY ON)

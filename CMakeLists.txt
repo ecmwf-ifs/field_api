@@ -100,8 +100,7 @@ list(APPEND prec_srcs
     ${CMAKE_CURRENT_BINARY_DIR}/src/core/field_module.F90
     ${CMAKE_CURRENT_BINARY_DIR}/src/util/field_array_module.F90
     ${CMAKE_CURRENT_BINARY_DIR}/src/util/field_array_util_module.F90
-    ${CMAKE_CURRENT_BINARY_DIR}/src/util/field_util_module.F90
-    ${CMAKE_CURRENT_BINARY_DIR}/src/util/field_clone_module.F90)
+    ${CMAKE_CURRENT_BINARY_DIR}/src/util/field_util_module.F90)
 
 list(APPEND obj_libs
         field_api_core
