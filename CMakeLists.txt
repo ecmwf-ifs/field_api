@@ -106,6 +106,7 @@ endif()
 ## specify precision dependent sources that must be compiled twice
 list(APPEND prec_srcs
     ${CMAKE_CURRENT_BINARY_DIR}/src/core/field_module.F90
+    ${CMAKE_CURRENT_BINARY_DIR}/src/hdf5io/field_hdf5_module.F90
     ${CMAKE_CURRENT_BINARY_DIR}/src/util/field_array_module.F90
     ${CMAKE_CURRENT_BINARY_DIR}/src/util/field_array_util_module.F90
     ${CMAKE_CURRENT_BINARY_DIR}/src/util/field_util_module.F90)
@@ -117,6 +118,7 @@ list(APPEND obj_libs
         field_api_buffer
         field_api_util
         field_api_shuffle
+        field_api_hdf5io
 )
 
 if( HAVE_FIELD_GANG )
@@ -160,7 +162,7 @@ foreach(prec ${precisions})
   # add sub-component module directories to target
   field_api_target_add_module_dirs(
     TARGET     ${LIBNAME}_${prec}
-    LIBS       field_api_debug field_api_core field_api_factory field_api_util field_api_shuffle
+    LIBS       field_api_debug field_api_core field_api_factory field_api_util field_api_shuffle field_api_hdf5io
   )
 
   if( prec MATCHES sp )

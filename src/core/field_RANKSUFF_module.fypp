@@ -50,7 +50,7 @@ CONTAINS
   PROCEDURE :: GET_DEVICE_DATA_RDWR => ${ftn}$_GET_DEVICE_DATA_RDWR
   PROCEDURE :: GET_HOST_DATA_RDONLY => ${ftn}$_GET_HOST_DATA_RDONLY
   PROCEDURE :: GET_HOST_DATA_RDWR => ${ftn}$_GET_HOST_DATA_RDWR
-  PROCEDURE :: GET_STORAGE_DATA => ${ftn}$_GET_STORAGE_DATA
+! PROCEDURE :: GET_STORAGE_DATA => ${ftn}$_GET_STORAGE_DATA
   PROCEDURE :: SYNC_HOST_RDWR => ${ftn}$_SYNC_HOST_RDWR
   PROCEDURE :: SYNC_HOST_RDONLY => ${ftn}$_SYNC_HOST_RDONLY
   PROCEDURE :: SYNC_DEVICE_RDWR => ${ftn}$_SYNC_DEVICE_RDWR
@@ -462,45 +462,45 @@ $:offload_macros.detach(ptr='SELF%DEVPTR', indent=6)
 
   END SUBROUTINE ${ftn}$_GET_HOST_DATA
 
-  SUBROUTINE ${ftn}$_GET_STORAGE_DATA (SELF, PTR, QUEUE)
-    CLASS(${ftn}$) :: SELF
-    INTEGER (KIND=JPIM)  :: MODE
-
-    ${ft.type}$, POINTER,          INTENT(INOUT) :: PTR(${ft.shape}$)
-    INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
-
-    INTEGER(KIND=JPIM) :: LBOUNDS(${ft.rank}$)
-    INTEGER(KIND=JPIM) :: UBOUNDS(${ft.rank}$)
-    TYPE(C_PTR) :: CPTR !(${ft.shape}$)
-    ! HDF5 variables
-    INTEGER(HID_T) :: file_id, space_id
-    INTEGER(HID_T) :: dset_id, dsetm_id, dsetd_id
-    INTEGER(HSIZE_T), DIMENSION(${ft.rank}$) :: dims
-    INTEGER :: hdferr
-
-    LBOUNDS=LBOUND(SELF%PTR)
-    UBOUNDS=UBOUND(SELF%PTR)
-    IF (IAND (SELF%GET_STATUS (), NHSTFRESH) == 0) THEN
-      CALL SELF%COPY_DATA (ND2H, QUEUE)
-      CALL SELF%SET_STATUS (IOR (SELF%GET_STATUS (), NHSTFRESH))
-    ENDIF
-    PTR (${ft.lbptr}$) => SELF%PTR (${','.join(':' for _ in range(ft.rank))}$)
-    MODE=NRD
-    IF (IAND (MODE, NWR) /= 0) THEN
-      CALL SELF%SET_STATUS (IAND (SELF%GET_STATUS (), NOT (NDEVFRESH)))
-    ENDIF
-        dims(1:${ft.rank}$)=UBOUNDS(1:${ft.rank}$)-LBOUNDS(1:${ft.rank}$)+1
-        CPTR=C_LOC(PTR)
-        CALL h5open_f(hdferr)
-        CALL H5Screate_simple_f(${ft.rank}$, dims, space_id, hdferr)
-        CALL H5Fcreate_F("field_store.hdf5", H5F_ACC_TRUNC_F, file_id, hdferr)
-        CALL H5Dcreate_f(file_id, "Field2DB", ${ft.h5type}$, space_id, dset_id, hdferr)
-        CALL H5Dwrite_f(dset_id,  ${ft.h5type}$, CPTR, hdferr)
-        CALL H5Dclose_f(dset_id, hdferr)
-        CALL H5Sclose_F(space_id, hdferr)
-        CALL H5Fclose_F(file_id, hdferr)
-
-  END SUBROUTINE ${ftn}$_GET_STORAGE_DATA
+!  SUBROUTINE ${ftn}$_GET_STORAGE_DATA (SELF, PTR, QUEUE)
+!    CLASS(${ftn}$) :: SELF
+!    INTEGER (KIND=JPIM)  :: MODE
+!
+!    ${ft.type}$, POINTER,          INTENT(INOUT) :: PTR(${ft.shape}$)
+!    INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
+!
+!    INTEGER(KIND=JPIM) :: LBOUNDS(${ft.rank}$)
+!    INTEGER(KIND=JPIM) :: UBOUNDS(${ft.rank}$)
+!    TYPE(C_PTR) :: CPTR !(${ft.shape}$)
+!    ! HDF5 variables
+!    INTEGER(HID_T) :: file_id, space_id
+!    INTEGER(HID_T) :: dset_id, dsetm_id, dsetd_id
+!    INTEGER(HSIZE_T), DIMENSION(${ft.rank}$) :: dims
+!    INTEGER :: hdferr
+!
+!    LBOUNDS=LBOUND(SELF%PTR)
+!    UBOUNDS=UBOUND(SELF%PTR)
+!    IF (IAND (SELF%GET_STATUS (), NHSTFRESH) == 0) THEN
+!      CALL SELF%COPY_DATA (ND2H, QUEUE)
+!      CALL SELF%SET_STATUS (IOR (SELF%GET_STATUS (), NHSTFRESH))
+!    ENDIF
+!    PTR (${ft.lbptr}$) => SELF%PTR (${','.join(':' for _ in range(ft.rank))}$)
+!    MODE=NRD
+!    IF (IAND (MODE, NWR) /= 0) THEN
+!      CALL SELF%SET_STATUS (IAND (SELF%GET_STATUS (), NOT (NDEVFRESH)))
+!    ENDIF
+!        dims(1:${ft.rank}$)=UBOUNDS(1:${ft.rank}$)-LBOUNDS(1:${ft.rank}$)+1
+!        CPTR=C_LOC(PTR)
+!        CALL h5open_f(hdferr)
+!        CALL H5Screate_simple_f(${ft.rank}$, dims, space_id, hdferr)
+!        CALL H5Fcreate_F("field_store.hdf5", H5F_ACC_TRUNC_F, file_id, hdferr)
+!        CALL H5Dcreate_f(file_id, "Field2DB", ${ft.h5type}$, space_id, dset_id, hdferr)
+!        CALL H5Dwrite_f(dset_id,  ${ft.h5type}$, CPTR, hdferr)
+!        CALL H5Dclose_f(dset_id, hdferr)
+!        CALL H5Sclose_F(space_id, hdferr)
+!        CALL H5Fclose_F(file_id, hdferr)
+!
+!  END SUBROUTINE ${ftn}$_GET_STORAGE_DATA
 
   SUBROUTINE ${ftn}$_OWNER_GET_HOST_DATA (SELF, MODE, PTR, QUEUE)
     CLASS(${ftn}$_OWNER) :: SELF

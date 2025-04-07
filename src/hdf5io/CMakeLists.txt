@@ -8,7 +8,7 @@
 # nor does it submit to any jurisdiction.
 
 list( APPEND ranksuff_srcs _hdf5)
-#list( APPEND non_ranksuff_srcs field_factory_module )
+list( APPEND non_ranksuff_srcs field_hdf5_module )
 
 ## expand ranksuff sources
 field_api_expand_fypp_ranksuff(
@@ -32,3 +32,7 @@ field_api_add_object_library(
     SRCS           ${srcs}
     LIBRARIES      field_api_core field_api_debug
 )
+
+## don't build precision dependent sourcefile
+set_source_files_properties( ${CMAKE_CURRENT_BINARY_DIR}/field_hdf5_module.F90 PROPERTIES HEADER_FILE_ONLY ON)
+
