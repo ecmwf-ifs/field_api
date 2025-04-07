@@ -9,7 +9,7 @@
 
 
 list( APPEND ranksuff_srcs _gang _factory_gang _stack _stack_member _factory_stack)
-list( APPEND non_ranksuff_srcs field_gang_module field_stack_module)
+list( APPEND non_ranksuff_srcs field_gang_module)
 
 ## expand ranksuff sources
 field_api_expand_fypp_ranksuff(
