@@ -9,21 +9,12 @@
 
 
 list( APPEND ranksuff_srcs _gang _factory_gang _stack _stack_member _factory_stack)
-list( APPEND non_ranksuff_srcs field_gang_module)
 
 ## expand ranksuff sources
 field_api_expand_fypp_ranksuff(
    PYTHON_MODULE_DIR      ${PROJECT_SOURCE_DIR}/python_utils
    SOURCE_DIR             ${CMAKE_CURRENT_SOURCE_DIR}
    INPUT_SRCS             ${ranksuff_srcs}
-   OUTPUT_SRCS            srcs
-)
-
-## expand non ranksuff sources
-field_api_expand_fypp(
-   PYTHON_MODULE_DIR      ${PROJECT_SOURCE_DIR}/python_utils
-   SOURCE_DIR             ${CMAKE_CURRENT_SOURCE_DIR}
-   INPUT_SRCS             ${non_ranksuff_srcs}
    OUTPUT_SRCS            srcs
 )
 
