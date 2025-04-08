@@ -144,9 +144,10 @@ PROGRAM TEST_HDF5_OUTPUT
         CALL H5Dclose_f(dsetl_id, hdferr)
         CALL H5Sclose_F(space_id, hdferr)
         CALL H5Fclose_F(file_id, hdferr)
-!       CALL W%GET_STORAGE_DATA(D_CPU)
-!       CALL WD%GET_STORAGE_DATA(DD_CPU)
-!       CALL WI%GET_STORAGE_DATA(DI_CPU)
+        CALL GET_STORAGE_DATA(W,D_CPU)
+        CALL GET_STORAGE_DATA(WM,DM_CPU)
+        CALL GET_STORAGE_DATA(WD,DD_CPU)
+        CALL GET_STORAGE_DATA(WI,DI_CPU)
         CALL GET_STORAGE_DATA(WL,DL_CPU)
 
         CALL FIELD_DELETE(W)

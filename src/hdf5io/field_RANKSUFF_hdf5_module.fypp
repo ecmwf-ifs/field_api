@@ -31,25 +31,6 @@ INTERFACE GET_STORAGE_DATA
 #:for ft in fieldTypeList
 #:set ftn = ft.name
   MODULE PROCEDURE ${ft.name}$_GET_STORAGE_DATA
-!  SUBROUTINE GET_STORAGE_DATA (SELF, PTR, QUEUE)
-!    ${fieldType.useParkind1 ()}$
-!    USE HDF5
-!    USE ISO_C_BINDING 
-!    IMPORT ::  ${ftn}$
-!    CLASS(${ftn}$),               INTENT(IN) :: SELF
-!    INTEGER (KIND=JPIM)  :: MODE
-!    ${ft.type}$, POINTER,          INTENT(INOUT) :: PTR(${ft.shape}$)
-!    INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
-!
-!    INTEGER(KIND=JPIM) :: LBOUNDS(${ft.rank}$)
-!    INTEGER(KIND=JPIM) :: UBOUNDS(${ft.rank}$)
-!    TYPE(C_PTR) :: CPTR !(${ft.shape}$)
-!    ! HDF5 variables
-!    INTEGER(HID_T) :: file_id, space_id
-!    INTEGER(HID_T) :: dset_id, dsetm_id, dsetd_id
-!    INTEGER(HSIZE_T), DIMENSION(${ft.rank}$) :: dims
-!    INTEGER :: hdferr
-!  END SUBROUTINE GET_STORAGE_DATA
 END INTERFACE
 #:endfor
 
@@ -72,19 +53,18 @@ CONTAINS
     INTEGER(HID_T) :: file_id, space_id
     INTEGER(HID_T) :: dset_id, dsetm_id, dsetd_id
     INTEGER(HSIZE_T), DIMENSION(${ft.rank}$) :: dims
+     ${ft.type}$, DIMENSION(${ft.shape}$), ALLOCATABLE :: TMP_ARRAY
     INTEGER :: hdferr
 
     LBOUNDS=LBOUND(SELF%PTR)
     UBOUNDS=UBOUND(SELF%PTR)
-!    IF (IAND (SELF%GET_STATUS (), NHSTFRESH) == 0) THEN
-!      CALL SELF%COPY_DATA (ND2H, QUEUE)
-!      CALL SELF%SET_STATUS (IOR (SELF%GET_STATUS (), NHSTFRESH))
-!    ENDIF
-    PTR (${ft.lbptr}$) => SELF%PTR (${','.join(':' for _ in range(ft.rank))}$)
-!    MODE=NRD
-!    IF (IAND (MODE, NWR) /= 0) THEN
-!      CALL SELF%SET_STATUS (IAND (SELF%GET_STATUS (), NOT (NDEVFRESH)))
-!    ENDIF
+
+    CALL SELF%SYNC_HOST_RDONLY()
+
+    ALLOCATE(TMP_ARRAY, MOLD=SELF%PTR)
+
+    TMP_ARRAY = SELF%PTR
+
         dims(1:${ft.rank}$)=UBOUNDS(1:${ft.rank}$)-LBOUNDS(1:${ft.rank}$)+1
         CPTR=C_LOC(PTR)
         CALL h5open_f(hdferr)

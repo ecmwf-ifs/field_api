@@ -22,6 +22,9 @@ USE ${fta.name}$_HDF5_MODULE, ONLY : &
       & ${fta.name}$_GET_STORAGE_DATA
 #:endfor
 
+#:for fta in ftlTA
+USE ${fta.name}$_HDF5_MODULE
+#:endfor
 #:for fto in ftlOT
 USE ${fto.name}$_HDF5_MODULE
 #:endfor
