@@ -17,9 +17,7 @@ MODULE FIELD_HDF5_MODULE
 #:def useAliasRB (ftlRB, ftlTA, ftlOT)
 
 #:for fta, ftb in zip (ftlTA, ftlRB)
-USE ${fta.name}$_HDF5_MODULE, ONLY : &
-      & ${ftb.name}$_GET_STORAGE_DATA      => ${fta.name}$_GET_STORAGE_DATA,      &
-      & ${fta.name}$_GET_STORAGE_DATA
+USE ${fta.name}$_HDF5_MODULE, ONLY : ${ftb.name}$_GET_STORAGE_DATA      => ${fta.name}$_GET_STORAGE_DATA
 #:endfor
 
 #:for fta in ftlTA
