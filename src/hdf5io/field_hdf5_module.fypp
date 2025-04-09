@@ -41,9 +41,5 @@ ${fieldType.useParkind1 ()}$
 
 IMPLICIT NONE
 
-#:for ft in fieldTypeListOT + fieldTypeListRM + fieldTypeListRB + fieldTypeListRD
-PUBLIC :: ${ft.name}$_GET_STORAGE_DATA
-#:endfor
-
 
 END MODULE FIELD_HDF5_MODULE
