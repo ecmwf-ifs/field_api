@@ -51,11 +51,11 @@ CONTAINS
     TYPE(C_PTR) :: CPTR !(${ft.shape}$)
     ! HDF5 variables
     INTEGER(HID_T) :: file_id, space_id
-    INTEGER(HID_T) :: dset_id, dsetm_id, dsetd_id
+    INTEGER(HID_T) :: dset_id, hdf5file_dset_id
     INTEGER(HSIZE_T), DIMENSION(${ft.rank}$) :: dims
      ${ft.type}$, DIMENSION(${ft.shape}$), ALLOCATABLE :: TMP_ARRAY
     INTEGER :: hdferr
-    LOGICAL :: hdf5_file_exists
+    LOGICAL :: hdf5_file_exists, hdf5_dataset_exists 
 
     LBOUNDS=LBOUND(SELF%PTR)
     UBOUNDS=UBOUND(SELF%PTR)
@@ -76,8 +76,13 @@ CONTAINS
         ELSE
             CALL H5Fcreate_F(TRIM(FILENAME), H5F_ACC_TRUNC_F, file_id, hdferr)
         END IF
-        CALL H5Dcreate_f(file_id, TRIM(VARNAME), h5kind_to_type(${ft.kind}$,${ft.h5kind}$), space_id, dset_id, hdferr)
-        CALL H5Dwrite_f(dset_id,  h5kind_to_type(${ft.kind}$,${ft.h5kind}$), CPTR, hdferr)
+        CALL H5Lexists_f(file_id, TRIM(VARNAME), hdf5_dataset_exists, hdferr)
+        IF( .NOT. hdf5_dataset_exists) THEN
+          CALL H5Dcreate_f(file_id, TRIM(VARNAME), h5kind_to_type(${ft.kind}$,${ft.h5kind}$), space_id, dset_id, hdferr)
+        ELSE 
+          CALL H5Dopen_f(file_id, TRIM(VARNAME), dset_id, hdferr)
+        ENDIF
+        CALL H5Dwrite_f(dset_id,  h5kind_to_type(${ft.kind}$, ${ft.h5kind}$), CPTR, hdferr)
         CALL H5Dclose_f(dset_id, hdferr)
         CALL H5Sclose_F(space_id, hdferr)
         CALL H5Fclose_F(file_id, hdferr)
