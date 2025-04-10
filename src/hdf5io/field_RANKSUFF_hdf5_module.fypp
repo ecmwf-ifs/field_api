@@ -13,12 +13,7 @@ MODULE FIELD_${RANK}$${SUFF}$_HDF5_MODULE
 #:set fieldTypeList = fieldType.getFieldTypeList (ranks=[RANK], kinds=['JP' + str (SUFF)])
 
 USE OML_MOD, ONLY: OML_MAX_THREADS , OML_MY_THREAD 
-USE IEEE_ARITHMETIC, ONLY: IEEE_SIGNALING_NAN
-!USE DEV_ALLOC_MODULE
-!USE HOST_ALLOC_MODULE
-USE FIELD_BASIC_MODULE
-USE FIELD_CONSTANTS_MODULE
-USE FIELD_DEFAULTS_MODULE
+USE FIELD_BASIC_HDF5_MODULE, ONLY: OPEN_HDF5_STORAGE, CLOSE_HDF5_STORAGE
 USE FIELD_${RANK}$${SUFF}$_MODULE
 USE HDF5
 ${fieldType.useParkind1 ()}$
@@ -68,14 +63,15 @@ CONTAINS
 
         dims(1:${ft.rank}$)=UBOUNDS(1:${ft.rank}$)-LBOUNDS(1:${ft.rank}$)+1
         CPTR=C_LOC(PTR)
-        CALL h5open_f(hdferr)
+!       CALL h5open_f(hdferr)
+        CALL OPEN_HDF5_STORAGE(FILENAME, FILE_ID)
         CALL H5Screate_simple_f(${ft.rank}$, dims, space_id, hdferr)
-        INQUIRE(FILE=TRIM(FILENAME), EXIST=hdf5_file_exists)
-        IF (hdf5_file_exists) THEN
-            CALL H5Fopen_F(TRIM(FILENAME), H5F_ACC_RDWR_F, file_id, hdferr)
-        ELSE
-            CALL H5Fcreate_F(TRIM(FILENAME), H5F_ACC_TRUNC_F, file_id, hdferr)
-        END IF
+!       INQUIRE(FILE=TRIM(FILENAME), EXIST=hdf5_file_exists)
+!       IF (hdf5_file_exists) THEN
+!           CALL H5Fopen_F(TRIM(FILENAME), H5F_ACC_RDWR_F, file_id, hdferr)
+!       ELSE
+!           CALL H5Fcreate_F(TRIM(FILENAME), H5F_ACC_TRUNC_F, file_id, hdferr)
+!       END IF
         CALL H5Lexists_f(file_id, TRIM(VARNAME), hdf5_dataset_exists, hdferr)
         IF( .NOT. hdf5_dataset_exists) THEN
           CALL H5Dcreate_f(file_id, TRIM(VARNAME), h5kind_to_type(${ft.kind}$,${ft.h5kind}$), space_id, dset_id, hdferr)
@@ -83,9 +79,10 @@ CONTAINS
           CALL H5Dopen_f(file_id, TRIM(VARNAME), dset_id, hdferr)
         ENDIF
         CALL H5Dwrite_f(dset_id,  h5kind_to_type(${ft.kind}$, ${ft.h5kind}$), CPTR, hdferr)
-        CALL H5Dclose_f(dset_id, hdferr)
-        CALL H5Sclose_F(space_id, hdferr)
-        CALL H5Fclose_F(file_id, hdferr)
+        CALL CLOSE_HDF5_STORAGE(DSET_ID, SPACE_ID, FILE_ID)
+!       CALL H5Dclose_f(dset_id, hdferr)
+!       CALL H5Sclose_F(space_id, hdferr)
+!       CALL H5Fclose_F(file_id, hdferr)
 
   END SUBROUTINE ${ftn}$_GET_STORAGE_DATA
 
