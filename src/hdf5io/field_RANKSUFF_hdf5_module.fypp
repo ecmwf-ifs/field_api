@@ -55,6 +55,7 @@ CONTAINS
     INTEGER(HSIZE_T), DIMENSION(${ft.rank}$) :: dims
      ${ft.type}$, DIMENSION(${ft.shape}$), ALLOCATABLE :: TMP_ARRAY
     INTEGER :: hdferr
+    LOGICAL :: hdf5_file_exists
 
     LBOUNDS=LBOUND(SELF%PTR)
     UBOUNDS=UBOUND(SELF%PTR)
@@ -69,9 +70,14 @@ CONTAINS
         CPTR=C_LOC(PTR)
         CALL h5open_f(hdferr)
         CALL H5Screate_simple_f(${ft.rank}$, dims, space_id, hdferr)
-        CALL H5Fcreate_F(TRIM(FILENAME), H5F_ACC_TRUNC_F, file_id, hdferr)
-        CALL H5Dcreate_f(file_id, TRIM(VARNAME), ${ft.h5type}$, space_id, dset_id, hdferr)
-        CALL H5Dwrite_f(dset_id,  ${ft.h5type}$, CPTR, hdferr)
+        INQUIRE(FILE=TRIM(FILENAME), EXIST=hdf5_file_exists)
+        IF (hdf5_file_exists) THEN
+            CALL H5Fopen_F(TRIM(FILENAME), H5F_ACC_RDWR_F, file_id, hdferr)
+        ELSE
+            CALL H5Fcreate_F(TRIM(FILENAME), H5F_ACC_TRUNC_F, file_id, hdferr)
+        END IF
+        CALL H5Dcreate_f(file_id, TRIM(VARNAME), h5kind_to_type(${ft.kind}$,${ft.h5kind}$), space_id, dset_id, hdferr)
+        CALL H5Dwrite_f(dset_id,  h5kind_to_type(${ft.kind}$,${ft.h5kind}$), CPTR, hdferr)
         CALL H5Dclose_f(dset_id, hdferr)
         CALL H5Sclose_F(space_id, hdferr)
         CALL H5Fclose_F(file_id, hdferr)
