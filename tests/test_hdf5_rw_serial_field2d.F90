@@ -122,16 +122,16 @@ PROGRAM TEST_HDF5_OUTPUT
         CALL H5Fcreate_F("field_data.hdf5", H5F_ACC_TRUNC_F, file_id, hdferr)
         IF(JPRB == JPRD) THEN
 !It is necessary the specialize the code, HDF5 constants must be passed directly
-        CALL H5Dcreate_f(file_id, "Field2DB", H5T_NATIVE_DOUBLE, space_id, dset_id, hdferr)
+        CALL H5Dcreate_f(file_id, "W", H5T_NATIVE_DOUBLE, space_id, dset_id, hdferr)
         CALL H5Dwrite_f(dset_id, H5T_NATIVE_DOUBLE, D_CPUPTR, hdferr)
         ELSE 
-        CALL H5Dcreate_f(file_id, "Field2DB", H5T_NATIVE_REAL, space_id, dsetm_id, hdferr)
+        CALL H5Dcreate_f(file_id, "W", H5T_NATIVE_REAL, space_id, dsetm_id, hdferr)
         CALL H5Dwrite_f(dsetm_id, H5T_NATIVE_REAL, D_CPUPTR, hdferr)
         ENDIF
-        CALL H5Dcreate_f(file_id, "Field2DBM", H5T_NATIVE_REAL, space_id, dsetm_id, hdferr)
-        CALL H5Dcreate_f(file_id, "Field2DBD", H5T_NATIVE_DOUBLE, space_id, dsetd_id, hdferr)
-        CALL H5Dcreate_f(file_id, "Field2DBI", H5T_NATIVE_INTEGER, space_id, dseti_id, hdferr)
-        CALL H5Dcreate_f(file_id, "Field2DBL", H5T_NATIVE_INTEGER, space_id, dsetl_id, hdferr)
+        CALL H5Dcreate_f(file_id, "WM", H5T_NATIVE_REAL, space_id, dsetm_id, hdferr)
+        CALL H5Dcreate_f(file_id, "WD", H5T_NATIVE_DOUBLE, space_id, dsetd_id, hdferr)
+        CALL H5Dcreate_f(file_id, "WI", H5T_NATIVE_INTEGER, space_id, dseti_id, hdferr)
+        CALL H5Dcreate_f(file_id, "WL", H5T_NATIVE_INTEGER, space_id, dsetl_id, hdferr)
         CALL H5Dwrite_f(dsetm_id, H5T_NATIVE_REAL, DM_CPUPTR, hdferr)
         CALL H5Dwrite_f(dsetd_id, H5T_NATIVE_DOUBLE, DD_CPUPTR, hdferr)
         CALL H5Dwrite_f(dseti_id, H5T_NATIVE_INTEGER, DI_CPUPTR, hdferr)
@@ -144,6 +144,12 @@ PROGRAM TEST_HDF5_OUTPUT
         CALL H5Dclose_f(dsetl_id, hdferr)
         CALL H5Sclose_F(space_id, hdferr)
         CALL H5Fclose_F(file_id, hdferr)
+
+        DO I=1,10
+        DO J=1,10
+        DL_CPU(I,J) = .FALSE. 
+        ENDDO
+        ENDDO
         CALL GET_STORAGE_DATA(W,D_CPU,"field_store.hdf5","W")
         CALL GET_STORAGE_DATA(WM,DM_CPU,"field_store.hdf5","WM")
         CALL GET_STORAGE_DATA(WD,DD_CPU,"field_store.hdf5","WD")
