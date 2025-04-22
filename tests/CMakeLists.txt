@@ -83,6 +83,7 @@ list(APPEND TEST_FILES
         test_get_device_data_wronly.F90
         test_get_device_data_non_contiguous.F90
         test_hdf5_rw_serial_field2d.F90
+        test_hdf5_rw_parallel_field2d.F90
         test_host_mem_pool.F90
         test_lastdim.F90
         test_legacy.F90
