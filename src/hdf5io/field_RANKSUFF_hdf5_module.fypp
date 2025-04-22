@@ -15,6 +15,7 @@ MODULE FIELD_${RANK}$${SUFF}$_HDF5_MODULE
 USE OML_MOD, ONLY: OML_MAX_THREADS , OML_MY_THREAD 
 USE FIELD_BASIC_HDF5_MODULE, ONLY: OPEN_HDF5_STORAGE, CLOSE_HDF5_STORAGE
 USE FIELD_${RANK}$${SUFF}$_MODULE
+USE MPL_MODULE, ONLY: MPL_RANK, MPL_NUMPROC
 USE HDF5
 ${fieldType.useParkind1 ()}$
 
@@ -38,6 +39,7 @@ CONTAINS
     CLASS(${ftn}$) :: SELF
     ${ft.type}$, POINTER,          INTENT(INOUT) :: PTR(${ft.shape}$)
     CHARACTER(LEN=*), INTENT(IN) :: FILENAME
+    CHARACTER(LEN=:), ALLOCATABLE :: fname_with_rank
     CHARACTER(LEN=*), INTENT(IN) :: VARNAME
     INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
 
@@ -51,6 +53,20 @@ CONTAINS
      ${ft.type}$, DIMENSION(${ft.shape}$), ALLOCATABLE :: TMP_ARRAY
     INTEGER :: hdferr
     LOGICAL :: hdf5_file_exists, hdf5_dataset_exists 
+    INTEGER :: name_len 
+    CHARACTER(LEN=20) :: rank_str
+
+
+    IF(MPL_NUMPROC > 1) THEN
+      WRITE(rank_str, '(I0)') MPL_RANK 
+      name_len = LEN_TRIM(FILENAME) + LEN("_rank") + LEN_TRIM(rank_str) + LEN(".hdf5")
+      ALLOCATE(CHARACTER(LEN=name_len) :: fname_with_rank)
+      fname_with_rank = TRIM(FILENAME) // "_rank" // TRIM(rank_str) // ".hdf5"
+    ELSE
+      name_len = LEN_TRIM(FILENAME) + LEN(".hdf5")
+      ALLOCATE(CHARACTER(LEN=name_len) :: fname_with_rank)
+      fname_with_rank = TRIM(FILENAME) // ".hdf5"
+    ENDIF
 
     LBOUNDS=LBOUND(SELF%PTR)
     UBOUNDS=UBOUND(SELF%PTR)
@@ -63,15 +79,8 @@ CONTAINS
 
         dims(1:${ft.rank}$)=UBOUNDS(1:${ft.rank}$)-LBOUNDS(1:${ft.rank}$)+1
         CPTR=C_LOC(PTR)
-!       CALL h5open_f(hdferr)
-        CALL OPEN_HDF5_STORAGE(FILENAME, FILE_ID)
+        CALL OPEN_HDF5_STORAGE(fname_with_rank, FILE_ID)
         CALL H5Screate_simple_f(${ft.rank}$, dims, space_id, hdferr)
-!       INQUIRE(FILE=TRIM(FILENAME), EXIST=hdf5_file_exists)
-!       IF (hdf5_file_exists) THEN
-!           CALL H5Fopen_F(TRIM(FILENAME), H5F_ACC_RDWR_F, file_id, hdferr)
-!       ELSE
-!           CALL H5Fcreate_F(TRIM(FILENAME), H5F_ACC_TRUNC_F, file_id, hdferr)
-!       END IF
         CALL H5Lexists_f(file_id, TRIM(VARNAME), hdf5_dataset_exists, hdferr)
         IF( .NOT. hdf5_dataset_exists) THEN
           CALL H5Dcreate_f(file_id, TRIM(VARNAME), h5kind_to_type(${ft.kind}$,${ft.h5kind}$), space_id, dset_id, hdferr)
@@ -80,9 +89,6 @@ CONTAINS
         ENDIF
         CALL H5Dwrite_f(dset_id,  h5kind_to_type(${ft.kind}$, ${ft.h5kind}$), CPTR, hdferr)
         CALL CLOSE_HDF5_STORAGE(DSET_ID, SPACE_ID, FILE_ID)
-!       CALL H5Dclose_f(dset_id, hdferr)
-!       CALL H5Sclose_F(space_id, hdferr)
-!       CALL H5Fclose_F(file_id, hdferr)
 
   END SUBROUTINE ${ftn}$_GET_STORAGE_DATA
 

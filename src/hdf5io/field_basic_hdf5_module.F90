@@ -40,6 +40,7 @@ CONTAINS
         CALL H5Dclose_f( dset_id, hdferr)
         CALL H5Sclose_F(space_id, hdferr)
         CALL H5Fclose_F( file_id, hdferr)
+        CALL H5close_F( hdferr)
     END SUBROUTINE CLOSE_HDF5_STORAGE
 
 
