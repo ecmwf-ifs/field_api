@@ -267,7 +267,7 @@ option).
 
 ## Cloning fields with FIELD\_CLONE\_ON_
 
-The subroutines FIELD_CLONE_ON_HOST amd FIELD_CLONE_ON_DEVICE let a field be
+The subroutines FIELD_CLONE_ON_HOST and FIELD_CLONE_ON_DEVICE let a field be
 cloned into a newly created FIELD_OWNER. The subroutines takes two arguments YL
 and YR. YL is the field that will receive the copy and YR is the field to be
 copied. YR is optional and can also be null, if any of those cases YL is set to
