@@ -52,9 +52,9 @@ SUBROUTINE ${ft.name}$_CLONE_ON_${TARGET}$(YL, YR)
   ZR => GET_${TARGET}$_DATA_RDONLY (YR)
   ZL => GET_${TARGET}$_DATA_RDWR (YL)
 
-$:offload_macros.serial(present=['ZL','ZR']) if TARGET=="DEVICE" else None
+$:offload_macros.kernels(present=['ZL','ZR']) if TARGET=="DEVICE" else None
   ZL = ZR
-$:offload_macros.end_serial() if TARGET=="DEVICE" else None
+$:offload_macros.end_kernels() if TARGET=="DEVICE" else None
 END SUBROUTINE ${ft.name}$_CLONE_ON_${TARGET}$
 #:endfor
 
