@@ -134,7 +134,7 @@ ELSE
   ZTRS => GET_${what}$_DATA_RDONLY (YLPAIR%YLSCAT)
   ZTRG => GET_${what}$_DATA_RDWR   (YLPAIR%YLGATH)
 
-  CALL PAIR_${ft.name}$_${what}$_${mode}$ (INDS, ZTRG, ZTRS)
+  CALL PAIR_${ft.name}$_${what}$_${mode}$ (INDS)
 
   ! Return pointer on packed array
   PTR => GET_${what}$_DATA_${mode}$ (YLPAIR%YLGATH)
@@ -144,10 +144,8 @@ ENDIF
 
 CONTAINS
 
-SUBROUTINE PAIR_${ft.name}$_${what}$_${mode}$ (KNDS, PTRG, PTRS)
+SUBROUTINE PAIR_${ft.name}$_${what}$_${mode}$ (KNDS)
 
-${ft.type}$, POINTER :: PTRG(${ft.shape}$)
-${ft.type}$, POINTER :: PTRS(${ft.shape}$)
 INTEGER (KIND=JPIM), INTENT (IN)  :: KNDS (:,:,:)
 INTEGER (KIND=JPIM) :: JLONS, JBLKS, JLONG, JBLKG
 
@@ -158,7 +156,7 @@ INTEGER (KIND=JPIM) :: ${ind}$
 #:endif
 
 #:if what == 'DEVICE'
-$:offload_macros.parallel_gang_loop(present=['PTRG', 'PTRS', 'KNDS'])
+$:offload_macros.parallel_gang_loop(present=['ZTRG', 'ZTRS', 'KNDS'])
 #:elif what == 'HOST'
 !$OMP PARALLEL DO PRIVATE (${ind}$JBLKG, JLONG, JBLKS, JLONS)
 #:endif
@@ -171,9 +169,9 @@ $:offload_macros.parallel_vector_loop(private=[f'{ind}JLONG', 'JBLKS', 'JLONS'])
     JBLKS = KNDS (NBLKDIM, JLONG, JBLKG)
     IF (JLONS > 0) THEN
 #:for i in reversed (range (2, ft.rank))
-      DO J${i}$ = LBOUND (PTRG, ${i}$), UBOUND (PTRG, ${i}$)
+      DO J${i}$ = LBOUND (ZTRG, ${i}$), UBOUND (ZTRG, ${i}$)
 #:endfor
-        PTRG (JLONG, ${ind}$JBLKG) = PTRS (JLONS, ${ind}$JBLKS)
+        ZTRG (JLONG, ${ind}$JBLKG) = ZTRS (JLONS, ${ind}$JBLKS)
 #:for i in (range (2, ft.rank))
       ENDDO
 #:endfor
@@ -216,7 +214,7 @@ DO WHILE (ASSOCIATED (YDPAIR))
       PTRG => GET_DEVICE_DATA_RDONLY (YDPAIR%YLGATH)
       PTRS => GET_DEVICE_DATA_RDWR   (YDPAIR%YLSCAT)
 
-      CALL ${ft.name}$_SCATTER_DEVICE_KERNEL (INDS, PTRG, PTRS)
+      CALL ${ft.name}$_SCATTER_DEVICE_KERNEL (INDS)
 
     ELSEIF (YDPAIR%IWHAT == NHOST) THEN
 
@@ -224,7 +222,7 @@ DO WHILE (ASSOCIATED (YDPAIR))
       PTRG => GET_HOST_DATA_RDONLY (YDPAIR%YLGATH)
       PTRS => GET_HOST_DATA_RDWR   (YDPAIR%YLSCAT)
 
-      CALL ${ft.name}$_SCATTER_HOST_KERNEL (INDS, PTRG, PTRS)
+      CALL ${ft.name}$_SCATTER_HOST_KERNEL (INDS)
 
     ENDIF
   ENDIF
@@ -239,10 +237,8 @@ ENDDO
 CONTAINS
 
 #:for what in ['DEVICE', 'HOST']
-SUBROUTINE ${ft.name}$_SCATTER_${what}$_KERNEL (KNDS, PTRG, PTRS)
+SUBROUTINE ${ft.name}$_SCATTER_${what}$_KERNEL (KNDS)
 
-${ft.type}$, POINTER :: PTRG(${ft.shape}$)
-${ft.type}$, POINTER :: PTRS(${ft.shape}$)
 INTEGER (KIND=JPIM), INTENT (IN) :: KNDS (:,:,:)
 INTEGER (KIND=JPIM) :: JLONS, JBLKS, JLONG, JBLKG
 
