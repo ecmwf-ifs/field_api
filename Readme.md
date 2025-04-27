@@ -13,7 +13,7 @@ you should not worry about it.
 Building FIELD_API requires:
 - A Fortran 2008 compliant compiler with support for:
   - OpenMP for CPU multi-threading
-  - OpenACC/CUDA for GPU offload (optional)
+  - OpenACC/OpenMP/CUDA for GPU offload (optional)
 - CMake (>= 3.24)
 - [ecbuild](https://github.com/ecmwf/ecbuild) (cloned if not found)
 - [fypp](https://github.com/aradi/fypp) (cloned if not found)
@@ -45,6 +45,7 @@ Features of FIELD_API can be toggled by passing the following argument to the CM
 | TESTS | ON | Build the testing suite. |
 | BUDDY_MALLOC | ON | Enable the use of a binary buddy memory allocator for the shadow host allocation for `FIELD%DEVPTR`. This option is switched off if CUDA is enabled.|
 | ACC | ON | Enable the use of OpenACC for GPU offload. Currently only suppored on NVHPC. |
+| OMP_OFFLOAD | ON | Enable the use of OpenMP for GPU offload. Currently only suppored on NVHPC. |
 | SINGLE_PRECISION | ON | Enable the compilation of field_api in single precision |
 | DOUBLE_PRECISION | ON | Enable the compilation of field_api in double precision |
 | CUDA | OFF | Enable the use of CUDA for GPU offload. Disables the use of the buddy memory allocator, removes the shadow host allocation for `FIELD%DEVPTR` and allocates owned fields (see below) in pinned (page-locked) host memory.|
