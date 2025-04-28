@@ -199,6 +199,27 @@ init_debug_value_jpim* to a custom value.
    CALL FIELD_NEW(O, LBOUNDS=[1,1], UBOUNDS=[10,10])
 ```
 
+## Data Transfers
+A field has ten type bound procedures that can be used to transfer data between the device and host.  Five `SYNC` methods that just copy the data using
+the specified access mode, and five `GET` methods that also additionally return a pointer to access the data:
+* ``SUBROUTINE SYNC_DEVICE_DATA_RDONLY (SELF)``
+* ``SUBROUTINE SYNC_DEVICE_DATA_WRONLY (SELF)``
+* ``SUBROUTINE SYNC_DEVICE_DATA_RDWR (SELF)``
+* ``SUBROUTINE SYNC_HOST_DATA_RDONLY (SELF)``
+* ``SUBROUTINE SYNC_HOST_DATA_RDWR (SELF)``
+
+* ``SUBROUTINE GET_DEVICE_DATA_RDONLY (SELF, PPTR)``
+* ``SUBROUTINE GET_DEVICE_DATA_WRONLY (SELF, PPTR)``
+* ``SUBROUTINE GET_DEVICE_DATA_RDWR (SELF, PPTR)``
+* ``SUBROUTINE GET_HOST_DATA_RDONLY (SELF, PPTR)``
+* ``SUBROUTINE GET_HOST_DATA_RDWR (SELF, PPTR)``
+
+Where``DEVICE/HOST`` indicates the transfer direction and ``RDONLY/RDWR/WRONLY`` indicates the access specifier, e.g. data copied to device using a `RDONLY`
+access specifier will **not** be copied back to host if a subsequent ``RDWR`` host access is issued. The difference between the ``GET`` and ``SYNC`` method
+is just their interface. The ``GET`` methods are called with a pointer argument, which must have the same rank as the field, that will be associated with
+the transferred data at its destination. The ``SYNC`` method is called without any arguments and will only perform the data transfers and update the field's
+inner pointers.
+
 ## Asynchronism
 
 This functionnality is still being tested.
@@ -293,12 +314,14 @@ SUBROUTINE DELETE_DEVICE
 FUNCTION GET_VIEW(SELF, BLOCK_INDEX, ZERO) RESULT(VIEW_PTR)
 SUBROUTINE GET_DEVICE_DATA_RDONLY (SELF, PPTR, QUEUE)
 SUBROUTINE GET_DEVICE_DATA_RDWR (SELF, PPTR, QUEUE)
+SUBROUTINE GET_DEVICE_DATA_WRONLY (SELF, PPTR, QUEUE)
 SUBROUTINE GET_HOST_DATA_RDONLY (SELF, PPTR, QUEUE)
 SUBROUTINE GET_HOST_DATA_RDWR (SELF, PPTR, QUEUE)
 SUBROUTINE SYNC_HOST_RDWR (SELF, QUEUE)
 SUBROUTINE SYNC_HOST_RDONLY (SELF, QUEUE)
 SUBROUTINE SYNC_DEVICE_RDWR (SELF, QUEUE)
 SUBROUTINE SYNC_DEVICE_RDONLY (SELF, QUEUE)
+SUBROUTINE SYNC_DEVICE_WRONLY (SELF, QUEUE)
 SUBROUTINE COPY_OBJECT (SELF, LDCREATED)
 SUBROUTINE WIPE_OBJECT (SELF, LDDELETED)
 SUBROUTINE GET_DIMS (SELF, LBOUNDS, UBOUNDS)
