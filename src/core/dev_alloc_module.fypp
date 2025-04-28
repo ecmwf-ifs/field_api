@@ -118,7 +118,7 @@ $:offload_macros.dev_malloc(ptr='PTR', size='SIZ', return_val='ISTAT', indent=5)
    CALL C_F_POINTER (PTR, TMP, UBOUNDS-ILBOUNDS+1)
    DEV (${ ', '.join (map (lambda i: 'ILBOUNDS (' + str (i) + '):', range (1, ft.rank+1))) }$) => TMP
 ELSE
-   ALLOCATE(DEV(${','.join(['0' for _ in range(1, ft.rank+1)])}$))
+   ALLOCATE(DEV(${ ', '.join (f'ILBOUNDS({i}):UBOUNDS({i})' for i in  range (1, ft.rank+1)) }$))
 ENDIF
 
 IF(MAP_DEVPTR)THEN
