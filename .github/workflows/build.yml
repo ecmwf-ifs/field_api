@@ -30,7 +30,7 @@ jobs:
       fail-fast: false  # false: try to complete all jobs
 
       matrix:
-        build_type: [RelWithDebInfo]
+        build_type: [Debug,RelWithDebInfo]
         name:
           - linux gnu-10
           - linux gnu-14
