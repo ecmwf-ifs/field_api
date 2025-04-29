@@ -13,20 +13,17 @@ MODULE FIELD_${RANK}$${SUFF}$_HDF5_MODULE
 #:set fieldTypeList = fieldType.getFieldTypeList (ranks=[RANK], kinds=['JP' + str (SUFF)])
 
 USE OML_MOD, ONLY: OML_MAX_THREADS , OML_MY_THREAD 
-USE FIELD_BASIC_HDF5_MODULE, ONLY: OPEN_HDF5_STORAGE, CLOSE_HDF5_STORAGE
+USE FIELD_BASIC_HDF5_MODULE, ONLY: OPEN_HDF5_STORAGE, NAME_HDF5_STORAGE, CLOSE_HDF5_STORAGE
 USE FIELD_${RANK}$${SUFF}$_MODULE
-USE MPL_MODULE, ONLY: MPL_RANK, MPL_NUMPROC
 USE HDF5
 ${fieldType.useParkind1 ()}$
 
 IMPLICIT NONE
 
-
-
-INTERFACE GET_STORAGE_DATA
+INTERFACE GET_HDF5_PERRANK_DATA
 #:for ft in fieldTypeList
 #:set ftn = ft.name
-  MODULE PROCEDURE ${ft.name}$_GET_STORAGE_DATA
+   MODULE PROCEDURE ${ft.name}$_GET_HDF5_PERRANK_DATA
 END INTERFACE
 #:endfor
 
@@ -35,63 +32,52 @@ CONTAINS
 #:for ft in fieldTypeList
 #:set ftn = ft.name
 
-  SUBROUTINE ${ftn}$_GET_STORAGE_DATA (SELF, PTR, FILENAME, VARNAME, QUEUE)
-    CLASS(${ftn}$) :: SELF
-    ${ft.type}$, POINTER,          INTENT(INOUT) :: PTR(${ft.shape}$)
-    CHARACTER(LEN=*), INTENT(IN) :: FILENAME
-    CHARACTER(LEN=:), ALLOCATABLE :: fname_with_rank
-    CHARACTER(LEN=*), INTENT(IN) :: VARNAME
-    INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
+SUBROUTINE ${ftn}$_GET_HDF5_PERRANK_DATA (SELF, PTR, FILENAME, VARNAME)
 
-    INTEGER(KIND=JPIM) :: LBOUNDS(${ft.rank}$)
-    INTEGER(KIND=JPIM) :: UBOUNDS(${ft.rank}$)
-    TYPE(C_PTR) :: CPTR !(${ft.shape}$)
-    ! HDF5 variables
-    INTEGER(HID_T) :: file_id, space_id
-    INTEGER(HID_T) :: dset_id, hdf5file_dset_id
-    INTEGER(HSIZE_T), DIMENSION(${ft.rank}$) :: dims
-     ${ft.type}$, DIMENSION(${ft.shape}$), ALLOCATABLE :: TMP_ARRAY
-    INTEGER :: hdferr
-    LOGICAL :: hdf5_file_exists, hdf5_dataset_exists 
-    INTEGER :: name_len 
-    CHARACTER(LEN=20) :: rank_str
+   CLASS(${ftn}$) :: SELF
+   ${ft.type}$, POINTER, INTENT(INOUT) :: PTR(${ft.shape}$)
+   CHARACTER(LEN=*),     INTENT(IN)    :: FILENAME
+   CHARACTER(LEN=*),     INTENT(IN)    :: VARNAME
+   CHARACTER(LEN=:),     ALLOCATABLE   :: FNAME_WITH_RANK
 
+   INTEGER(KIND=JPIM) :: LBOUNDS(${ft.rank}$)
+   INTEGER(KIND=JPIM) :: UBOUNDS(${ft.rank}$)
+   TYPE(C_PTR) :: CPTR 
 
-    IF(MPL_NUMPROC > 1) THEN
-      WRITE(rank_str, '(I0)') MPL_RANK 
-      name_len = LEN_TRIM(FILENAME) + LEN("_rank") + LEN_TRIM(rank_str) + LEN(".hdf5")
-      ALLOCATE(CHARACTER(LEN=name_len) :: fname_with_rank)
-      fname_with_rank = TRIM(FILENAME) // "_rank" // TRIM(rank_str) // ".hdf5"
-    ELSE
-      name_len = LEN_TRIM(FILENAME) + LEN(".hdf5")
-      ALLOCATE(CHARACTER(LEN=name_len) :: fname_with_rank)
-      fname_with_rank = TRIM(FILENAME) // ".hdf5"
-    ENDIF
+   INTEGER(HID_T) :: FILE_ID, SPACE_ID
+   INTEGER(HID_T) :: DSET_ID, HDF5FILE_DSET_ID
+   INTEGER(HSIZE_T), DIMENSION(${ft.rank}$) :: DIMS
+   ${ft.type}$     , DIMENSION(${ft.shape}$), ALLOCATABLE, TARGET :: TMP_ARRAY
+   INTEGER :: HDFERR
+   LOGICAL :: HDF5_FILE_EXISTS, HDF5_DATASET_EXISTS 
+!Make sure that the field is present on host
+   CALL SELF%SYNC_HOST_RDONLY()
+!Make sure that the field is continuous
+   ALLOCATE(TMP_ARRAY, MOLD=SELF%PTR)
+   TMP_ARRAY = SELF%PTR
+!Prepare array of sizes of the variable at hand
+   LBOUNDS=LBOUND(SELF%PTR)
+   UBOUNDS=UBOUND(SELF%PTR)
+   DIMS(1:${ft.rank}$)=UBOUNDS(1:${ft.rank}$)-LBOUNDS(1:${ft.rank}$)+1
+!Define separate filename for each MPI rank
+   CALL NAME_HDF5_STORAGE(FILENAME,FNAME_WITH_RANK)
+   CALL OPEN_HDF5_STORAGE(FNAME_WITH_RANK, FILE_ID)
+!Create HDF5 space
+   CALL H5Screate_simple_F(${ft.rank}$, DIMS, SPACE_ID, HDFERR)
+!Check if the dataset named VARNAME already exists in the HDF5 file, if not create it
+   CALL H5Lexists_F(FILE_ID, TRIM(VARNAME), HDF5_DATASET_EXISTS, HDFERR)
+   IF( .NOT. HDF5_DATASET_EXISTS) THEN
+     CALL H5Dcreate_F(FILE_ID, TRIM(VARNAME), H5KIND_TO_TYPE(${ft.kind}$,${ft.h5kind}$), SPACE_ID, DSET_ID, HDFERR)
+   ELSE 
+     CALL H5Dopen_F  (FILE_ID, TRIM(VARNAME), DSET_ID, HDFERR)
+   ENDIF
+!Write the data to a file
+   CPTR=C_LOC(TMP_ARRAY)
+   CALL H5Dwrite_F(DSET_ID,  H5KIND_TO_TYPE(${ft.kind}$, ${ft.h5kind}$), CPTR, HDFERR)
+!Sanitize HDF5 environment and close the file
+   CALL CLOSE_HDF5_STORAGE(DSET_ID, SPACE_ID, FILE_ID)
 
-    LBOUNDS=LBOUND(SELF%PTR)
-    UBOUNDS=UBOUND(SELF%PTR)
-
-    CALL SELF%SYNC_HOST_RDONLY()
-
-    ALLOCATE(TMP_ARRAY, MOLD=SELF%PTR)
-
-    TMP_ARRAY = SELF%PTR
-
-        dims(1:${ft.rank}$)=UBOUNDS(1:${ft.rank}$)-LBOUNDS(1:${ft.rank}$)+1
-        CPTR=C_LOC(PTR)
-        CALL OPEN_HDF5_STORAGE(fname_with_rank, FILE_ID)
-        CALL H5Screate_simple_f(${ft.rank}$, dims, space_id, hdferr)
-        CALL H5Lexists_f(file_id, TRIM(VARNAME), hdf5_dataset_exists, hdferr)
-        IF( .NOT. hdf5_dataset_exists) THEN
-          CALL H5Dcreate_f(file_id, TRIM(VARNAME), h5kind_to_type(${ft.kind}$,${ft.h5kind}$), space_id, dset_id, hdferr)
-        ELSE 
-          CALL H5Dopen_f(file_id, TRIM(VARNAME), dset_id, hdferr)
-        ENDIF
-        CALL H5Dwrite_f(dset_id,  h5kind_to_type(${ft.kind}$, ${ft.h5kind}$), CPTR, hdferr)
-        CALL CLOSE_HDF5_STORAGE(DSET_ID, SPACE_ID, FILE_ID)
-
-  END SUBROUTINE ${ftn}$_GET_STORAGE_DATA
-
+END SUBROUTINE ${ftn}$_GET_HDF5_PERRANK_DATA
 
 #:endfor
 
