@@ -16,8 +16,6 @@ PROGRAM TEST_0_SIZED_TRANSFER
         USE FIELD_ABORT_MODULE
         IMPLICIT NONE
         CLASS(FIELD_2RB), POINTER :: O => NULL()
-        CLASS(FIELD_3RB), POINTER :: W=>NULL()
-        REAL(KIND=JPRB), ALLOCATABLE :: D(:,:,:)
 
         CALL FIELD_NEW(O, LBOUNDS=[10,1], UBOUNDS=[9,11], PERSISTENT=.TRUE.)
 
@@ -30,19 +28,4 @@ PROGRAM TEST_0_SIZED_TRANSFER
         CALL O%SYNC_HOST_RDWR()
 
         CALL FIELD_DELETE(O)
-
-        ! Same again, but using the wrapper API
-        ! =====================================
-        ALLOCATE(D(20, 0, 3))
-        CALL FIELD_NEW(W, DATA=D, PERSISTENT=.TRUE.)
-
-        IF( SIZE(W%PTR) > 0 )THEN
-           CALL FIELD_ABORT("ALLOCATION SHOULD BE 0 SIZED")
-        ENDIF
-
-        !...Ensure data can be copied to device and back safely
-        CALL W%SYNC_DEVICE_RDWR()
-        CALL W%SYNC_HOST_RDWR()
-
-        CALL FIELD_DELETE(W)
 END PROGRAM TEST_0_SIZED_TRANSFER

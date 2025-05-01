@@ -74,11 +74,13 @@ list(APPEND TEST_FILES
         sync_device.F90
         sync_host.F90
         test_0_sized_transfer.F90
+        test_0_sized_transfer_wrap.F90
         test_async.F90
         test_bc.F90
         test_crc64.F90
         test_field1d.F90
         test_field_array.F90
+        test_field_array_0_size.F90
         test_field_clone.F90
         test_field_clone_2.F90
         test_field_clone_device.F90
