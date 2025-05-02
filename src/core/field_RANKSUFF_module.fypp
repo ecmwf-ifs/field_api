@@ -500,7 +500,7 @@ $:offload_macros.detach(ptr=['SELF%DEVPTR'], indent=6)
     CALL FIELD_ABORT("${ftn}$: THE SPECIFIED BLOCK IS NOT CONTAINED IN THE ALLOCATED DEVICE PTR")
   ENDIF
 
-  HST_BLK => SELF%PTR(${ft.hst_blk}$)
+  HST_BLK => SELF%PTR(${':,'*(ft.rank-1)}$ BLK_BOUNDS(1):BLK_BOUNDS(2))
   DEV_BLK => SELF%DEVPTR(${':,'*(ft.rank-1)}$ LB+LOCAL_OFFSET : LB+LOCAL_OFFSET+BLK_BOUNDS(2)-BLK_BOUNDS(1))
 
   CALL CPU_TIME(START)
@@ -559,9 +559,9 @@ $:offload_macros.detach(ptr=['SELF%DEVPTR'], indent=6)
 
     LBOUNDS=SELF%LBOUNDS
     IF ( PRESENT(BLK_BOUNDS) ) THEN
-      PTR ( ${ft.lbptr_blk}$) => SELF%PTR (${ft.hst_blk}$)
+      PTR (${''.join(f'LBOUNDS({i}):,' for i in range(1,ft.rank))}$ BLK_BOUNDS(1):) => SELF%PTR (${':,'*(ft.rank-1)}$ BLK_BOUNDS(1):BLK_BOUNDS(2))
     ELSE
-      PTR (${ft.lbptr}$) => SELF%PTR (${','.join(':' for _ in range(ft.rank))}$)
+      PTR (${ft.lbptr}$) => SELF%PTR (${ft.shape}$)
     END IF
   END SUBROUTINE ${ftn}$_GET_HOST_POINTER
 
@@ -721,17 +721,17 @@ $:offload_macros.detach(ptr=['SELF%DEVPTR'], indent=6)
     INTEGER(KIND=JPIM)                           :: LOCAL_OFFSET
 
     LBOUNDS=SELF%LBOUNDS
-    
     IF ( PRESENT(OFFSET) ) THEN
       LOCAL_OFFSET = OFFSET
     ELSE
       LOCAL_OFFSET = 0
     ENDIF
+    #:set devptr_blk =  ':,'*(ft.rank-1) + f' LBOUNDS({ft.rank}) + LOCAL_OFFSET:LBOUNDS({ft.rank}) + LOCAL_OFFSET + BLK_BOUNDS(2)-BLK_BOUNDS(1)'
 
     IF ( PRESENT(BLK_BOUNDS) ) THEN
-      PTR (${ft.lbptr_blk}$) => SELF%DEVPTR (${ft.devptr_blk}$)
+      PTR (${''.join(f'LBOUNDS({i}):,' for i in range(1,ft.rank))}$ BLK_BOUNDS(1):) => SELF%DEVPTR (${devptr_blk}$)
     ELSE
-      PTR (${ft.lbptr}$) => SELF%DEVPTR (${','.join(':' for _ in range(ft.rank))}$)
+      PTR (${ft.lbptr}$) => SELF%DEVPTR (${ft.shape}$)
     END IF
   END SUBROUTINE ${ftn}$_GET_DEVICE_POINTER
 
