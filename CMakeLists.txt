@@ -29,7 +29,6 @@ include( field_api_macros )
 
 ## find required packages
 ecbuild_find_package(OpenMP COMPONENTS Fortran REQUIRED)
-#ecbuild_find_package(HDF5 REQUIRED)
 
 ## find fypp
 field_api_find_fypp()
@@ -77,7 +76,7 @@ ecbuild_add_option( FEATURE FIELD_GANG
 ecbuild_add_option( FEATURE HDF5
     DESCRIPTION "Use HDF5 to read and write FielAPI variables"
     REQUIRED_PACKAGES "HDF5 COMPONENTS Fortran"
-    DEFAULT ON
+    DEFAULT OFF
 )
 
 ## fypp preprocessor flags
@@ -106,10 +105,14 @@ endif()
 ## specify precision dependent sources that must be compiled twice
 list(APPEND prec_srcs
     ${CMAKE_CURRENT_BINARY_DIR}/src/core/field_module.F90
-    ${CMAKE_CURRENT_BINARY_DIR}/src/hdf5io/field_hdf5_module.F90
     ${CMAKE_CURRENT_BINARY_DIR}/src/util/field_array_module.F90
     ${CMAKE_CURRENT_BINARY_DIR}/src/util/field_array_util_module.F90
     ${CMAKE_CURRENT_BINARY_DIR}/src/util/field_util_module.F90)
+
+if(HAVE_HDF5)
+list(APPEND prec_srcs
+    ${CMAKE_CURRENT_BINARY_DIR}/src/hdf5io/field_hdf5_module.F90)
+endif()
 
 list(APPEND obj_libs
         field_api_core
@@ -118,7 +121,6 @@ list(APPEND obj_libs
         field_api_buffer
         field_api_util
         field_api_shuffle
-        field_api_hdf5io
 )
 
 if( HAVE_FIELD_GANG )
@@ -142,7 +144,7 @@ foreach(prec ${precisions})
          $<${fiat_FOUND}:parkind_${prec}>
          OpenMP::OpenMP_Fortran
       PUBLIC_LIBS
-      $<${HAVE_HDF5}:HDF5::HDF5>
+          $<${HAVE_HDF5}:HDF5::HDF5>
       )
 
   set_property(TARGET ${LIBNAME}_${prec} PROPERTY C_STANDARD 99)
@@ -162,9 +164,15 @@ foreach(prec ${precisions})
   # add sub-component module directories to target
   field_api_target_add_module_dirs(
     TARGET     ${LIBNAME}_${prec}
-    LIBS       field_api_debug field_api_core field_api_factory field_api_util field_api_shuffle field_api_hdf5io
+    LIBS       field_api_debug field_api_core field_api_factory field_api_util field_api_shuffle
   )
 
+if(HAVE_HDF5)
+  field_api_target_add_module_dirs(
+    TARGET     ${LIBNAME}_${prec}
+    LIBS       field_api_hdf5io
+  )
+endif()
   if( prec MATCHES sp )
       target_compile_definitions( ${LIBNAME}_${prec} PRIVATE PARKIND1_SINGLE )
   endif()
