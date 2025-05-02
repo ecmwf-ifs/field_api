@@ -244,15 +244,21 @@ There are use cases when it is neccessary to have fine grained control over the 
 transfers. For these use cases Field API provides an *advanced API* with
 four type bound procedures that will always trigger data copies.
 The advanced API consists of the four subroutines:
-* ``SUBROUTINE GET_HOST_DATA_FORCE(SELF, PTR, QUEUE)``
-* ``SUBROUTINE SYNC_HOST_FORCE(SELF, QUEUE)``
-* ``SUBROUTINE GET_DEVICE_DATA_FORCE(SELF, PTR, QUEUE)``
-* ``SUBROUTINE SYNC_HOST_FORCE(SELF, QUEUE)``
+* ``SUBROUTINE GET_HOST_DATA_FORCE(SELF, PTR, QUEUE, BLK_BOUNDS, OFFSET)``
+* ``SUBROUTINE SYNC_HOST_FORCE(SELF, QUEUE, BLK_BOUNDS, OFFSET)``
+* ``SUBROUTINE GET_DEVICE_DATA_FORCE(SELF, PTR, QUEUE, BLK_BOUNDS, OFFSET)``
+* ``SUBROUTINE SYNC_DEVICE_FORCE(SELF, QUEUE, BLK_BOUNDS, OFFSET)``
 
 A call to any of these routines will always transfer data between the host and
 the device and set the internal status of the field to ``UNDEFINED``.
-Furthermore, the routines above add an optional dummy argument ``QUEUE`` that
-can be used to invoke asynchronous data transfers (see more below).
+Furthermore, the routines above add three optional dummy arguments
+* ``QUEUE`` an integer argument that will trigger asynchronous data transfers over the specified
+queue if the backend supports asynchronous data transfers.
+* ``BLK_BOUNDS`` an integer array of size 2, ``[BLK_START, BLK_END]``, that lets the user define
+a block (slice of the field in its final dimension) that will make the method only copy the block.
+If the field is unallocated on the device before this copy method is invoked, then the device
+allocation inside the copy method will only be the size of the block.
+* ``OFFSET`` an integer that lets the user add an offset into the allocated device memory for offloading multiple fields into the same buffer (see more below).
 
 If any data transfer routine from the advanced API has been used,
 then the user must explicitly set the status of the field before the data
@@ -299,6 +305,80 @@ CALL WAIT_FOR_ASYNC_QUEUE(QUEUE=2)
 
 NB: Asynchronous offload requires the CUDA backend, which can be
 enabled by passing `-DENABLE_CUDA=ON` at build time.
+
+#### Partial offload of fields
+
+By using the optional ``BLK_BOUNDS`` argument it is possible to offload partial fields to the device.
+This is useful both for optimization purposes and when the fields are too large to fit in device
+memory. Below is an example of how to solve this problem by introducing a *block loop* that
+offloads the field in *chunks* and computes on each chunk separately.
+```fortran
+  CALL FIELD_NEW(F_PTR, LBOUNDS=[1,1,1], UBOUNDS=[64,64,FINAL_RANK], PERSISTENT=.TRUE.)
+  CHUNK_SIZE = 12
+  CHUNK_COUNT = (FINAL_RANK+CHUNK_SIZE-1) / CHUNK_SIZE
+
+  ! Loop over the chunks
+  DO CHUNK_IDX = 1, CHUNK_COUNT
+    CHUNK_START=(CHUNK_IDX-1)*CHUNK_SIZE
+    CHUNK_END= MIN((CHUNK_IDX)*CHUNK_SIZE, FINAL_RANK)
+    BLK_BOUNDS = [CHUNK_START, CHUNK_END]
+
+    ! copy PTR_GPU(:,:,CHUNK_START:CHUNK_END) to device
+    CALL F_PTR%GET_DEVICE_DATA_FORCE(PTR_GPU, BLK_BOUNDS=BLK_BOUNDS)
+
+    !$acc kernels present(ptr_gpu)
+    ... ! do work on PTR_GPU(:,:,CHUNK_START:CHUNK_END)
+    !$acc end kernels
+
+    ! copy PTR_GPU(:,:,CHUNK_START:CHUNK_END) back to host
+    CALL F_PTR%SYNC_HOST_FORCE(BLK_BOUNDS=BLK_BOUNDS)
+
+  END DO
+```
+
+#### Asynchronous partial offload of fields (overlapping computation + communication)
+
+Using the optional ``OFFSET`` argument  it is possible to use the buffer for multiple chunks
+of a field when doing partial offloads. The ``OFFSET `` specifies an offset from the start
+of the field device allocation that the data should be transferred to/from.
+The main use case for this is when doing partial offload
+over multiple queues. In this case it is up to the user to explicitly make a device allocation
+that fits the number of chunks they want to be able to use asynchronously on the device. Below
+is an example showing how this can be used to overlap computation and communication, using ``NQUEUES`` in range ``1, ..., NQUEUES``, based on
+the block loop of the previous example.
+
+```fortran
+  CALL FIELD_NEW(F_PTR, LBOUNDS=[1,1,1], UBOUNDS=[64,64,FINAL_RANK], PERSISTENT=.TRUE.)
+  CHUNK_SIZE = 12
+  CHUNK_COUNT = (FINAL_RANK+CHUNK_SIZE-1) / CHUNK_SIZE
+  NQUEUES = 3
+  ! Allocate space for NQUEUES chunks on the device
+  CALL F_PTR%CREATE_DEVICE_DATA(BLK_BOUNDS=[1,NQUEUES*CHUNK_SIZE])
+
+  ! Loop over the chunks and reuse same memory for chunks with index differing by NQUEUES
+  DO CHUNK_IDX = 1, CHUNK_COUNT
+    CHUNK_START=(CHUNK_IDX-1)*CHUNK_SIZE
+    CHUNK_END= MIN((CHUNK_IDX)*CHUNK_SIZE, FINAL_RANK)
+    BLK_BOUNDS = [CHUNK_START, CHUNK_END]
+    QUEUE = MODULO(CHUNK_IDX, NQUEUES)+1
+    OFFSET = (QUEUE-1)*CHUNK_SIZE
+
+    ! asynchrononous copy PTR_GPU(:,:,CHUNK_START:CHUNK_END) to device
+    CALL F_PTR%GET_DEVICE_DATA_FORCE(PTR_GPU, BLK_BOUNDS=BLK_BOUNDS, QUEUE=QUEUE, OFFSET=OFFSET)
+
+    !$acc kernels present(ptr_gpu) async(QUEUE)
+    ... ! do work on PTR_GPU(:,:,CHUNK_START:CHUNK_END)
+    !$acc end kernels
+
+    ! asynchronous copy PTR_GPU(:,:,CHUNK_START:CHUNK_END) back to host
+    CALL F_PTR%SYNC_HOST_FORCE(BLK_BOUNDS=BLK_BOUNDS, QUEUE=QUEUE, OFFSET=OFFSET)
+  END DO
+
+  ! Wait for work in all queues to finish
+  DO QUEUE=1,NQUEUES
+    CALL WAIT_FOR_ASYNC_QUEUE(QUEUE)
+  END DO
+```
 
 ## Statistics
 
