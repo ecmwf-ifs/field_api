@@ -150,11 +150,11 @@ PROGRAM TEST_HDF5_OUTPUT
         DL_CPU(I,J) = .FALSE. 
         ENDDO
         ENDDO
-        CALL GET_HDF5_PERRANK_DATA(W,D_CPU,"field_store.hdf5","W")
-        CALL GET_HDF5_PERRANK_DATA(WM,DM_CPU,"field_store.hdf5","WM")
-        CALL GET_HDF5_PERRANK_DATA(WD,DD_CPU,"field_store.hdf5","WD")
-        CALL GET_HDF5_PERRANK_DATA(WI,DI_CPU,"field_store.hdf5","WI")
-        CALL GET_HDF5_PERRANK_DATA(WL,DL_CPU,"field_store.hdf5","WL")
+        CALL WRITE_HDF5_PERRANK_DATA(W,D_CPU,"field_store.hdf5","W")
+        CALL WRITE_HDF5_PERRANK_DATA(WM,DM_CPU,"field_store.hdf5","WM")
+        CALL WRITE_HDF5_PERRANK_DATA(WD,DD_CPU,"field_store.hdf5","WD")
+        CALL WRITE_HDF5_PERRANK_DATA(WI,DI_CPU,"field_store.hdf5","WI")
+        CALL WRITE_HDF5_PERRANK_DATA(WL,DL_CPU,"field_store.hdf5","WL")
 
         CALL FIELD_DELETE(W)
         CALL FIELD_DELETE(WM)
