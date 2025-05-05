@@ -265,10 +265,15 @@ CONTAINS
     CALL SELF%${ftn}$_${type}$%CREATE_DEVICE_DATA (BLK_BOUNDS=BLK_BOUNDS)
 
 #:set ar = ', '.join ([':'] * (ft.rank-2))
-    DO JFLD = 1, SIZE (SELF%CHILDREN)
-      SELF%CHILDREN (JFLD)%PTR%DEVPTR (${','.join (list (map (lambda i: "LBOUND(SELF%DEVPTR," + str(i) + "):", range (1, ft1.rank))))}$,1:) => SELF%DEVPTR (${ar}$, JFLD, :)
-    ENDDO
-
+    IF ( PRESENT(BLK_BOUNDS) ) THEN
+      DO JFLD = 1, SIZE (SELF%CHILDREN)
+        SELF%CHILDREN (JFLD)%PTR%DEVPTR (${','.join (list (map (lambda i: "LBOUND(SELF%DEVPTR," + str(i) + "):", range (1, ft1.rank))))}$,BLK_BOUNDS(1):) => SELF%DEVPTR (${ar}$, JFLD, BLK_BOUNDS(1):BLK_BOUNDS(2))
+      ENDDO
+    ELSE
+      DO JFLD = 1, SIZE (SELF%CHILDREN)
+        SELF%CHILDREN (JFLD)%PTR%DEVPTR (${','.join (list (map (lambda i: "LBOUND(SELF%DEVPTR," + str(i) + "):", range (1, ft1.rank))))}$,1:) => SELF%DEVPTR (${ar}$, JFLD, :)
+      ENDDO
+    ENDIF
   END SUBROUTINE
 
   SUBROUTINE ${ftn}$_GANG_${type}$_SET_STATUS (SELF, KSTATUS)
