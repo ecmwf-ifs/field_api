@@ -75,10 +75,10 @@ PROGRAM TEST_GET_DEVICE_DATA_BOUNDS
   CALL F_PTR%GET_DEVICE_DATA_FORCE(PTR_GPU, BLK_BOUNDS=[3,3])
   !$acc serial, present(PTR_GPU), copy(OKAY)
   DO I=1,128
-    IF ( PTR_GPU(I,J) /= 39 ) THEN
+    IF ( PTR_GPU(I,3) /= 39 ) THEN
       OKAY = .FALSE.
     END IF
-    PTR_GPU(I,J) = 40
+    PTR_GPU(I,3) = 40
   END DO
   !$acc end serial
 
@@ -89,7 +89,7 @@ PROGRAM TEST_GET_DEVICE_DATA_BOUNDS
   CALL F_PTR%SYNC_HOST_FORCE(BLK_BOUNDS=[3,3])
 
   DO I=1,128
-   IF ( PTR_CPU(I,J) /= 40 ) THEN
+   IF ( PTR_CPU(I,3) /= 40 ) THEN
      OKAY =.FALSE.
    END IF
   END DO
