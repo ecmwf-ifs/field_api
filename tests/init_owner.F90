@@ -21,7 +21,7 @@ PROGRAM INIT_OWNER
         CLASS(FIELD_2RB), POINTER :: O => NULL()
         CLASS(FIELD_2RB), POINTER :: OFORCE => NULL()
         REAL(KIND=JPRB), POINTER  :: PTR(:,:), DEVPTR(:,:)
-        INTEGER(KIND=JPIM)        :: I, J
+        INTEGER(KIND=JPIM)        :: I, J, OMP_MAX_THREADS
 
         CALL FIELD_NEW(O, LBOUNDS=[10,1], UBOUNDS=[21,11])
         CALL O%GET_HOST_DATA_RDWR(PTR)
@@ -60,14 +60,23 @@ PROGRAM INIT_OWNER
 
         CALL FIELD_NEW(OFORCE, LBOUNDS=[10,1], UBOUNDS=[21,11])
         CALL OFORCE%GET_DEVICE_DATA_FORCE(DEVPTR)
+        OMP_MAX_THREADS = OMP_GET_MAX_THREADS()
 
+#ifdef OMPGPU
+        !$omp target map(to:DEVPTR)
+#else
         !$acc serial present(DEVPTR)
-        DO J=1,11
+#endif
+        DO J=1,OMP_MAX_THREADS
           DO I=10,21
             DEVPTR(I,J)=45
           END DO
         END DO
+#ifdef OMPGPU
+        !$omp end target
+#else
         !$acc end serial
+#endif
         CALL OFORCE%GET_HOST_DATA_FORCE(PTR)
 
         IF (SIZE(OFORCE%PTR,1) /= 12) THEN
