@@ -152,10 +152,9 @@ PROGRAM TEST_HDF5_PARALLEL_OUTPUT
         INTEGER :: hdferr
         INTEGER(JPIM) :: k,l,m 
         INTEGER(JPIM) :: NPROCS
-        CHARACTER(LEN=100) :: filename,filenames
+        CHARACTER(LEN=100) :: filenames
         CALL MPL_INIT(KPROCS=NPROCS,LDINFO=.FALSE.,LDENV=.TRUE.)
         WRITE(filenames, '(A,I0)') "field_general"
-        filename = TRIM(filename) // ".hdf5"
         filenames = TRIM(filenames) 
 
         ALLOCATE(DATA_1RB(1))
@@ -188,48 +187,48 @@ PROGRAM TEST_HDF5_PARALLEL_OUTPUT
         ALLOCATE(DATA_5IM(3,2,1,2,3))
         ALLOCATE(DATA_5LM(3,2,1,2,3))
 
-        DATA_1RB=[(1.1_JPRB, i = 1, 1)]
-        DATA_1RM=[(1.2_JPRM, i = 1, 1)]
-        DATA_1RD=[(1.3_JPRD, i = 1, 1)]
-        DATA_1IM=[(1_JPIM  , i = 1, 1)]
-        DATA_1LM=[(.FALSE. , i = 1, 1)]
+        DATA_1RB = [(1.1_JPRB, i = 1, 1)]
+        DATA_1RM = [(1.2_JPRM, i = 1, 1)]
+        DATA_1RD = [(1.3_JPRD, i = 1, 1)]
+        DATA_1IM = [(1_JPIM  , i = 1, 1)]
+        DATA_1LM = [(.FALSE. , i = 1, 1)]
         
         DO CONCURRENT(i=1:2, j=1:3)
-           DATA_2RB=2.1_JPRB + i*.1_JPRB + j*.01_JPRB
-           DATA_2RM=2.2_JPRM + i*.1_JPRM + j*.01_JPRM
-           DATA_2RD=2.3_JPRD + i*.1_JPRD + j*.01_JPRD
-           DATA_2IM=2_JPIM   + i*10_JPIM + j*100_JPIM
-           DATA_2LM=.FALSE.                          
+           DATA_2RB(i,j) = 2.1_JPRB + i*.1_JPRB + j*.01_JPRB
+           DATA_2RM(i,j) = 2.2_JPRM + i*.1_JPRM + j*.01_JPRM
+           DATA_2RD(i,j) = 2.3_JPRD + i*.1_JPRD + j*.01_JPRD
+           DATA_2IM(i,j) = 2_JPIM   + i*10_JPIM + j*100_JPIM
+           DATA_2LM(i,j) = .FALSE.
         END DO 
-        DATA_2LM(2,2)=.TRUE.
+        DATA_2LM(2,2) = .TRUE.
 
         
         DO CONCURRENT(i=1:4, j=1:3, k=1:2)
-           DATA_3RB=3.1_JPRB + i*.1_JPRB + j*.01_JPRB + k*.001_JPRB
-           DATA_3RM=3.2_JPRM + i*.1_JPRM + j*.01_JPRM + k*.001_JPRM
-           DATA_3RD=3.3_JPRD + i*.1_JPRD + j*.01_JPRD + k*.001_JPRD
-           DATA_3IM=3_JPIM   + i*10_JPIM + j*100_JPIM + k*1000_JPIM
-           DATA_3LM=.FALSE.
+           DATA_3RB(i,j,k) = 3.1_JPRB + i*.1_JPRB + j*.01_JPRB + k*.001_JPRB
+           DATA_3RM(i,j,k) = 3.2_JPRM + i*.1_JPRM + j*.01_JPRM + k*.001_JPRM
+           DATA_3RD(i,j,k) = 3.3_JPRD + i*.1_JPRD + j*.01_JPRD + k*.001_JPRD
+           DATA_3IM(i,j,k) = 3_JPIM   + i*10_JPIM + j*100_JPIM + k*1000_JPIM
+           DATA_3LM(i,j,k) = .FALSE.
         END DO 
-        DATA_3LM(3,2,1)=.TRUE.
+        DATA_3LM(3,2,1) = .TRUE.
 
         DO CONCURRENT(i=1:2, j=1:3, k=1:1, l=1:2)
-           DATA_4RB=4.1_JPRB + i*.1_JPRB + j*.01_JPRB + k*.001_JPRB + l*.0001_JPRB
-           DATA_4RM=4.2_JPRM + i*.1_JPRM + j*.01_JPRM + k*.001_JPRM + l*.0001_JPRM
-           DATA_4RD=4.3_JPRD + i*.1_JPRD + j*.01_JPRD + k*.001_JPRD + l*.0001_JPRD
-           DATA_4IM=4_JPIM   + i*10_JPIM + j*100_JPIM + k*1000_JPIM + l*10000_JPIM
-           DATA_4LM=.FALSE.                                                       
+           DATA_4RB(i,j,k,l) = 4.1_JPRB + i*.1_JPRB + j*.01_JPRB + k*.001_JPRB + l*.0001_JPRB
+           DATA_4RM(i,j,k,l) = 4.2_JPRM + i*.1_JPRM + j*.01_JPRM + k*.001_JPRM + l*.0001_JPRM
+           DATA_4RD(i,j,k,l) = 4.3_JPRD + i*.1_JPRD + j*.01_JPRD + k*.001_JPRD + l*.0001_JPRD
+           DATA_4IM(i,j,k,l) = 4_JPIM   + i*10_JPIM + j*100_JPIM + k*1000_JPIM + l*10000_JPIM
+           DATA_4LM(i,j,k,l) = .FALSE.
         END DO 
-        DATA_4LM(1,2,1,2)=.TRUE.
+        DATA_4LM(1,2,1,2) = .TRUE.
 
         DO CONCURRENT(i=1:3, j=1:2, k=1:1, l=1:2, m=1:3)
-           DATA_5RB=5.1_JPRB + i*.1_JPRB + j*.01_JPRB + k*.001_JPRB + l*.0001_JPRB + m*.00001_JPRB
-           DATA_5RM=5.2_JPRM + i*.1_JPRM + j*.01_JPRM + k*.001_JPRB + l*.0001_JPRB + m*.00001_JPRB
-           DATA_5RD=5.3_JPRD + i*.1_JPRD + j*.01_JPRD + k*.001_JPRB + l*.0001_JPRB + m*.00001_JPRB
-           DATA_5IM=5_JPIM   + i*10_JPIM + j*100_JPIM + k*1000_JPIM + l*10000_JPIM + m*100000_JPIM
-           DATA_5LM=.FALSE. 
+           DATA_5RB(i,j,k,l,m) = 5.1_JPRB + i*.1_JPRB + j*.01_JPRB + k*.001_JPRB + l*.0001_JPRB + m*.00001_JPRB
+           DATA_5RM(i,j,k,l,m) = 5.2_JPRM + i*.1_JPRM + j*.01_JPRM + k*.001_JPRM + l*.0001_JPRM + m*.00001_JPRM
+           DATA_5RD(i,j,k,l,m) = 5.3_JPRD + i*.1_JPRD + j*.01_JPRD + k*.001_JPRD + l*.0001_JPRD + m*.00001_JPRD
+           DATA_5IM(i,j,k,l,m) = 5_JPIM   + i*10_JPIM + j*100_JPIM + k*1000_JPIM + l*10000_JPIM + m*100000_JPIM
+           DATA_5LM(i,j,k,l,m) = .FALSE.
         END DO 
-        DATA_5LM(2,1,1,2,3)=.TRUE.
+        DATA_5LM(2,1,1,2,3) = .TRUE.
 
         CALL FIELD_NEW(FIELD_DATA_1RB, DATA=DATA_1RB)
         CALL FIELD_NEW(FIELD_DATA_1RM, DATA=DATA_1RM)
@@ -291,53 +290,52 @@ PROGRAM TEST_HDF5_PARALLEL_OUTPUT
         CALL FIELD_DATA_5IM%GET_DEVICE_DATA_RDWR(DATA_GPU_5IM)
         CALL FIELD_DATA_5LM%GET_DEVICE_DATA_RDWR(DATA_GPU_5LM)
 
-!$ACC KERNELS PRESENT(D_GPU_1RB, DATA_GPU_1RM, DATA_GPU_1RD, DATA_GPU_1IM, DATA_GPU_1LM, &
-!$ACC                 D_GPU_2RB, DATA_GPU_2RM, DATA_GPU_2RD, DATA_GPU_2IM, DATA_GPU_2LM, &
-!$ACC                 D_GPU_3RB, DATA_GPU_3RM, DATA_GPU_3RD, DATA_GPU_3IM, DATA_GPU_3LM, &
-!$ACC                 D_GPU_4RB, DATA_GPU_4RM, DATA_GPU_4RD, DATA_GPU_4IM, DATA_GPU_4LM, &
-!$ACC                 D_GPU_5RB, DATA_GPU_5RM, DATA_GPU_5RD, DATA_GPU_5IM, DATA_GPU_5LM)
-        DATA_GPU_1RB=[(2.1_JPRB, i = 1, 1)]
-        DATA_GPU_1RM=[(2.2_JPRM, i = 1, 1)]
-        DATA_GPU_1RD=[(2.3_JPRD, i = 1, 1)]
-        DATA_GPU_1IM=[(2_JPIM  , i = 1, 1)]
-        DATA_GPU_1LM=[(.FALSE. , i = 1, 1)]
+!$ACC KERNELS PRESENT(DATA_GPU_1RB, DATA_GPU_1RM, DATA_GPU_1RD, DATA_GPU_1IM, DATA_GPU_1LM, &
+!$ACC                 DATA_GPU_2RB, DATA_GPU_2RM, DATA_GPU_2RD, DATA_GPU_2IM, DATA_GPU_2LM, &
+!$ACC                 DATA_GPU_3RB, DATA_GPU_3RM, DATA_GPU_3RD, DATA_GPU_3IM, DATA_GPU_3LM, &
+!$ACC                 DATA_GPU_4RB, DATA_GPU_4RM, DATA_GPU_4RD, DATA_GPU_4IM, DATA_GPU_4LM, &
+!$ACC                 DATA_GPU_5RB, DATA_GPU_5RM, DATA_GPU_5RD, DATA_GPU_5IM, DATA_GPU_5LM)
+        DATA_GPU_1RB = [(2.1_JPRB, i = 1, 1)]
+        DATA_GPU_1RM = [(2.2_JPRM, i = 1, 1)]
+        DATA_GPU_1RD = [(2.3_JPRD, i = 1, 1)]
+        DATA_GPU_1IM = [(2_JPIM  , i = 1, 1)]
+        DATA_GPU_1LM = [(.FALSE. , i = 1, 1)]
         
         DO CONCURRENT(i=1:2, j=1:3)
-           DATA_GPU_2RB(i,j)=3.1_JPRB + i*.1_JPRB + j*.01_JPRB
-           DATA_GPU_2RM(i,j)=3.2_JPRM + i*.1_JPRM + j*.01_JPRM
-           DATA_GPU_2RD(i,j)=3.3_JPRD + i*.1_JPRD + j*.01_JPRD
-           DATA_GPU_2IM(i,j)=3_JPIM   + i*10_JPIM + j*100_JPIM
-           DATA_GPU_2LM(i,j)=.FALSE.                          
+           DATA_GPU_2RB(i,j) = 3.1_JPRB + i*.1_JPRB + j*.01_JPRB
+           DATA_GPU_2RM(i,j) = 3.2_JPRM + i*.1_JPRM + j*.01_JPRM
+           DATA_GPU_2RD(i,j) = 3.3_JPRD + i*.1_JPRD + j*.01_JPRD
+           DATA_GPU_2IM(i,j) = 3_JPIM   + i*10_JPIM + j*100_JPIM
+           DATA_GPU_2LM(i,j) = .FALSE.
         END DO 
-        DATA_GPU_2LM(2,2)=.TRUE.
+        DATA_GPU_2LM(2,2) = .TRUE.
 
-        
         DO CONCURRENT(i=1:4, j=1:3, k=1:2)
-           DATA_GPU_3RB(i,j,k)=4.1_JPRB + i*.1_JPRB + j*.01_JPRB + k*.001_JPRB
-           DATA_GPU_3RM(i,j,k)=4.2_JPRM + i*.1_JPRM + j*.01_JPRM + k*.001_JPRM
-           DATA_GPU_3RD(i,j,k)=4.3_JPRD + i*.1_JPRD + j*.01_JPRD + k*.001_JPRD
-           DATA_GPU_3IM(i,j,k)=4_JPIM   + i*10_JPIM + j*100_JPIM + k*1000_JPIM
-           DATA_GPU_3LM=.FALSE.
+           DATA_GPU_3RB(i,j,k) = 4.1_JPRB + i*.1_JPRB + j*.01_JPRB + k*.001_JPRB
+           DATA_GPU_3RM(i,j,k) = 4.2_JPRM + i*.1_JPRM + j*.01_JPRM + k*.001_JPRM
+           DATA_GPU_3RD(i,j,k) = 4.3_JPRD + i*.1_JPRD + j*.01_JPRD + k*.001_JPRD
+           DATA_GPU_3IM(i,j,k) = 4_JPIM   + i*10_JPIM + j*100_JPIM + k*1000_JPIM
+           DATA_GPU_3LM(i,j,k) = .FALSE.
         END DO 
-        DATA_GPU_3LM(3,2,1)=.TRUE.
+        DATA_GPU_3LM(3,2,1) = .TRUE.
 
         DO CONCURRENT(i=1:2, j=1:3, k=1:1, l=1:2)
-           DATA_GPU_4RB(i,j,k,l)=5.1_JPRB + i*.1_JPRB + j*.01_JPRB + k*.001_JPRB + l*.0001_JPRB
-           DATA_GPU_4RM(i,j,k,l)=5.2_JPRM + i*.1_JPRM + j*.01_JPRM + k*.001_JPRM + l*.0001_JPRM
-           DATA_GPU_4RD(i,j,k,l)=5.3_JPRD + i*.1_JPRD + j*.01_JPRD + k*.001_JPRD + l*.0001_JPRD
-           DATA_GPU_4IM(i,j,k,l)=5_JPIM   + i*10_JPIM + j*100_JPIM + k*1000_JPIM + l*10000_JPIM
-           DATA_GPU_4LM=.FALSE.                                                       
+           DATA_GPU_4RB(i,j,k,l) = 5.1_JPRB + i*.1_JPRB + j*.01_JPRB + k*.001_JPRB + l*.0001_JPRB
+           DATA_GPU_4RM(i,j,k,l) = 5.2_JPRM + i*.1_JPRM + j*.01_JPRM + k*.001_JPRM + l*.0001_JPRM
+           DATA_GPU_4RD(i,j,k,l) = 5.3_JPRD + i*.1_JPRD + j*.01_JPRD + k*.001_JPRD + l*.0001_JPRD
+           DATA_GPU_4IM(i,j,k,l) = 5_JPIM   + i*10_JPIM + j*100_JPIM + k*1000_JPIM + l*10000_JPIM
+           DATA_GPU_4LM(i,j,k,l) = .FALSE.
         END DO 
-        DATA_GPU_4LM(1,2,1,2)=.TRUE.
+        DATA_GPU_4LM(1,2,1,2) = .TRUE.
 
         DO CONCURRENT(i=1:3, j=1:2, k=1:1, l=1:2, m=1:3)
-           DATA_GPU_5RB(i,j,k,l,m)=6.1_JPRB + i*.1_JPRB + j*.01_JPRB + k*.001_JPRB + l*.0001_JPRB + m*.00001_JPRB
-           DATA_GPU_5RM(i,j,k,l,m)=6.2_JPRM + i*.1_JPRM + j*.01_JPRM + k*.001_JPRB + l*.0001_JPRB + m*.00001_JPRB
-           DATA_GPU_5RD(i,j,k,l,m)=6.3_JPRD + i*.1_JPRD + j*.01_JPRD + k*.001_JPRB + l*.0001_JPRB + m*.00001_JPRB
-           DATA_GPU_5IM(i,j,k,l,m)=6_JPIM   + i*10_JPIM + j*100_JPIM + k*1000_JPIM + l*10000_JPIM + m*100000_JPIM
-           DATA_GPU_5LM=.FALSE. 
+           DATA_GPU_5RB(i,j,k,l,m) = 6.1_JPRB + i*.1_JPRB + j*.01_JPRB + k*.001_JPRB + l*.0001_JPRB + m*.00001_JPRB
+           DATA_GPU_5RM(i,j,k,l,m) = 6.2_JPRM + i*.1_JPRM + j*.01_JPRM + k*.001_JPRM + l*.0001_JPRM + m*.00001_JPRM
+           DATA_GPU_5RD(i,j,k,l,m) = 6.3_JPRD + i*.1_JPRD + j*.01_JPRD + k*.001_JPRD + l*.0001_JPRD + m*.00001_JPRD
+           DATA_GPU_5IM(i,j,k,l,m) = 6_JPIM   + i*10_JPIM + j*100_JPIM + k*1000_JPIM + l*10000_JPIM + m*100000_JPIM
+           DATA_GPU_5LM(i,j,k,l,m) = .FALSE.
         END DO 
-        DATA_GPU_5LM(2,1,1,2,3)=.TRUE.
+        DATA_GPU_5LM(2,1,1,2,3) = .TRUE.
 
         DATA_GPU_1LM=.NOT.DATA_GPU_1LM
         DATA_GPU_2LM=.NOT.DATA_GPU_2LM
@@ -346,76 +344,6 @@ PROGRAM TEST_HDF5_PARALLEL_OUTPUT
         DATA_GPU_5LM=.NOT.DATA_GPU_5LM
 
 !$ACC END KERNELS
-
-!        CALL W%SYNC_HOST_RDONLY()
-!        CALL WM%SYNC_HOST_RDONLY()
-!        CALL WD%SYNC_HOST_RDONLY()
-!        CALL WI%SYNC_HOST_RDONLY()
-!        CALL WL%SYNC_HOST_RDONLY()
-!        DO I=1,10
-!        DO J=1,10
-!        IF (D(I,J) /= 7) THEN
-!                CALL FIELD_ABORT ("ERROR")
-!        ENDIF
-!        IF (DM(I,J) /= 8) THEN
-!                CALL FIELD_ABORT ("ERROR")
-!        ENDIF
-!        IF (DD(I,J) /= 9) THEN
-!                CALL FIELD_ABORT ("ERROR")
-!        ENDIF
-!        IF (DI(I,J) /= 2) THEN
-!                CALL FIELD_ABORT ("ERROR")
-!        ENDIF
-!        IF (DL(I,J) .NEQV. .TRUE.) THEN
-!                CALL FIELD_ABORT ("ERROR")
-!        ENDIF
-!        ENDDO
-!        ENDDO
-!
-!        dims = SHAPE(D)  ! Get dimensions of the array
-!        CALL W%GET_HOST_DATA_RDWR(D_CPU)
-!        CALL WM%GET_HOST_DATA_RDWR(DM_CPU)
-!        CALL WD%GET_HOST_DATA_RDWR(DD_CPU)
-!        CALL WI%GET_HOST_DATA_RDWR(DI_CPU)
-!        CALL WL%GET_HOST_DATA_RDWR(DL_CPU)
-!        D_CPUPTR  = C_LOC(D_CPU)
-!        DM_CPUPTR = C_LOC(DM_CPU)
-!        DD_CPUPTR = C_LOC(DD_CPU)
-!        DI_CPUPTR = C_LOC(DI_CPU)
-!        DL_CPUPTR = C_LOC(DL_CPU)
-!        CALL h5open_f(hdferr)
-!        CALL H5Screate_simple_f(2, dims, space_id, hdferr)
-!        CALL H5Fcreate_F(filename, H5F_ACC_TRUNC_F, file_id, hdferr)
-!        IF(JPRB == JPRD) THEN
-!!It is necessary the specialize the code, HDF5 constants must be passed directly
-!        CALL H5Dcreate_f(file_id, "W", H5T_NATIVE_DOUBLE, space_id, dset_id, hdferr)
-!        CALL H5Dwrite_f(dset_id, H5T_NATIVE_DOUBLE, D_CPUPTR, hdferr)
-!        ELSE 
-!        CALL H5Dcreate_f(file_id, "W", H5T_NATIVE_REAL, space_id, dsetm_id, hdferr)
-!        CALL H5Dwrite_f(dsetm_id, H5T_NATIVE_REAL, D_CPUPTR, hdferr)
-!        ENDIF
-!        CALL H5Dcreate_f(file_id, "WM", H5T_NATIVE_REAL, space_id, dsetm_id, hdferr)
-!        CALL H5Dcreate_f(file_id, "WD", H5T_NATIVE_DOUBLE, space_id, dsetd_id, hdferr)
-!        CALL H5Dcreate_f(file_id, "WI", H5T_NATIVE_INTEGER, space_id, dseti_id, hdferr)
-!        CALL H5Dcreate_f(file_id, "WL", H5T_NATIVE_INTEGER, space_id, dsetl_id, hdferr)
-!        CALL H5Dwrite_f(dsetm_id, H5T_NATIVE_REAL, DM_CPUPTR, hdferr)
-!        CALL H5Dwrite_f(dsetd_id, H5T_NATIVE_DOUBLE, DD_CPUPTR, hdferr)
-!        CALL H5Dwrite_f(dseti_id, H5T_NATIVE_INTEGER, DI_CPUPTR, hdferr)
-!        CALL H5Dwrite_f(dsetl_id, H5T_NATIVE_INTEGER, DL_CPUPTR, hdferr)
-!
-!        CALL H5Dclose_f(dset_id, hdferr)
-!        CALL H5Dclose_f(dsetm_id, hdferr)
-!        CALL H5Dclose_f(dsetd_id, hdferr)
-!        CALL H5Dclose_f(dseti_id, hdferr)
-!        CALL H5Dclose_f(dsetl_id, hdferr)
-!        CALL H5Sclose_F(space_id, hdferr)
-!        CALL H5Fclose_F(file_id, hdferr)
-!
-!        DO I=1,10
-!        DO J=1,10
-!        DL_CPU(I,J) = .FALSE. 
-!        ENDDO
-!        ENDDO
 
         CALL WRITE_HDF5_PERRANK_DATA(FIELD_DATA_1RB, DATA_CPU_1RB, filenames,"DATA_CPU_1RB")
         CALL WRITE_HDF5_PERRANK_DATA(FIELD_DATA_1RM, DATA_CPU_1RM, filenames,"DATA_CPU_1RM")
@@ -478,7 +406,95 @@ PROGRAM TEST_HDF5_PARALLEL_OUTPUT
         CALL WRITE_HDF5_PERRANK_DATA(FIELD_DATA_5IM, DATA_GPU_5IM, filenames,"DATA_GPU_5IM", LSYNC=.TRUE.)
         CALL WRITE_HDF5_PERRANK_DATA(FIELD_DATA_5LM, DATA_GPU_5LM, filenames,"DATA_GPU_5LM", LSYNC=.TRUE.)
 
-        PRINT *,'MPL_WORLD_RANK',MPL_WORLD_RANK,MPL_RANK
+
+        CALL READ_HDF5_PERRANK_DATA(FIELD_DATA_1RB, DATA_CPU_1RB, filenames,"DATA_CPU_1RB")
+        CALL READ_HDF5_PERRANK_DATA(FIELD_DATA_1RM, DATA_CPU_1RM, filenames,"DATA_CPU_1RM")
+        CALL READ_HDF5_PERRANK_DATA(FIELD_DATA_1RD, DATA_CPU_1RD, filenames,"DATA_CPU_1RD")
+        CALL READ_HDF5_PERRANK_DATA(FIELD_DATA_1IM, DATA_CPU_1IM, filenames,"DATA_CPU_1IM")
+        CALL READ_HDF5_PERRANK_DATA(FIELD_DATA_1LM, DATA_CPU_1LM, filenames,"DATA_CPU_1LM")
+
+        CALL READ_HDF5_PERRANK_DATA(FIELD_DATA_2RB, DATA_CPU_2RB, filenames,"DATA_CPU_2RB")
+        CALL READ_HDF5_PERRANK_DATA(FIELD_DATA_2RM, DATA_CPU_2RM, filenames,"DATA_CPU_2RM")
+        CALL READ_HDF5_PERRANK_DATA(FIELD_DATA_2RD, DATA_CPU_2RD, filenames,"DATA_CPU_2RD")
+        CALL READ_HDF5_PERRANK_DATA(FIELD_DATA_2IM, DATA_CPU_2IM, filenames,"DATA_CPU_2IM")
+        CALL READ_HDF5_PERRANK_DATA(FIELD_DATA_2LM, DATA_CPU_2LM, filenames,"DATA_CPU_2LM")
+
+        CALL READ_HDF5_PERRANK_DATA(FIELD_DATA_3RB, DATA_CPU_3RB, filenames,"DATA_CPU_3RB")
+        CALL READ_HDF5_PERRANK_DATA(FIELD_DATA_3RM, DATA_CPU_3RM, filenames,"DATA_CPU_3RM")
+        CALL READ_HDF5_PERRANK_DATA(FIELD_DATA_3RD, DATA_CPU_3RD, filenames,"DATA_CPU_3RD")
+        CALL READ_HDF5_PERRANK_DATA(FIELD_DATA_3IM, DATA_CPU_3IM, filenames,"DATA_CPU_3IM")
+        CALL READ_HDF5_PERRANK_DATA(FIELD_DATA_3LM, DATA_CPU_3LM, filenames,"DATA_CPU_3LM")
+
+        CALL READ_HDF5_PERRANK_DATA(FIELD_DATA_4RB, DATA_CPU_4RB, filenames,"DATA_CPU_4RB")
+        CALL READ_HDF5_PERRANK_DATA(FIELD_DATA_4RM, DATA_CPU_4RM, filenames,"DATA_CPU_4RM")
+        CALL READ_HDF5_PERRANK_DATA(FIELD_DATA_4RD, DATA_CPU_4RD, filenames,"DATA_CPU_4RD")
+        CALL READ_HDF5_PERRANK_DATA(FIELD_DATA_4IM, DATA_CPU_4IM, filenames,"DATA_CPU_4IM")
+        CALL READ_HDF5_PERRANK_DATA(FIELD_DATA_4LM, DATA_CPU_4LM, filenames,"DATA_CPU_4LM")
+
+        CALL READ_HDF5_PERRANK_DATA(FIELD_DATA_5RB, DATA_CPU_5RB, filenames,"DATA_CPU_5RB")
+        CALL READ_HDF5_PERRANK_DATA(FIELD_DATA_5RM, DATA_CPU_5RM, filenames,"DATA_CPU_5RM")
+        CALL READ_HDF5_PERRANK_DATA(FIELD_DATA_5RD, DATA_CPU_5RD, filenames,"DATA_CPU_5RD")
+        CALL READ_HDF5_PERRANK_DATA(FIELD_DATA_5IM, DATA_CPU_5IM, filenames,"DATA_CPU_5IM")
+        CALL READ_HDF5_PERRANK_DATA(FIELD_DATA_5LM, DATA_CPU_5LM, filenames,"DATA_CPU_5LM")
+
+        DATA_1RB = DATA_1RB-[(1.1_JPRB, i = 1, 1)]
+        DATA_1RM = DATA_1RM-[(1.2_JPRM, i = 1, 1)]
+        DATA_1RD = DATA_1RD-[(1.3_JPRD, i = 1, 1)]
+        DATA_1IM = DATA_1IM-[(1_JPIM  , i = 1, 1)]
+        DATA_1LM = .NOT.(DATA_1LM.EQV.[(.FALSE. , i = 1, 1)])
+
+        DO CONCURRENT(i=1:2, j=1:3)
+           DATA_2RB(i,j) = 2.1_JPRB + i*.1_JPRB + j*.01_JPRB - DATA_2RB(i,j)
+           DATA_2RM(i,j) = 2.2_JPRM + i*.1_JPRM + j*.01_JPRM - DATA_2RM(i,j)
+           DATA_2RD(i,j) = 2.3_JPRD + i*.1_JPRD + j*.01_JPRD - DATA_2RD(i,j)
+           DATA_2IM(i,j) = 2_JPIM   + i*10_JPIM + j*100_JPIM - DATA_2IM(i,j)
+           DATA_2LM(i,j) = .NOT.(.FALSE. .EQV. DATA_2LM(i,j))
+        END DO
+        DATA_2LM(2,2) = .NOT.(.TRUE. .EQV. DATA_2LM(2,2))
+
+        DO CONCURRENT(i=1:4, j=1:3, k=1:2)
+           DATA_3RB(i,j,k) = 3.1_JPRB + i*.1_JPRB + j*.01_JPRB + k*.001_JPRB - DATA_3RB(i,j,k)
+           DATA_3RM(i,j,k) = 3.2_JPRM + i*.1_JPRM + j*.01_JPRM + k*.001_JPRM - DATA_3RM(i,j,k)
+           DATA_3RD(i,j,k) = 3.3_JPRD + i*.1_JPRD + j*.01_JPRD + k*.001_JPRD - DATA_3RD(i,j,k)
+           DATA_3IM(i,j,k) = 3_JPIM   + i*10_JPIM + j*100_JPIM + k*1000_JPIM - DATA_3IM(i,j,k)
+           DATA_3LM(i,j,k) = .NOT. (.FALSE. .EQV. DATA_3LM(i,j,k))
+        END DO
+        DATA_3LM(3,2,1) = .NOT. (.TRUE. .EQV. DATA_3LM(3,2,1))
+
+        DO CONCURRENT(i=1:2, j=1:3, k=1:1, l=1:2)
+           DATA_4RB(i,j,k,l) = 4.1_JPRB + i*.1_JPRB + j*.01_JPRB + k*.001_JPRB + l*.0001_JPRB - DATA_4RB(i,j,k,l)
+           DATA_4RM(i,j,k,l) = 4.2_JPRM + i*.1_JPRM + j*.01_JPRM + k*.001_JPRM + l*.0001_JPRM - DATA_4RM(i,j,k,l)
+           DATA_4RD(i,j,k,l) = 4.3_JPRD + i*.1_JPRD + j*.01_JPRD + k*.001_JPRD + l*.0001_JPRD - DATA_4RD(i,j,k,l)
+           DATA_4IM(i,j,k,l) = 4_JPIM   + i*10_JPIM + j*100_JPIM + k*1000_JPIM + l*10000_JPIM - DATA_4IM(i,j,k,l)
+           DATA_4LM(i,j,k,l) = .NOT. (.FALSE. .EQV.  DATA_4LM(i,j,k,l))
+        END DO
+        DATA_4LM(1,2,1,2) = .NOT. (.TRUE. .EQV. DATA_4LM(1,2,1,2))
+
+        DO CONCURRENT(i=1:3, j=1:2, k=1:1, l=1:2, m=1:3)
+           DATA_5RB(i,j,k,l,m) = 5.1_JPRB + i*.1_JPRB + j*.01_JPRB + k*.001_JPRB + l*.0001_JPRB + m*.00001_JPRB &
+                                                                                          & - DATA_5RB(i,j,k,l,m)
+           DATA_5RM(i,j,k,l,m) = 5.2_JPRM + i*.1_JPRM + j*.01_JPRM + k*.001_JPRM + l*.0001_JPRM + m*.00001_JPRM &
+                                                                                          & - DATA_5RM(i,j,k,l,m)
+           DATA_5RD(i,j,k,l,m) = 5.3_JPRD + i*.1_JPRD + j*.01_JPRD + k*.001_JPRD + l*.0001_JPRD + m*.00001_JPRD &
+                                                                                          & - DATA_5RD(i,j,k,l,m)
+           DATA_5IM(i,j,k,l,m) = 5_JPIM   + i*10_JPIM + j*100_JPIM + k*1000_JPIM + l*10000_JPIM + m*100000_JPIM &
+                                                                                          & - DATA_5IM(i,j,k,l,m)
+           DATA_5LM(i,j,k,l,m) = .NOT. (.FALSE. .EQV. DATA_5LM(i,j,k,l,m))
+        END DO
+        DATA_5LM(2,1,1,2,3) = .NOT. (.TRUE. .EQV. DATA_5LM(2,1,1,2,3))
+
+        IF (ANY((DATA_1RB+DATA_1RM+DATA_1RD+REAL(DATA_1IM,JPRD)) /= 0.) .OR. ANY(DATA_1LM)) THEN
+           CALL FIELD_ABORT("Wrong HDF5 write/read of 1D data")
+        ELSE IF (ANY((DATA_2RB+DATA_2RM+DATA_2RD+REAL(DATA_2IM,JPRD)) /= 0.) .OR. ANY(DATA_2LM)) THEN
+           CALL FIELD_ABORT("Wrong HDF5 write/read of 2D data")
+        ELSE IF (ANY((DATA_3RB+DATA_3RM+DATA_3RD+REAL(DATA_3IM,JPRD)) /= 0.) .OR. ANY(DATA_3LM)) THEN
+           CALL FIELD_ABORT("Wrong HDF5 write/read of 3D data")
+        ELSE IF (ANY((DATA_4RB+DATA_4RM+DATA_4RD+REAL(DATA_4IM,JPRD)) /= 0.) .OR. ANY(DATA_4LM)) THEN
+           CALL FIELD_ABORT("Wrong HDF5 write/read of 4D data")
+        ELSE IF (ANY((DATA_5RB+DATA_5RM+DATA_5RD+REAL(DATA_5IM,JPRD)) /= 0.) .OR. ANY(DATA_5LM)) THEN
+           CALL FIELD_ABORT("Wrong HDF5 write/read of 5D data")
+        ENDIF
+
         CALL MPL_END(LDMEMINFO=.FALSE.)
 
         CALL FIELD_DELETE(FIELD_DATA_1RB)
