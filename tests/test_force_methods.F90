@@ -32,7 +32,11 @@ PROGRAM TEST_FORCE_METHODS
   CALL F_PTR%GET_DEVICE_DATA_FORCE(PTR_GPU)
   OKAY=.TRUE.
 
+#ifdef OMPGPU
+  !$omp target map(to:PTR_GPU) map(tofrom:OKAY)
+#else
   !$acc serial, present(PTR_GPU), copy(OKAY)
+#endif
   DO I=1,128
     DO J = 1,2
       IF ( PTR_GPU(I,J) /= 42 ) THEN
@@ -41,7 +45,11 @@ PROGRAM TEST_FORCE_METHODS
       PTR_GPU(I,J) = 32
     END DO
   END DO
+#ifdef OMPGPU
+  !$omp end target
+#else
   !$acc end serial
+#endif
 
   IF (.NOT. OKAY) THEN
     CALL FIELD_ABORT("ERROR DATA NOT UPDATED ON DEVICE")
