@@ -152,10 +152,9 @@ PROGRAM TEST_HDF5_PARALLEL_OUTPUT
         INTEGER :: hdferr
         INTEGER(JPIM) :: k,l,m 
         INTEGER(JPIM) :: NPROCS
-        CHARACTER(LEN=100) :: filename,filenames
+        CHARACTER(LEN=100) :: filenames
         CALL MPL_INIT(KPROCS=NPROCS,LDINFO=.FALSE.,LDENV=.TRUE.)
         WRITE(filenames, '(A,I0)') "field_general"
-        filename = TRIM(filename) // ".hdf5"
         filenames = TRIM(filenames) 
 
         ALLOCATE(DATA_1RB(1))
