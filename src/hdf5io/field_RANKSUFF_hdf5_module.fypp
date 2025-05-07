@@ -72,7 +72,8 @@ SUBROUTINE ${ftn}$_WRITE_HDF5_PERRANK_DATA (SELF, PTR, FILENAME, VARNAME, LSYNC,
    LBOUNDS=LBOUND(SELF%PTR)
    UBOUNDS=UBOUND(SELF%PTR)
    DIMS(1:${ft.rank}$)=UBOUNDS(1:${ft.rank}$)-LBOUNDS(1:${ft.rank}$)+1
-   PRINT *,'COMPUTED DIMS:',DIMS
+   PRINT *,'COMPUTED DIMS:',DIMS, ' TYPE: ',H5KIND_TO_TYPE(${ft.kind}$,${ft.h5kind}$)
+
 
    IF(.NOT.PRESENT(HDFEXISTS)) &
   &CALL INIT_HDF5_STORAGE()
@@ -88,7 +89,7 @@ SUBROUTINE ${ftn}$_WRITE_HDF5_PERRANK_DATA (SELF, PTR, FILENAME, VARNAME, LSYNC,
    IF (HDFERR /= 0) CALL FIELD_ABORT("Unable to check if the variable: "//TRIM(VARNAME)//" exists") 
    IF( .NOT. HDF5_DATASET_EXISTS) THEN
      CALL H5Dcreate_F(FILE_ID, TRIM(VARNAME), H5KIND_TO_TYPE(${ft.kind}$,${ft.h5kind}$), SPACE_ID, DSET_ID, HDFERR)
-     IF (HDFERR /= 0) CALL FIELD_ABORT("Unable to create variable: "//TRIM(VARNAME)//"of type ${ft.kind}$,${ft.h5kind}$") 
+     IF (HDFERR /= 0) CALL FIELD_ABORT("Unable to create variable: "//TRIM(VARNAME)//" of type ${ft.kind}$,${ft.h5kind}$") 
    ELSE
      CALL H5Dopen_F  (FILE_ID, TRIM(VARNAME), DSET_ID, HDFERR)
      IF (HDFERR /= 0) CALL FIELD_ABORT("Unable to open existing variable: "//TRIM(VARNAME)) 
