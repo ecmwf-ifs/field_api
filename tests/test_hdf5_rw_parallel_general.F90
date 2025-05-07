@@ -471,10 +471,14 @@ PROGRAM TEST_HDF5_PARALLEL_OUTPUT
         DATA_4LM(1,2,1,2) = .NOT. (.TRUE. .EQV. DATA_4LM(1,2,1,2))
 
         DO CONCURRENT(i=1:3, j=1:2, k=1:1, l=1:2, m=1:3)
-           DATA_5RB(i,j,k,l,m) = 5.1_JPRB + i*.1_JPRB + j*.01_JPRB + k*.001_JPRB + l*.0001_JPRB + m*.00001_JPRB - DATA_5RB(i,j,k,l,m)
-           DATA_5RM(i,j,k,l,m) = 5.2_JPRM + i*.1_JPRM + j*.01_JPRM + k*.001_JPRM + l*.0001_JPRM + m*.00001_JPRM - DATA_5RM(i,j,k,l,m)
-           DATA_5RD(i,j,k,l,m) = 5.3_JPRD + i*.1_JPRD + j*.01_JPRD + k*.001_JPRD + l*.0001_JPRD + m*.00001_JPRD - DATA_5RD(i,j,k,l,m)
-           DATA_5IM(i,j,k,l,m) = 5_JPIM   + i*10_JPIM + j*100_JPIM + k*1000_JPIM + l*10000_JPIM + m*100000_JPIM - DATA_5IM(i,j,k,l,m)
+           DATA_5RB(i,j,k,l,m) = 5.1_JPRB + i*.1_JPRB + j*.01_JPRB + k*.001_JPRB + l*.0001_JPRB + m*.00001_JPRB &
+                                                                                          & - DATA_5RB(i,j,k,l,m)
+           DATA_5RM(i,j,k,l,m) = 5.2_JPRM + i*.1_JPRM + j*.01_JPRM + k*.001_JPRM + l*.0001_JPRM + m*.00001_JPRM &
+                                                                                          & - DATA_5RM(i,j,k,l,m)
+           DATA_5RD(i,j,k,l,m) = 5.3_JPRD + i*.1_JPRD + j*.01_JPRD + k*.001_JPRD + l*.0001_JPRD + m*.00001_JPRD &
+                                                                                          & - DATA_5RD(i,j,k,l,m)
+           DATA_5IM(i,j,k,l,m) = 5_JPIM   + i*10_JPIM + j*100_JPIM + k*1000_JPIM + l*10000_JPIM + m*100000_JPIM &
+                                                                                          & - DATA_5IM(i,j,k,l,m)
            DATA_5LM(i,j,k,l,m) = .NOT. (.FALSE. .EQV. DATA_5LM(i,j,k,l,m))
         END DO
         DATA_5LM(2,1,1,2,3) = .NOT. (.TRUE. .EQV. DATA_5LM(2,1,1,2,3))
