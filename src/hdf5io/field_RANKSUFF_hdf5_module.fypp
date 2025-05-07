@@ -61,9 +61,10 @@ SUBROUTINE ${ftn}$_WRITE_HDF5_PERRANK_DATA (SELF, PTR, FILENAME, VARNAME, LSYNC,
    INTEGER :: HDFERR
    LOGICAL :: HDF5_FILE_EXISTS, HDF5_DATASET_EXISTS
    
-   PRINT *,'WRITING HDF5 VARIABLE:',TRIM(VARNAME),' INTO FILE: ',TRIM(FILENAME)
+   PRINT *,'WRITING HDF5 VARIABLE: ',TRIM(VARNAME),' INTO FILE: ',TRIM(FILENAME)
 !Make sure that the field is present on host
    IF(PRESENT(LSYNC)) CALL SELF%SYNC_HOST_RDONLY()
+
 !Make sure that the field is continuous
    ALLOCATE(TMP_ARRAY, MOLD=SELF%PTR)
    TMP_ARRAY = SELF%PTR
@@ -71,23 +72,31 @@ SUBROUTINE ${ftn}$_WRITE_HDF5_PERRANK_DATA (SELF, PTR, FILENAME, VARNAME, LSYNC,
    LBOUNDS=LBOUND(SELF%PTR)
    UBOUNDS=UBOUND(SELF%PTR)
    DIMS(1:${ft.rank}$)=UBOUNDS(1:${ft.rank}$)-LBOUNDS(1:${ft.rank}$)+1
-!Define separate filename for each MPI rank
+   PRINT *,'COMPUTED DIMS:',DIMS
+
    IF(.NOT.PRESENT(HDFEXISTS)) &
   &CALL INIT_HDF5_STORAGE()
+!Define separate filename for each MPI rank
    CALL NAME_HDF5_STORAGE(FILENAME,FNAME_WITH_RANK)
    CALL OPEN_HDF5_STORAGE(FNAME_WITH_RANK, FILE_ID)
+
 !Create HDF5 space
    CALL H5Screate_simple_F(${ft.rank}$, DIMS, SPACE_ID, HDFERR)
+   IF (HDFERR /= 0) CALL FIELD_ABORT("Unable to create HDF5 space of rank ${ft.rank}$") 
 !Check if the dataset named VARNAME already exists in the HDF5 file, if not create it
    CALL H5Lexists_F(FILE_ID, TRIM(VARNAME), HDF5_DATASET_EXISTS, HDFERR)
+   IF (HDFERR /= 0) CALL FIELD_ABORT("Unable to check if the variable: "//TRIM(VARNAME)//" exists") 
    IF( .NOT. HDF5_DATASET_EXISTS) THEN
      CALL H5Dcreate_F(FILE_ID, TRIM(VARNAME), H5KIND_TO_TYPE(${ft.kind}$,${ft.h5kind}$), SPACE_ID, DSET_ID, HDFERR)
+     IF (HDFERR /= 0) CALL FIELD_ABORT("Unable to create variable: "//TRIM(VARNAME)//"of type ${ft.kind}$,${ft.h5kind}$") 
    ELSE
      CALL H5Dopen_F  (FILE_ID, TRIM(VARNAME), DSET_ID, HDFERR)
+     IF (HDFERR /= 0) CALL FIELD_ABORT("Unable to open existing variable: "//TRIM(VARNAME)) 
    ENDIF
 !Write the data to a file
    CPTR=C_LOC(TMP_ARRAY)
    CALL H5Dwrite_F(DSET_ID,  H5KIND_TO_TYPE(${ft.kind}$, ${ft.h5kind}$), CPTR, HDFERR)
+     IF (HDFERR /= 0) CALL FIELD_ABORT("Unable to write variable: "//TRIM(VARNAME)//"of type ${ft.kind}$,${ft.h5kind}$") 
 !Sanitize HDF5 environment and close the file
    CALL CLOSE_HDF5_STORAGE(DSET_ID, SPACE_ID, FILE_ID)
    IF(.NOT.PRESENT(HDFEXISTS)) &
