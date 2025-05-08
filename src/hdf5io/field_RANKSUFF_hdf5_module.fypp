@@ -90,6 +90,10 @@ SUBROUTINE ${ftn}$_WRITE_HDF5_PERRANK_DATA (SELF, PTR, FILENAME, VARNAME, LSYNC,
    IF (HDFERR /= 0) CALL FIELD_ABORT("Unable to check if the variable: "//TRIM(VARNAME)//" exists") 
    IF( .NOT. HDF5_DATASET_EXISTS) THEN
      IFORT_FIX_TYPE_ID=H5KIND_TO_TYPE(${ft.kind}$,${ft.h5kind}$)
+     IF(${ft.kind}$ == JPRM) THEN
+             IFORT_FIX_TYPE_ID=H5T_IEEE_F32LE
+             PRINT *,'INTEL fix' 
+     ENDIF
      CALL H5Dcreate_F(FILE_ID, TRIM(VARNAME), IFORT_FIX_TYPE_ID, SPACE_ID, DSET_ID, HDFERR)
      IF (HDFERR /= 0) CALL FIELD_ABORT("Unable to create variable: "//TRIM(VARNAME)//" of type ${ft.kind}$,${ft.h5kind}$") 
    ELSE
