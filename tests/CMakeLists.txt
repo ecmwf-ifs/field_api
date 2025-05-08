@@ -30,6 +30,7 @@ target_compile_definitions( main.x PRIVATE $<${HAVE_CUDA}:_CUDA> )
 
 ## Unit tests
 list(APPEND TEST_FILES
+        testHDF5.F90
         cpu_to_gpu.F90
         cpu_to_gpu_delayed_init_value.F90
         cpu_to_gpu_init_value.F90

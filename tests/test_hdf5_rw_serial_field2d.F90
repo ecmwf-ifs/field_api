@@ -144,6 +144,7 @@ PROGRAM TEST_HDF5_OUTPUT
         CALL H5Dclose_f(dsetl_id, hdferr)
         CALL H5Sclose_F(space_id, hdferr)
         CALL H5Fclose_F(file_id, hdferr)
+        CALL h5close_f(hdferr)
 
         DO I=1,10
         DO J=1,10
