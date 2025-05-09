@@ -101,7 +101,12 @@ list(APPEND TEST_FILES
 	)
 
 if(HAVE_FIELD_GANG)
-  list(APPEND TEST_FILES test_gang.F90 test_field_stack_cpu.F90 test_field_stack_gpu.F90)
+  list(APPEND TEST_FILES
+        test_gang.F90
+        test_field_stack_cpu.F90
+        test_field_stack_gpu.F90
+        test_field_stack_member_ranks.F90
+      )
 endif()
 
 #Place-holder for failing tests
