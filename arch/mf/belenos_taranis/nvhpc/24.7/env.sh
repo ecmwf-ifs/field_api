@@ -7,8 +7,15 @@
 # granted to it by virtue of its status as an intergovernmental organisation
 # nor does it submit to any jurisdiction.
 
-####################################################################
-# OpenAcc FLAGS
-####################################################################
+# Source me to get the correct configure/build/run environment
 
-set( OpenACC_Fortran_FLAGS "-acc=gpu -gpu=cc70 -Minfo=accel" CACHE STRING "" )
+# module purge was emptying BASH_SOURCE, so save it
+path=$BASH_SOURCE
+
+module purge
+module load cmake/3.24.1
+module load nvhpc/24.7
+module load python/3.7.6
+
+DIR_PATH=$(dirname $path)
+export ECBUILD_TOOLCHAIN=$DIR_PATH/toolchain.cmake
