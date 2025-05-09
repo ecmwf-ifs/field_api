@@ -7,12 +7,9 @@
 # granted to it by virtue of its status as an intergovernmental organisation
 # nor does it submit to any jurisdiction.
 
-# Source me to get the correct configure/build/run environment
+####################################################################
+# Offloading FLAGS
+####################################################################
 
-module purge
-module load cmake/3.24.1
-module load nvhpc/23.9
-module load python/3.7.6
-
-DIR_PATH=$(realpath $(dirname $BASH_SOURCE))
-export CMAKE_TOOLCHAIN_FILE=$DIR_PATH/toolchain.cmake
+set( OpenACC_Fortran_FLAGS "-acc=gpu -gpu=cc70 -Minfo=accel" CACHE STRING "" )
+set( OpenMP_Fortran_FLAGS "-mp=gpu -gpu=cc70" CACHE STRING "" )
