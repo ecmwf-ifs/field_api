@@ -208,7 +208,7 @@ init_debug_value_jpim* to a custom value.
 
 ## Data Transfers
 There are two categories of data transfer methods in Field API. The *core API* consists of methods that internally keeps track of the status of a field and the *advanced API* which consists of methods that relies on the user to
-keep track of where the data is located. There is no benefit in using the advanced api if the default API can be used and it is recommended to only use the features from the advanced API when
+keep track of where the data is located. There is no benefit in using the advanced API if the default API can be used and it is recommended to only use the features from the advanced API when
 the same can't be achieved with the default API (e.g. for asynchronous data transfers).
 
 
