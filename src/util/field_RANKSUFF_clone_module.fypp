@@ -53,6 +53,9 @@ SUBROUTINE ${ft.name}$_CLONE_ON_${TARGET}$(YL, YR)
   ZR => GET_${TARGET}$_DATA_RDONLY (YR)
   ZL => GET_${TARGET}$_DATA_RDWR (YL)
 
+#! OpenMP offload does not have an equivalent for the kernels command,
+#! which means we cannot rely on array notation here and must generate
+#! a nested gang-vector loop. 
 #:for i in range(ft.rank, 0, -1)
 #:set indent = ' ' * (1 + (ft.rank-i)*2)
 #:if i == ft.rank
