@@ -75,8 +75,6 @@ jobs:
               - python3
             cmake_options:
               - -DENABLE_HDF5=ON
-#              - -DENABLE_ACC=ON
-#              - -DENABLE_CUDA=${{ matrix.cuda }}
               - -DENABLE_SINGLE_PRECISION=ON
               - -DENABLE_DOUBLE_PRECISION=ON
             dependencies:
