@@ -7,6 +7,12 @@
 ! granted to it by virtue of its status as an intergovernmental organisation
 ! nor does it submit to any jurisdiction.
 
+! This is a simple test to verify the async functionality of the FORCE data
+! transfer methods. The kernel in this test is not wrapped inside any acc data
+! region, as opposed to in the test get_device_data_multi_blk_async. The
+! reason for this is that data regions may be blocking, depending on compiler
+! version, which leads to synchronous execution. This test executes
+! asynchronously when compiled with NVHPC compiler versions 22.11 and 24.5.
 
 PROGRAM TEST_FORCE_ASYNC
 
