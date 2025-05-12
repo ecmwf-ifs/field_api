@@ -72,7 +72,7 @@ jobs:
               - ecbuild
               - prgenv/intel
               - intel/2023.2.0
-              - hdf5
+              - hdf5/1.14.6
               - python3
             cmake_options:
               - -DENABLE_HDF5=ON
