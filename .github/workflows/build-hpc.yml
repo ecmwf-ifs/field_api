@@ -70,7 +70,8 @@ jobs:
               - cmake
               - ninja
               - ecbuild
-              - prgenv/nvidia
+              - prgenv/intel
+              - intel/2023.2.0
               - hdf5
               - python3
             cmake_options:
