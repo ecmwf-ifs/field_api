@@ -1,0 +1,100 @@
+#! (C) Copyright 2022- ECMWF.
+#! (C) Copyright 2022- Meteo-France.
+#!
+#! This software is licensed under the terms of the Apache Licence Version 2.0
+#! which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
+#! In applying this licence, ECMWF does not waive the privileges and immunities
+#! granted to it by virtue of its status as an intergovernmental organisation
+#! nor does it submit to any jurisdiction.
+
+MODULE FIELD_${RANK}$${SUFF}$_STACK_MEMBER_MODULE
+
+USE FIELD_BASIC_MODULE
+USE FIELD_CONSTANTS_MODULE
+
+#:set fieldTypeList = fieldType.getFieldTypeList (ranks=[RANK], kinds=['JP' + str (SUFF)])
+
+#:for ft in fieldTypeList
+USE ${ft.name}$_MODULE
+#:endfor
+${fieldType.useParkind1 ()}$
+
+IMPLICIT NONE
+
+PRIVATE
+
+#:for ft in fieldTypeList
+#:set ftn = ft.name
+
+TYPE, EXTENDS (${ftn}$_WRAPPER) :: ${ftn}$_STACK_MEMBER
+  CLASS (FIELD_BASIC), POINTER :: PARENT => NULL ()
+CONTAINS
+  PROCEDURE :: DELETE_DEVICE_DATA => ${ftn}$_STACK_MEMBER_DELETE_DEVICE_DATA
+  PROCEDURE :: CREATE_DEVICE_DATA => ${ftn}$_STACK_MEMBER_CREATE_DEVICE_DATA
+  PROCEDURE :: SET_DEVICE_DIRTY => ${ftn}$_STACK_MEMBER_SET_DEVICE_DIRTY
+  PROCEDURE :: GET_DEVICE_DATA => ${ftn}$_STACK_MEMBER_GET_DEVICE_DATA
+  PROCEDURE :: GET_HOST_DATA => ${ftn}$_STACK_MEMBER_GET_HOST_DATA
+END TYPE
+
+PUBLIC :: ${ftn}$_STACK_MEMBER
+
+#:endfor
+
+CONTAINS
+
+#:for ft in fieldTypeList
+#:set ftn = ft.name
+
+  SUBROUTINE ${ftn}$_STACK_MEMBER_CREATE_DEVICE_DATA (SELF)
+    CLASS(${ftn}$_STACK_MEMBER) :: SELF
+
+    IF (ASSOCIATED (SELF%PARENT)) THEN
+      CALL SELF%PARENT%CREATE_DEVICE_DATA ()
+    ENDIF
+
+  END SUBROUTINE ${ftn}$_STACK_MEMBER_CREATE_DEVICE_DATA
+
+  SUBROUTINE ${ftn}$_STACK_MEMBER_DELETE_DEVICE_DATA (SELF)
+    CLASS(${ftn}$_STACK_MEMBER) :: SELF
+
+    IF (ASSOCIATED (SELF%PARENT)) THEN
+      CALL SELF%PARENT%DELETE_DEVICE_DATA ()
+    ENDIF
+
+  END SUBROUTINE ${ftn}$_STACK_MEMBER_DELETE_DEVICE_DATA
+
+  SUBROUTINE ${ftn}$_STACK_MEMBER_SET_DEVICE_DIRTY (SELF)
+
+    CLASS (${ftn}$_STACK_MEMBER) :: SELF
+
+    IF (ASSOCIATED (SELF%PARENT)) THEN
+      CALL SELF%PARENT%SET_DEVICE_DIRTY ()
+    ENDIF
+
+  END SUBROUTINE ${ftn}$_STACK_MEMBER_SET_DEVICE_DIRTY
+
+#:for what in ['HOST', 'DEVICE']
+  SUBROUTINE ${ftn}$_STACK_MEMBER_GET_${what}$_DATA (SELF, MODE, PTR, QUEUE)
+    CLASS(${ftn}$_STACK_MEMBER) :: SELF
+    INTEGER (KIND=JPIM),           INTENT(IN)    :: MODE
+    ${ft.type}$, POINTER,          INTENT(INOUT) :: PTR(${ft.shape}$)
+    INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
+    INTEGER(KIND=JPIM)                           :: LBOUNDS(${ft.rank}$)
+
+    IF (ASSOCIATED (SELF%PARENT)) THEN
+      IF (IAND (MODE, NWR) /= 0) THEN
+        CALL SELF%PARENT%SYNC_${what}$_RDWR (QUEUE)
+      ELSEIF (IAND (MODE, NRD) /= 0) THEN
+        CALL SELF%PARENT%SYNC_${what}$_RDONLY (QUEUE)
+      ENDIF
+    ENDIF
+
+    CALL SELF%${ftn}$_WRAPPER%GET_${what}$_DATA (MODE, PTR, QUEUE)
+
+  END SUBROUTINE ${ftn}$_STACK_MEMBER_GET_${what}$_DATA
+
+#:endfor
+#:endfor
+
+
+END MODULE FIELD_${RANK}$${SUFF}$_STACK_MEMBER_MODULE
