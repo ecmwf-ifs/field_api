@@ -77,6 +77,8 @@ jobs:
             python-version: '3.8'
             caching: true
 
+            cmake_options: "-DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ${{ matrix.cmake_options }} -DENABLE_ACC=OFF -std=gnu++17"
+
           - name : linux intel-modern
             os: ubuntu-24.04
             compiler: intel-modern
