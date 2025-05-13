@@ -69,7 +69,7 @@ jobs:
             caching: true
 
           - name : linux intel-classic
-            os: ubuntu-20.04
+            os: ubuntu-24.04
             compiler: intel-classic
             compiler_cc: icc
             compiler_cxx: icpc
@@ -221,6 +221,6 @@ jobs:
           ecmwf-ifs/fiat
         dependency_branch: develop
         dependency_cmake_options: |
-          ecmwf-ifs/fiat: "-DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DENABLE_TESTS=OFF
-        cmake_options: "-DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ${{ matrix.cmake_options }} -DENABLE_ACC=OFF -DENABLE_HDF5=ON "
+          ecmwf-ifs/fiat: "-DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DENABLE_TESTS=OFF -D__STDC_WANT_IEC_60559_TYPES_EXT__=1
+        cmake_options: "-DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ${{ matrix.cmake_options }} -DENABLE_ACC=OFF -DENABLE_HDF5=ON -D__STDC_WANT_IEC_60559_TYPES_EXT__=1"
         ctest_options: "${{ matrix.ctest_options }}"
