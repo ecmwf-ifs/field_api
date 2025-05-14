@@ -71,8 +71,8 @@ jobs:
           - name : linux intel-classic
             os: ubuntu-22.04
             compiler: intel-classic
-            compiler_cc: icx
-            compiler_cxx: icpx
+            compiler_cc: icc
+            compiler_cxx: icpc
             compiler_fc: ifort
             python-version: '3.8'
             caching: true
