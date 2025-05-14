@@ -54,7 +54,7 @@ jobs:
               - python3
             gpu: 1
               
-          - name: ac-gpu intel 
+          - name: ac-cpu intel 
             site: ac-batch
             sbatch_options: |
               #SBATCH --time=00:20:00
