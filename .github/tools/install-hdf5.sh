@@ -19,6 +19,7 @@ curl --location "$url" | tar zx -C "${temporary_files}"
 
 # Build hdf5
 cd "${temporary_files}/hdf5-${hdf5_version}"
+cd "${temporary_files}/hdfsrc"
 prefix="${GITHUB_WORKSPACE}/hdf5-install"
 mkdir -p "${prefix}"
 ./configure --prefix="${prefix}" --enable-shared --enable-fortran --enable-hl
