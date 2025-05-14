@@ -51,6 +51,7 @@ jobs:
               - ecbuild
               - prgenv/nvidia
               - hpcx-openmpi/2.14.0-cuda
+              - hdf5/1.12.2
               - python3
             gpu: 1
               
@@ -69,9 +70,8 @@ jobs:
               - ninja
               - ecbuild
               - prgenv/intel
-              - intel/2021.4.0
-              - hdf5/1.14.6
               - hpcx-openmpi/2.9.0
+              - hdf5/1.14.6
               - python3
             gpu: 0
 
