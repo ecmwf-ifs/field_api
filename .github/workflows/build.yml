@@ -69,10 +69,10 @@ jobs:
             caching: true
 
           - name : linux intel-classic
-            os: ubuntu-24.04
+            os: ubuntu-22.04
             compiler: intel-classic
-            compiler_cc: icc
-            compiler_cxx: icpc
+            compiler_cc: icx
+            compiler_cxx: icpx
             compiler_fc: ifort
             python-version: '3.8'
             caching: true
