@@ -143,7 +143,7 @@ foreach(prec ${precisions})
          $<${fiat_FOUND}:fiat>
          $<${fiat_FOUND}:parkind_${prec}>
          OpenMP::OpenMP_Fortran
-          $<${HAVE_HDF5}::stdc++>
+          $<${HAVE_HDF5}:stdc++>
       PUBLIC_LIBS
           $<${HAVE_HDF5}:HDF5::HDF5>
       )
