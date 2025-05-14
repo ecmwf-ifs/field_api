@@ -69,8 +69,9 @@ jobs:
               - ninja
               - ecbuild
               - prgenv/intel
+              - intel/2023.2.0
               - hpcx-openmpi/2.9.0
-              - hdf5/1.14.6
+              - hdf5/1.14.3
               - python3
             gpu: 0
 
