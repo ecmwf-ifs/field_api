@@ -50,6 +50,7 @@ jobs:
               - ninja
               - ecbuild
               - prgenv/nvidia
+              - nvidia/24.5
               - hpcx-openmpi/2.14.0-cuda
               - hdf5/1.12.2
               - python3

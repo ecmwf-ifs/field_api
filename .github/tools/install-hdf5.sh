@@ -2,7 +2,7 @@
 set -euo pipefail
 set -x
 
-hdf5_version=1.14.6
+hdf5_version=1.14.3
 
 # Choose hdf5
 version_parts=($(echo ${hdf5_version} | tr "." "\n"))
