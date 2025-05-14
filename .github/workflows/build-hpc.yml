@@ -51,8 +51,8 @@ jobs:
               - ecbuild
               - prgenv/nvidia
               - nvidia/24.5
-              - hpcx-openmpi/2.14.0-cuda
-              - hdf5/1.12.2
+              - hpcx-openmpi/2.19.0-cuda
+              - hdf5/1.14.3
               - python3
             gpu: 1
               
@@ -79,7 +79,7 @@ jobs:
     runs-on: [self-hosted, linux, hpc]
     env:
       GH_TOKEN: ${{ github.token }}
-    steps:
+    sninjateps:
       - uses: ecmwf-actions/reusable-workflows/ci-hpc-generic@v2
         with:
           site: ${{ matrix.site }}
