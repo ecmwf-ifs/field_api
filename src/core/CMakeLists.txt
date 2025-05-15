@@ -50,7 +50,7 @@ field_api_add_object_library(
     LIBNAME        field_api_core
     SRCS           ${srcs}
     LIBRARIES      field_api_debug
-                   HDF5 
+
 )
 
 set_source_files_properties( ${CMAKE_CURRENT_BINARY_DIR}/dev_alloc_module.F90 PROPERTIES COMPILE_OPTIONS $<${HAVE_CUDA}:-cuda>)

@@ -74,7 +74,7 @@ ecbuild_add_option( FEATURE FIELD_GANG
 
 ### HDF5
 ecbuild_add_option( FEATURE HDF5
-    DESCRIPTION "Use HDF5 to read and write FielAPI variables"
+    DESCRIPTION "Use HDF5 to read and write FieldAPI variables"
     REQUIRED_PACKAGES "HDF5 COMPONENTS Fortran"
     DEFAULT OFF
 )

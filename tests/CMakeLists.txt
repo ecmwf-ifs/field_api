@@ -141,7 +141,6 @@ foreach(TEST_FILE ${TEST_FILES})
     )
 
     target_link_options( ${TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:-gpu=pinned> )
-    #target_link_libraries( ${TEST_NAME}.x PRIVATE HDF5::HDF5)
     target_compile_definitions( ${TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:_CUDA> )
 
     if( DEFAULT_PRECISION MATCHES sp )
