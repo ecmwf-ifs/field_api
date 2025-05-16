@@ -100,6 +100,13 @@ list(APPEND TEST_FILES
         wrapper_modify_gpu.F90
 	)
 
+if(HAVE_HDF5)
+  list(APPEND TEST_FILES 
+	test_hdf5_rw_serial_field2d.F90 
+	test_hdf5_rw_parallel_field2d.F90
+	test_hdf5_rw_parallel_general.F90)
+endif()
+
 if(HAVE_FIELD_GANG)
   list(APPEND TEST_FILES test_gang.F90)
 endif()
