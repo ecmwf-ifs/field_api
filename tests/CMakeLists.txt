@@ -100,6 +100,12 @@ list(APPEND TEST_FILES
         wrapper_modify_gpu.F90
 	)
 
+if(HAVE_HDF5)
+  list(APPEND HDF5_TEST_FILES
+       test_hdf5_wr_parallel_field2d.F90
+       test_hdf5_rw_parallel_general.F90)
+endif()
+
 if(HAVE_FIELD_GANG)
   list(APPEND TEST_FILES
         test_gang.F90
@@ -122,6 +128,41 @@ set(ABOR1_TEST_FILES
 
 #Set OMP_NUM_THREADS for tests
 set(omp_num_threads 8)
+
+if(HAVE_HDF5)
+foreach(TEST_FILE ${HDF5_TEST_FILES})
+    get_filename_component(TEST_NAME ${TEST_FILE} NAME_WE)
+    ecbuild_add_test(
+        TARGET ${TEST_NAME}.x
+        SOURCES ${TEST_FILE}
+        LIBS
+           ${LIBNAME_PREC}
+           parkind_${DEFAULT_PRECISION}
+           fiat
+           OpenMP::OpenMP_Fortran
+           $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
+        DEFINITIONS
+           $<${HAVE_FIELD_GANG}:HAVE_FIELD_GANG>
+        LINKER_LANGUAGE Fortran
+        MPI 2
+        OMP ${omp_num_threads}
+        ENVIRONMENT "DEV_ALLOC_SIZE=${dev_alloc_size}"
+    )
+
+    set_target_properties(${TEST_NAME}.x
+        PROPERTIES Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/include/tests
+    )
+
+    target_link_options( ${TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:-gpu=pinned> )
+    target_compile_definitions( ${TEST_NAME}.x PRIVATE
+                                $<${HAVE_OMP_OFFLOAD}:OMPGPU>
+                                $<${HAVE_CUDA}:_CUDA> )
+
+    if( DEFAULT_PRECISION MATCHES sp )
+       target_compile_definitions( ${TEST_NAME}.x PRIVATE PARKIND1_SINGLE )
+    endif()
+endforeach()
+endif()
 
 foreach(TEST_FILE ${TEST_FILES})
     get_filename_component(TEST_NAME ${TEST_FILE} NAME_WE)
