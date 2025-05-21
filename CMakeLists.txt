@@ -78,6 +78,13 @@ ecbuild_add_option( FEATURE HDF5
     DEFAULT OFF
 )
 
+if( HAVE_HDF5)
+ecbuild_add_option( FEATURE MPI
+                    DESCRIPTION "Support for task-level parallelism using MPI"
+                    DEFAULT ON
+                    REQUIRED_PACKAGES "MPI COMPONENTS Fortran" )
+endif()
+
 ## fypp preprocessor flags
 if(HAVE_BUDDY_MALLOC)
   list( APPEND fypp_defines "-DUSE_BUDDY_MALLOC")
@@ -192,6 +199,7 @@ ecbuild_add_option(
     DESCRIPTION "Enable field_api testing"
     CONDITION fiat_FOUND
 )
+
 if( HAVE_TESTS )
   include(CTest)
   add_subdirectory(tests)
