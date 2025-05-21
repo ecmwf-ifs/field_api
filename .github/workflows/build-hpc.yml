@@ -21,30 +21,46 @@ on:
     types: [labeled]
 
 jobs:
-  ci-hpc:
-    name: ci-hpc
+  ci-hpc-nvhpc:
+    name: ci-hpc-nvhpc
     if: ${{ !github.event.pull_request.head.repo.fork && github.event.action != 'labeled' || github.event.label.name == 'approved-for-ci' }}
 
     strategy:
       fail-fast: false    # false: try to complete all jobs
 
       matrix:
-        cuda: [False, True]
-        openmp: [False, True]
+        build_type: [RelWithDebInfo]
         name:
           - ac-gpu nvhpc
+
+        cuda: [False, True]
+        openmp: [False, True]
 
         include:
           - name: ac-gpu nvhpc
             site: ac-batch
+            compiler_cc: mpicc
+            compiler_cxx: mpic++
+            compiler_fc: mpifort
             sbatch_options: |
               #SBATCH --time=00:20:00
               #SBATCH --nodes=1
-              #SBATCH --ntasks=1
+              #SBATCH --ntasks=2
               #SBATCH --cpus-per-task=32
               #SBATCH --gpus-per-task=1
               #SBATCH --mem=100G
               #SBATCH --qos=dg
+            modules:
+              - cmake
+              - ninja
+              - ecbuild
+              - prgenv/nvidia
+              - nvidia/24.5
+              - hpcx-openmpi/2.19.0-cuda
+              - hdf5/1.14.3
+              - python3
+            gpu: 1
+            toolchain: arch/ecmwf/hpc2020/nvhpc/24.5/toolchain.cmake
 
     runs-on: [self-hosted, linux, hpc]
     env:
@@ -56,32 +72,31 @@ jobs:
           troika_user: ${{ secrets.HPC_CI_SSH_USER }}
           sbatch_options: ${{ matrix.sbatch_options }}
           template_data: |
-            modules:
-              - cmake
-              - ninja
-              - ecbuild
-              - prgenv/nvidia
-              - nvidia/24.5
-              - python3
             cmake_options:
               - -DENABLE_OMP_OFFLOAD=${{ matrix.openmp }}
               - -DENABLE_CUDA=${{ matrix.cuda }}
+              - -DENABLE_HDF5=ON
               - -DENABLE_SINGLE_PRECISION=ON
               - -DENABLE_DOUBLE_PRECISION=ON
-              - -DCMAKE_TOOLCHAIN_FILE=arch/ecmwf/hpc2020/nvhpc/24.5/toolchain.cmake
+              - -DCMAKE_TOOLCHAIN_FILE=${{ matrix.toolchain }}
+              - -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
             dependencies:
               ecmwf/fckit:
                 version: 0.13.0
                 cmake_options:
                   - -DENABLE_TESTS=OFF
                   - -DENABLE_FCKIT_VENV=ON
+                  - -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
               ecmwf-ifs/fiat:
-                version: 1.4.1
+                version: 1.5.0
                 cmake_options:
+                  - -DENABLE_MPI=ON
+                  - -DENABLE_TESTS=OFF
                   - -DENABLE_SINGLE_PRECISION=ON
                   - -DENABLE_DOUBLE_PRECISION=ON
+                  - -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
           template: |
-            {% for module in modules %}
+            {% for module in "${{ join(matrix.modules, ',') }}".split(',') %}
               module load {{module}}
             {% endfor %}
             BASEDIR=$PWD
@@ -118,4 +133,134 @@ jobs:
               {% endfor %}
               {{ cmake_options|join(' ') }}
             cmake --build build
-            ctest --test-dir build
+            ctest --test-dir build --output-on-failure
+
+  ci-hpc-gnuintel:
+    name: ci-hpc
+    if: ${{ !github.event.pull_request.head.repo.fork && github.event.action != 'labeled' || github.event.label.name == 'approved-for-ci' }}
+
+    strategy:
+      fail-fast: false    # false: try to complete all jobs
+
+      matrix:
+        build_type: [RelWithDebInfo]
+        name:
+          - ac-cpu intel
+          - ac-cpu gnu
+
+        include:
+
+          - name: ac-cpu intel
+            site: ac-batch
+            compiler: intel-classic
+            sbatch_options: |
+              #SBATCH --time=00:20:00
+              #SBATCH --nodes=1
+              #SBATCH --ntasks=2
+              #SBATCH --cpus-per-task=32
+              #SBATCH --hint=nomultithread
+              #SBATCH --qos=np
+            modules:
+              - cmake
+              - ninja
+              - ecbuild
+              - prgenv/intel
+              - intel/2023.2.0
+              - hpcx-openmpi/2.9.0
+              - hdf5/1.14.3
+              - python3
+            gpu: 0
+            toolchain: arch/ecmwf/hpc2020/intel/2021.4.0/toolchain.cmake
+
+          - name: ac-cpu gnu
+            site: ac-batch
+            compiler: gnu-14
+            sbatch_options: |
+              #SBATCH --time=00:20:00
+              #SBATCH --nodes=1
+              #SBATCH --ntasks=2
+              #SBATCH --cpus-per-task=32
+              #SBATCH --hint=nomultithread
+              #SBATCH --qos=np
+            modules:
+              - cmake
+              - ninja
+              - ecbuild
+              - prgenv/gnu
+              - gcc/14.2.0
+              - openmpi/4.1.1.1
+              - hdf5/1.14.3
+              - python3
+            gpu: 0
+            toolchain: arch/ecmwf/hpc2020/gnu/11.2.0/toolchain.cmake
+
+    runs-on: [self-hosted, linux, hpc]
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: ecmwf-actions/reusable-workflows/ci-hpc-generic@v2
+        with:
+          site: ${{ matrix.site }}
+          troika_user: ${{ secrets.HPC_CI_SSH_USER }}
+          sbatch_options: ${{ matrix.sbatch_options }}
+          template_data: |
+            cmake_options:
+              - -DENABLE_SINGLE_PRECISION=ON
+              - -DENABLE_DOUBLE_PRECISION=ON
+              - -DENABLE_HDF5=ON
+              - -DCMAKE_TOOLCHAIN_FILE=${{ matrix.toolchain }}
+              - -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+            dependencies:
+              ecmwf/fckit:
+                version: 0.13.0
+                cmake_options:
+                  - -DENABLE_TESTS=OFF
+                  - -DENABLE_FCKIT_VENV=ON
+                  - -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+              ecmwf-ifs/fiat:
+                version: 1.5.0
+                cmake_options:
+                  - -DENABLE_MPI=ON
+                  - -DENABLE_TESTS=OFF
+                  - -DENABLE_SINGLE_PRECISION=ON
+                  - -DENABLE_DOUBLE_PRECISION=ON
+                  - -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          template: |
+            {% for module in "${{ join(matrix.modules, ',') }}".split(',') %}
+              module load {{module}}
+            {% endfor %}
+            BASEDIR=$PWD
+            {% for name, options in dependencies.items() %}
+                mkdir -p {{name}}
+                pushd {{name}}
+                git init
+                git remote add origin ${{ github.server_url }}/{{name}}
+                git fetch origin {{options['version']}}
+                git reset --hard FETCH_HEAD
+                cmake -G Ninja -S . -B build \
+                  {% for name in dependencies %}
+                    {% set org, proj = name.split('/') %}
+                    -D{{proj}}_ROOT=$BASEDIR/{{name}}/installation \
+                  {% endfor %}
+                  {{ options['cmake_options']|join(' ') }}
+                cmake --build build
+                cmake --install build --prefix installation
+                popd
+            {% endfor %}
+            REPO=${{ github.event.pull_request.head.repo.full_name || github.repository }}
+            SHA=${{ github.event.pull_request.head.sha || github.sha }}
+            mkdir -p $REPO
+            pushd $REPO
+            git init
+            git remote add origin ${{ github.server_url }}/$REPO
+            git fetch origin $SHA
+            git reset --hard FETCH_HEAD
+            popd
+            cmake -G Ninja -S $REPO -B build \
+              {% for name in dependencies %}
+                {% set org, proj = name.split('/') %}
+                -D{{proj}}_ROOT=$BASEDIR/{{name}}/installation \
+              {% endfor %}
+              {{ cmake_options|join(' ') }}
+            cmake --build build
+            ctest --test-dir build --output-on-failure
