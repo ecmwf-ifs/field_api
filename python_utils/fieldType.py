@@ -30,6 +30,9 @@ class fieldType (object):
     self.hasView = self.rank > 1
     self.ganged = self.rank > 2
 
+    h5th = {'R': 'REAL', 'I': 'INTEGER', 'L': 'INTEGER'}
+    self.h5type ='H5T_NATIVE_' + h5th[tt]
+    self.h5kind ='H5_' + h5th[tt] + '_KIND'
 
 kinds = ['JPRM', 'JPRD', 'JPIM', 'JPLM']
 
