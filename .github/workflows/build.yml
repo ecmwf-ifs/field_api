@@ -34,7 +34,7 @@ jobs:
         name:
           - linux gnu-10
           - linux gnu-14
-          - linux nvhpc-23.5
+          - linux nvhpc-24.5
           - linux intel-classic
           - linux intel-modern
           - macos
@@ -59,12 +59,12 @@ jobs:
             python-version: '3.11'
             caching: true
 
-          - name: linux nvhpc-23.5
+          - name: linux nvhpc-24.5
             os: ubuntu-22.04
-            compiler: nvhpc-23.5
-            compiler_cc: nvc
-            compiler_cxx: nvc++
-            compiler_fc: nvfortran
+            compiler: nvhpc-24.5
+            compiler_cc: mpicc
+            compiler_cxx: mpic++
+            compiler_fc: mpifort
             python-version: '3.8'
             caching: true
 
@@ -123,9 +123,17 @@ jobs:
           echo "HOMEBREW_NO_INSTALL_CLEANUP=1"            >> $GITHUB_ENV
           echo "SDKROOT=$(xcrun --show-sdk-path)"         >> $GITHUB_ENV
           brew install libomp
+          brew install open-mpi
           brew install coreutils
+          brew install hdf5
         else
           sudo apt-get update
+          if [[ "${{ matrix.compiler }}" =~ gnu ]]; then
+             sudo apt-get install libopenmpi-dev
+             sudo apt-get install libhdf5-dev libhdf5-serial-dev
+          else
+              export HDF5_ROOT=${GITHUB_WORKSPACE}/hdf5-install
+          fi
         fi
 
         printenv
@@ -162,9 +170,12 @@ jobs:
       if: contains( matrix.compiler, 'nvhpc' )
       shell: bash -eux {0}
       run: |
-        ${FIELD_API_TOOLS}/install-nvhpc.sh --prefix /opt/nvhpc --version 23.5
+        ${FIELD_API_TOOLS}/install-nvhpc.sh --prefix /opt/nvhpc --version 24.5
         source /opt/nvhpc/env.sh
-        echo "${NVHPC_DIR}/compilers/bin"                   >> $GITHUB_PATH
+        FC=pgf90 .github/tools/install-hdf5.sh
+        echo "HDF5_ROOT=${GITHUB_WORKSPACE}/hdf5-install"    >> $GITHUB_ENV
+        echo "${NVHPC_DIR}/compilers/bin"                    >> $GITHUB_PATH
+        echo "${NVHPC_DIR}/comm_libs/openmpi4/bin"           >> $GITHUB_PATH
 
     - name: Download Intel compiler
       if: contains( matrix.compiler, 'intel' )
@@ -179,12 +190,14 @@ jobs:
       run: |
         sudo apt update
         sudo apt install \
-          intel-oneapi-compiler-fortran-2023.2.0 \
-          intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic-2023.2.0 \
+          intel-oneapi-compiler-fortran-2023.2.4 \
+          intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic-2023.2.4 \
           intel-oneapi-mpi-devel-2021.10.0 \
           intel-oneapi-mkl-2023.2.0
         source /opt/intel/oneapi/setvars.sh
         printenv >> $GITHUB_ENV
+        FC=ifort .github/tools/install-hdf5.sh
+        echo "HDF5_ROOT=${GITHUB_WORKSPACE}/hdf5-install"    >> $GITHUB_ENV
         echo "CACHE_SUFFIX=$CC-$($CC -dumpversion)" >> $GITHUB_ENV
 
     - name: Install Intel modern compiler
@@ -194,6 +207,8 @@ jobs:
         sudo apt install intel-hpckit
         source /opt/intel/oneapi/setvars.sh
         printenv >> $GITHUB_ENV
+        .github/tools/install-hdf5.sh
+        echo "HDF5_ROOT=${GITHUB_WORKSPACE}/hdf5-install"    >> $GITHUB_ENV
         echo "CACHE_SUFFIX=$CC-$($CC -dumpversion)" >> $GITHUB_ENV
 
     - name: Build & Test
@@ -210,5 +225,5 @@ jobs:
         dependency_branch: develop
         dependency_cmake_options: |
           ecmwf-ifs/fiat: "-DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DENABLE_TESTS=OFF
-        cmake_options: "-DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ${{ matrix.cmake_options }} -DENABLE_ACC=OFF"
+        cmake_options: "-DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ${{ matrix.cmake_options }} -DENABLE_ACC=OFF -DENABLE_HDF5=ON"
         ctest_options: "${{ matrix.ctest_options }}"
