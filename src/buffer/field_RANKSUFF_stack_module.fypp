@@ -93,10 +93,12 @@ CONTAINS
 
       IF(MEMBER_RANKS(IFLD) == ${ft.rank - 1}$) THEN
 
+        !... Initialise a member of rank one less to that of the stack
          CALL STACK_MEMBER_INIT_0(DATA(${ar_pre}$ MEMBER_MAP(JFLD) ${ar_post}$), LBOUNDS)
 
       ELSE
 
+        !... Initialise a member of rank equal to that of the stack
          CALL STACK_MEMBER_INIT_1(DATA(${ar_pre}$ MEMBER_MAP(JFLD):MEMBER_MAP(JFLD+1) ${ar_post}$), &
          &                        LBOUNDS, MEMBER_LBOUNDS(IFLD))
 
@@ -176,10 +178,12 @@ CONTAINS
       SELECT TYPE(MEMBER)
       TYPE IS(FIELD_${RANK-1}$${SUFF}$_STACK_MEMBER)
 
+        !... Set DEVPTR for member of rank one less to that of the stack
          CALL CREATE_MEMBER_DEVICE_DATA_0(MEMBER, DEVPTR(${ar_pre}$ MEMBER_MAP(JFLD) ${ar_post}$), LBOUNDS)
 
       TYPE IS(FIELD_${RANK}$${SUFF}$_STACK_MEMBER)
 
+        !... Set DEVPTR for member of rank equal to that of the stack
          CALL CREATE_MEMBER_DEVICE_DATA_1(MEMBER, DEVPTR(${ar_pre}$ MEMBER_MAP(JFLD):MEMBER_MAP(JFLD+1) ${ar_post}$), &
          &                        LBOUNDS, MEMBER_LBOUNDS(IFLD))
 
