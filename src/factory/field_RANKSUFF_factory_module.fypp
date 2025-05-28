@@ -11,10 +11,11 @@ MODULE FIELD_${RANK}$${SUFF}$_FACTORY_MODULE
 
 #:set fieldTypeList = fieldType.getFieldTypeList (ranks=[RANK], kinds=['JP' + SUFF])
 
+USE FIELD_BASIC_MODULE
 #:for ft in fieldTypeList
 USE ${ft.name}$_MODULE
 #:if defined('HAVE_GANG')
-#:if ft.ganged
+#:if ft.hasView
 USE FIELD_${ft.rank-1}$${SUFF}$_MODULE
 #:endif
 #:endif
@@ -34,6 +35,10 @@ INTERFACE FIELD_NEW
 #:if ft.ganged
   MODULE PROCEDURE ${ft.name}$_NEW_GANG_WRAPPER
   MODULE PROCEDURE ${ft.name}$_NEW_GANG_OWNER
+#:endif
+#:if ft.hasView
+  MODULE PROCEDURE ${ft.name}$_NEW_STACK_WRAPPER
+  MODULE PROCEDURE ${ft.name}$_NEW_STACK_OWNER
 #:endif
 #:endif
 #:endfor
@@ -74,6 +79,57 @@ ${ft.type}$, OPTIONAL, INTENT(IN) :: INIT_VALUE
 
 END SUBROUTINE
 #:endif
+
+#:if ft.hasView
+MODULE SUBROUTINE ${ft.name}$_NEW_STACK_WRAPPER (FIELD_PTR, DATA, LSTACK, LBOUNDS, PERSISTENT, SYNC_ON_FINAL, INITIALIZED, &
+&                                                MEMBER_LBOUNDS, MEMBER_MAP, MEMBER_RANKS)
+
+CLASS(${ft.name}$), POINTER :: FIELD_PTR
+${ft.type}$, TARGET, INTENT (IN) :: DATA (${ft.shape}$)
+LOGICAL,  INTENT(IN) :: LSTACK
+INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN) :: LBOUNDS (${ft.rank}$)
+LOGICAL, OPTIONAL, INTENT(IN) :: PERSISTENT
+LOGICAL, OPTIONAL,  INTENT(IN) :: SYNC_ON_FINAL
+LOGICAL, OPTIONAL,  INTENT(IN) :: INITIALIZED
+
+INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: MEMBER_LBOUNDS(:) ! Overrides for the member lower bounds for ${member_dim}
+INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: MEMBER_MAP(:) ! A list of tuples containing the range of each member
+INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: MEMBER_RANKS(:) ! Explicit overrides for the rank of each member
+
+END SUBROUTINE
+
+MODULE SUBROUTINE ${ft.name}$_NEW_STACK_OWNER (FIELD_PTR, UBOUNDS, LSTACK, LBOUNDS, PERSISTENT, DELAYED, INIT_VALUE, &
+&                                              MEMBER_LBOUNDS, MEMBER_MAP, MEMBER_RANKS)
+
+CLASS(${ft.name}$), POINTER :: FIELD_PTR
+INTEGER(KIND=JPIM), INTENT(IN) :: UBOUNDS (${ft.rank}$)
+LOGICAL,  INTENT(IN) :: LSTACK
+INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN) :: LBOUNDS (${ft.rank}$)
+LOGICAL, OPTIONAL, INTENT(IN) :: PERSISTENT
+LOGICAL, OPTIONAL,  INTENT(IN) :: DELAYED
+${ft.type}$, OPTIONAL, INTENT(IN) :: INIT_VALUE
+
+INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: MEMBER_LBOUNDS(:) ! Overrides for the member lower bounds for ${member_dim}
+INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: MEMBER_MAP(:) ! A list of tuples containing the range of each member
+INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: MEMBER_RANKS(:) ! Explicit overrides for the rank of each member
+
+END SUBROUTINE
+
+MODULE SUBROUTINE ${ft.name}$_GET_STACK_MEMBER_0(SELF, IDX, MEMBER)
+  CLASS(${ft.name}$), INTENT(IN) :: SELF
+  INTEGER(KIND=JPIM), INTENT(IN) :: IDX
+  CLASS(FIELD_${RANK-1}$${SUFF}$), POINTER, INTENT(INOUT) :: MEMBER
+
+END SUBROUTINE ${ft.name}$_GET_STACK_MEMBER_0
+
+MODULE SUBROUTINE ${ft.name}$_GET_STACK_MEMBER_1(SELF, IDX, MEMBER)
+  CLASS(${ft.name}$), INTENT(IN) :: SELF
+  INTEGER(KIND=JPIM), INTENT(IN) :: IDX
+  CLASS(FIELD_${RANK}$${SUFF}$), POINTER, INTENT(INOUT) :: MEMBER
+
+END SUBROUTINE ${ft.name}$_GET_STACK_MEMBER_1
+
+#:endif
 #:endfor
 #:endif
 
@@ -89,6 +145,19 @@ END SUBROUTINE
 #:endfor
 
 END INTERFACE
+
+#:if defined('HAVE_GANG')
+#:for ft in fieldTypeList
+#:if ft.hasView
+INTERFACE GET_STACK_MEMBER
+  MODULE PROCEDURE ${ft.name}$_GET_STACK_MEMBER_0
+  MODULE PROCEDURE ${ft.name}$_GET_STACK_MEMBER_1
+END INTERFACE GET_STACK_MEMBER
+
+PUBLIC :: GET_STACK_MEMBER
+#:endif
+#:endfor
+#:endif
 
 PUBLIC :: FIELD_NEW
 

@@ -149,7 +149,7 @@ foreach(prec ${precisions})
   # add sub-component module directories to target
   field_api_target_add_module_dirs(
     TARGET     ${LIBNAME}_${prec}
-    LIBS       field_api_debug field_api_core field_api_factory field_api_util field_api_shuffle
+    LIBS       ${obj_libs}
   )
 
   if( prec MATCHES sp )
