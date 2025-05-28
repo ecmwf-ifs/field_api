@@ -22,6 +22,9 @@ USE FIELD_${RANK-1}$${SUFF}$_STACK_MEMBER_MODULE
 #:for ft in fieldTypeList
 
 USE ${ft.name}$_MODULE
+#:if RANK > 1
+USE FIELD_${RANK-1}$${SUFF}$_MODULE
+#:endif
 
 ${fieldType.useParkind1 ()}$
 
@@ -33,7 +36,7 @@ PRIVATE
 #:for type in ['WRAPPER', 'OWNER']
 
 TYPE, EXTENDS (${ftn}$_${type}$) :: ${ftn}$_STACK_${type}$
-  TYPE (FIELD_BASIC_PTR), POINTER :: MEMBERS (:) => NULL ()
+  TYPE (FIELD_BASIC_PTR), ALLOCATABLE :: MEMBERS (:)
   INTEGER(KIND=JPIM), ALLOCATABLE :: MEMBER_MAP(:) 
   INTEGER(KIND=JPIM), ALLOCATABLE :: MEMBER_LBOUNDS(:) 
   INTEGER(KIND=JPIM), ALLOCATABLE :: MEMBER_RANKS(:) 
@@ -64,7 +67,6 @@ CONTAINS
 #:if ft.rank > member_dim
 #:set ar_post = ',' + ', '.join([':'] * (ft.rank - member_dim))
 #:endif
-
 
   SUBROUTINE INIT_MEMBERS(PARENT, DATA, MEMBERS, MEMBER_MAP, LBOUNDS, MEMBER_LBOUNDS, &
   &                       LPERSISTENT, MAP_DEVPTR, MEMBER_RANKS)
@@ -391,7 +393,6 @@ CONTAINS
     CALL SELF%${ftn}$_${type}$%FINAL ()
 
     DEALLOCATE (SELF%MEMBERS)  
-    NULLIFY (SELF%MEMBERS)  
 
     DEALLOCATE (SELF%MEMBER_LBOUNDS)
     DEALLOCATE (SELF%MEMBER_RANKS)
