@@ -69,7 +69,6 @@ ecbuild_add_option( FEATURE BUDDY_MALLOC
 ecbuild_add_option( FEATURE FIELD_GANG
     DESCRIPTION "Enable packed storage of fields"
     DEFAULT ON
-    CONDITION (NOT CMAKE_Fortran_COMPILER_ID MATCHES "Cray")
 )
 
 ## fypp preprocessor flags
