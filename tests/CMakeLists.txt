@@ -100,7 +100,7 @@ list(APPEND TEST_FILES
         wrapper_modify_gpu.F90
 	)
 
-if(HAVE_HDF5)
+if(HAVE_IO)
   list(APPEND HDF5_TEST_FILES
        test_hdf5_wr_parallel_field2d.F90
        test_hdf5_rw_parallel_general.F90)
@@ -129,7 +129,7 @@ set(ABOR1_TEST_FILES
 #Set OMP_NUM_THREADS for tests
 set(omp_num_threads 8)
 
-if(HAVE_HDF5)
+if(HAVE_IO AND fiat_HAVE_MPI)
 foreach(TEST_FILE ${HDF5_TEST_FILES})
     get_filename_component(TEST_NAME ${TEST_FILE} NAME_WE)
     ecbuild_add_test(

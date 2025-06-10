@@ -29,7 +29,7 @@ field_api_expand_fypp(
 
 ## define object library
 field_api_add_object_library(
-    LIBNAME        field_api_hdf5io
+    LIBNAME        field_api_io
     SRCS           ${srcs}
     LIBRARIES      field_api_core field_api_debug
 )

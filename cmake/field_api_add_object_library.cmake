@@ -62,7 +62,7 @@ macro(field_api_add_object_library)
            $<${fiat_FOUND}:parkind_${DEFAULT_PRECISION}>
            OpenMP::OpenMP_Fortran
 	 PUBLIC_LIBS
-	   $<${HAVE_HDF5}: HDF5::HDF5>
+	   $<${HAVE_IO}:HDF5::HDF5>
         )
 
     target_include_directories( ${_PAR_LIBNAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}

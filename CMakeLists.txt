@@ -56,6 +56,17 @@ if(HAVE_DOUBLE_PRECISION)
     list(APPEND fiat_components double)
 endif()
 
+## IO using HDF5
+ecbuild_add_option( FEATURE IO
+    DESCRIPTION "Use external libs, e.g. HDF5 to read and write FieldAPI variables"
+    REQUIRED_PACKAGES "HDF5 COMPONENTS Fortran"
+    DEFAULT OFF
+)
+
+if(HAVE_IO)
+    list(APPEND fiat_components MPI)
+endif()
+
 ## find fiat
 field_api_find_fiat_modules()
 
@@ -71,19 +82,12 @@ ecbuild_add_option( FEATURE FIELD_GANG
     DEFAULT ON
 )
 
-## HDF5
-ecbuild_add_option( FEATURE HDF5
-    DESCRIPTION "Use HDF5 to read and write FieldAPI variables"
+## IO using HDF5
+ecbuild_add_option( FEATURE IO 
+    DESCRIPTION "Use external libs, e.g. HDF5 to read and write FieldAPI variables"
     REQUIRED_PACKAGES "HDF5 COMPONENTS Fortran"
     DEFAULT OFF
 )
-
-if( HAVE_HDF5)
-ecbuild_add_option( FEATURE MPI
-                    DESCRIPTION "Support for task-level parallelism using MPI"
-                    DEFAULT ON
-                    REQUIRED_PACKAGES "MPI COMPONENTS Fortran" )
-endif()
 
 ## fypp preprocessor flags
 if(HAVE_BUDDY_MALLOC)
@@ -115,9 +119,9 @@ list(APPEND prec_srcs
     ${CMAKE_CURRENT_BINARY_DIR}/src/util/field_array_util_module.F90
     ${CMAKE_CURRENT_BINARY_DIR}/src/util/field_util_module.F90)
 
-if(HAVE_HDF5)
+if(HAVE_IO)
 list(APPEND prec_srcs
-    ${CMAKE_CURRENT_BINARY_DIR}/src/hdf5io/field_hdf5_module.F90)
+    ${CMAKE_CURRENT_BINARY_DIR}/src/io/field_hdf5_module.F90)
 endif()
 
 list(APPEND obj_libs
@@ -132,8 +136,8 @@ if( HAVE_FIELD_GANG )
    list(APPEND obj_libs field_api_buffer)
 endif()
 
-if( HAVE_HDF5 )
-   list(APPEND obj_libs field_api_hdf5io)
+if( HAVE_IO )
+   list(APPEND obj_libs field_api_io)
 endif()
 
 ## add field_api targets
@@ -148,9 +152,9 @@ foreach(prec ${precisions})
          $<${fiat_FOUND}:fiat>
          $<${fiat_FOUND}:parkind_${prec}>
          OpenMP::OpenMP_Fortran
-          $<${HAVE_HDF5}:stdc++>
+	 $<${HAVE_IO}:stdc++>
       PUBLIC_LIBS
-          $<${HAVE_HDF5}:HDF5::HDF5>
+         $<${HAVE_IO}:HDF5::HDF5>
       )
 
   set_property(TARGET ${LIBNAME}_${prec} PROPERTY C_STANDARD 99)
@@ -180,7 +184,7 @@ foreach(prec ${precisions})
 if(HAVE_HDF5)
   field_api_target_add_module_dirs(
     TARGET     ${LIBNAME}_${prec}
-    LIBS       field_api_hdf5io
+    LIBS       field_api_io
   )
 endif()
 
