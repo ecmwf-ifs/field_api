@@ -365,14 +365,26 @@ of the `FIELD_STACK` can be found in `tests/test_field_stack_*.F90`.
 
 ## HDF5 I/O 
 
-Optional HDF5 module provides two routines to write and read FieldAPI data. The call requires 
-Field object, CPU or GPU data pointer, name of the HDF5 file to read from/write to and variable name.
-Optional lsync parameter is enforcing  data sync when the GPU data pointer is provided.
-Furthermore, optional hdfexists parameter disables creation of the HDF5 context 
-(e.g. when the HDF5 functionality is used in a pre-existing HDF5 context of the cloudsc dwarf).
+Optional HDF5 module provides two routines to write and read FieldAPI data. The call requires: 
+* ``Field object``,
+* ``CPU or GPU data pointer``,
+* ``name of the HDF5 file to read from/write to ``,
+* ``variable name``.
+
+Optional arguments:
+* `` lsync``
+
+ parameter is enforcing  data sync when the GPU data pointer is provided.
+* `` hdfexists``
+
+ parameter disables creation of the HDF5 context 
+(e.g. when the HDF5 functionality is used in a pre-existing HDF5 context of the CLOUDSC dwarf).
+
+Example HDF5 output and input calls:
+```
 CALL WRITE_HDF5_PERRANK_DATA(FIELD_DATA_1RB, DATA_GPU_1RB, h5filename, "DATA_GPU_1RB", LSYNC=.TRUE.)
 CALL  READ_HDF5_PERRANK_DATA(FIELD_DATA_1RB, DATA_CPU_1RB, h5filename, "DATA_CPU_1RB") 
-
+```
 # Public API
 
 For field api type:
