@@ -7,7 +7,7 @@
 # granted to it by virtue of its status as an intergovernmental organisation
 # nor does it submit to any jurisdiction.
 
-list( APPEND srcs field_basic_hdf5_module.F90 ) 
+list( APPEND srcs hdf5_common_module.F90 ) 
 list( APPEND ranksuff_srcs _hdf5)
 list( APPEND non_ranksuff_srcs field_hdf5_module )
 

@@ -8,7 +8,7 @@
 ! granted to it by virtue of its status as an intergovernmental organisation
 ! nor does it submit to any jurisdiction.
 
-MODULE FIELD_BASIC_HDF5_MODULE
+MODULE HDF5_COMMON_MODULE
 
 USE OML_MOD, ONLY: OML_MAX_THREADS, OML_MY_THREAD 
 USE HDF5
@@ -81,4 +81,4 @@ ELSE
 ENDIF
 END SUBROUTINE NAME_HDF5_STORAGE
 
-END MODULE FIELD_BASIC_HDF5_MODULE
+END MODULE HDF5_COMMON_MODULE
