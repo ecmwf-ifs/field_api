@@ -82,12 +82,6 @@ ecbuild_add_option( FEATURE FIELD_GANG
     DEFAULT ON
 )
 
-## IO using HDF5
-ecbuild_add_option( FEATURE IO 
-    DESCRIPTION "Use external libs, e.g. HDF5 to read and write FieldAPI variables"
-    REQUIRED_PACKAGES "HDF5 COMPONENTS Fortran"
-    DEFAULT OFF
-)
 
 ## fypp preprocessor flags
 if(HAVE_BUDDY_MALLOC)
