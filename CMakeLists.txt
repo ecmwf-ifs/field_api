@@ -56,6 +56,17 @@ if(HAVE_DOUBLE_PRECISION)
     list(APPEND fiat_components double)
 endif()
 
+## IO using HDF5
+ecbuild_add_option( FEATURE IO
+    DESCRIPTION "Use external libs, e.g. HDF5 to read and write FieldAPI variables"
+    REQUIRED_PACKAGES "HDF5 COMPONENTS Fortran"
+    DEFAULT OFF
+)
+
+if(HAVE_IO)
+    list(APPEND fiat_components MPI)
+endif()
+
 ## find fiat
 field_api_find_fiat_modules()
 
@@ -71,6 +82,7 @@ ecbuild_add_option( FEATURE FIELD_GANG
     DEFAULT ON
     CONDITION (NOT CMAKE_Fortran_COMPILER_ID MATCHES "Cray")
 )
+
 
 ## fypp preprocessor flags
 if(HAVE_BUDDY_MALLOC)
@@ -102,6 +114,11 @@ list(APPEND prec_srcs
     ${CMAKE_CURRENT_BINARY_DIR}/src/util/field_array_util_module.F90
     ${CMAKE_CURRENT_BINARY_DIR}/src/util/field_util_module.F90)
 
+if(HAVE_IO)
+list(APPEND prec_srcs
+    ${CMAKE_CURRENT_BINARY_DIR}/src/io/field_hdf5_module.F90)
+endif()
+
 list(APPEND obj_libs
         field_api_core
         field_api_debug
@@ -112,6 +129,10 @@ list(APPEND obj_libs
 
 if( HAVE_FIELD_GANG )
    list(APPEND obj_libs field_api_buffer)
+endif()
+
+if( HAVE_IO )
+   list(APPEND obj_libs field_api_io)
 endif()
 
 ## add field_api targets
@@ -126,6 +147,8 @@ foreach(prec ${precisions})
          $<${fiat_FOUND}:fiat>
          $<${fiat_FOUND}:parkind_${prec}>
          OpenMP::OpenMP_Fortran
+      PUBLIC_LIBS
+         $<${HAVE_IO}:HDF5::HDF5>
       )
 
   set_property(TARGET ${LIBNAME}_${prec} PROPERTY C_STANDARD 99)
@@ -152,6 +175,13 @@ foreach(prec ${precisions})
     LIBS       ${obj_libs}
   )
 
+if(HAVE_HDF5)
+  field_api_target_add_module_dirs(
+    TARGET     ${LIBNAME}_${prec}
+    LIBS       field_api_io
+  )
+endif()
+
   if( prec MATCHES sp )
       target_compile_definitions( ${LIBNAME}_${prec} PRIVATE PARKIND1_SINGLE )
   endif()
@@ -167,6 +197,7 @@ ecbuild_add_option(
     DESCRIPTION "Enable field_api testing"
     CONDITION fiat_FOUND
 )
+
 if( HAVE_TESTS )
   include(CTest)
   add_subdirectory(tests)
