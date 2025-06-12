@@ -75,7 +75,7 @@ jobs:
             cmake_options:
               - -DENABLE_OMP_OFFLOAD=${{ matrix.openmp }}
               - -DENABLE_CUDA=${{ matrix.cuda }}
-              - -DENABLE_HDF5=ON
+              - -DENABLE_IO=ON
               - -DENABLE_SINGLE_PRECISION=ON
               - -DENABLE_DOUBLE_PRECISION=ON
               - -DCMAKE_TOOLCHAIN_FILE=${{ matrix.toolchain }}
