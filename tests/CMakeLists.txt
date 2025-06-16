@@ -57,8 +57,11 @@ list(APPEND TEST_FILES
         init_owner_0_size.F90
         init_owner_delayed.F90
         init_owner_delayed_gpu.F90
+        init_owner_delayed_gpu2.F90
+        init_owner_delayed_gpu3.F90
         init_owner_delayed_init_debug_value.F90
         init_owner_delayed_init_value.F90
+        init_owner_delayed_init_value2.F90
         init_owner_gpu.F90
         init_owner_init_debug_value.F90
         init_owner_init_debug_value_gpu.F90
