@@ -304,7 +304,10 @@ CONTAINS
     INTEGER(KIND=JPIM) :: IDX
     INTEGER(KIND=JPIM) :: LBOUNDS(${ft.rank}$)
 
-    IF(IAND (SELF%GET_STATUS (),NHSTFRESH) /= NHSTFRESH) THEN
+    !Only checking that data is fresh on CPU is not sufficient, because after createing the field
+    !without the INIT_VALUE argument, the data is set to UNINITIALIZED, so neither fresh on CPU or GPU.
+    !So we check that data is never set to fresh on GPU without being also fresh on CPU.
+    IF(SELF%IS_STATUS(NDEVFRESH) .AND. .NOT. SELF%IS_STATUS (NHSTFRESH)) THEN
       CALL FIELD_ABORT ("GET_VIEW WAS CALLED, BUT DATA IS NOT PRESENT ON HOST")
     ENDIF
 
@@ -318,7 +321,9 @@ CONTAINS
       IF (ZERO) VIEW_PTR(${ft.viewShape}$) = ${ft.default}$
     END IF
 
-    CALL SELF%SET_DEVICE_DIRTY ()
+    CALL SELF%REMOVE_STATUS(UNINITIALIZED_CPU)
+    CALL SELF%REMOVE_STATUS(NDEVFRESH)
+    CALL SELF%ADD_STATUS(NHSTFRESH)
 
   END FUNCTION ${ftn}$_GET_VIEW
 #:endif
