@@ -304,6 +304,12 @@ CONTAINS
     INTEGER(KIND=JPIM) :: IDX
     INTEGER(KIND=JPIM) :: LBOUNDS(${ft.rank}$)
 
+    ! Get view is only supposed to work if the data on CPU have been allocated
+    IF(.NOT. ASSOCIATED(SELF%PTR)) THEN
+      CALL FIELD_ABORT ("GET_VIEW WAS CALLED, BUT DATA IS NOT ALLOCATED ON HOST")
+    ENDIF
+
+
     !Only checking that data is fresh on CPU is not sufficient, because after createing the field
     !without the INIT_VALUE argument, the data is set to UNINITIALIZED, so neither fresh on CPU or GPU.
     !So we check that data is never set to fresh on GPU without being also fresh on CPU.
