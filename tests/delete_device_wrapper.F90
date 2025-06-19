@@ -24,20 +24,15 @@ PROGRAM FINAL_WRAPPER_GPU
 
         CALL FIELD_NEW(W, DATA=D)
         CALL W%GET_DEVICE_DATA_RDONLY(D_GPU)
-        write(*,*)"ICI",__LINE__
 
         IF (.NOT. ASSOCIATED(W%DEVPTR)) THEN
                 CALL FIELD_ABORT ("ERROR")
         END IF
 
-        write(*,*)"ICI",__LINE__
         CALL W%DELETE_DEVICE_DATA()
-        write(*,*)"ICI",__LINE__
 
         IF (ASSOCIATED(W%DEVPTR)) THEN
                 CALL FIELD_ABORT ("ERROR")
         END IF
-        write(*,*)"ICI",__LINE__
         CALL FIELD_DELETE(W)
-        write(*,*)"ICI",__LINE__
 END PROGRAM FINAL_WRAPPER_GPU
