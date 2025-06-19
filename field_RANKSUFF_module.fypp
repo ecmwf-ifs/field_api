@@ -270,9 +270,7 @@ CONTAINS
       SELF%INIT_VALUE=INIT_DEBUG_VALUE_${ft.kind}$
     ENDIF
     IF(.NOT. IS_DELAYED) THEN
-		write(*,*)"NOT DELAYED WILL ALLOCATE HOST",self%PRINT_STATUS()
       CALL SELF%CREATE_HOST_DATA ()
-		write(*,*)"NOT DELAYED APRES ALLOCATE HOST",self%PRINT_STATUS()
       IF (SELF%HAS_INIT_VALUE) THEN
         SELF%PTR=SELF%INIT_VALUE
         CALL SELF%ADD_STATUS(NHSTFRESH)
@@ -281,7 +279,6 @@ CONTAINS
     ENDIF
 
     SELF%COPY_FUNC => ${ftn}$_COPY_FUNC ()
-		write(*,*)"_FIN INIT_OWNER",self%print_status()
 
   END SUBROUTINE ${ftn}$_OWNER_INIT
 
@@ -350,36 +347,29 @@ CONTAINS
   SUBROUTINE ${ftn}$_FINAL(SELF)
     ! Finalizes field and deallocates owned data
     CLASS(${ftn}$) :: SELF
-		write(*,*)"_FINAL"
     NULLIFY(SELF%PTR)
     CALL SELF%DELETE_DEVICE_DATA()
-		write(*,*)"FIN _FINAL"
   END SUBROUTINE ${ftn}$_FINAL
 
   SUBROUTINE ${ftn}$_WRAPPER_FINAL(SELF)
     ! Finalizes field and deallocates owned data
     CLASS(${ftn}$_WRAPPER) :: SELF
     ${ft.type}$, POINTER :: PTR(${ft.shape}$)
-		write(*,*)"_WRAPPER_FINAL"
     IF (SELF%SYNC_ON_FINAL) THEN
-		write(*,*)"SYNC ON FINAL"
       CALL SELF%GET_HOST_DATA_RDONLY(PTR)
     ENDIF
     CALL SELF%${ftn}$_FINAL
-		write(*,*)"FIN _WRAPPER_FINAL"
   END SUBROUTINE ${ftn}$_WRAPPER_FINAL
 
   SUBROUTINE ${ftn}$_OWNER_FINAL(SELF)
     ! Finalizes field and deallocates owned data
     CLASS(${ftn}$_OWNER) :: SELF
-		write(*,*)"_OWNER_FINAL"
 
     IF(ASSOCIATED(SELF%PTR))THEN
        CALL HOST_DEALLOC (SELF%PTR, SELF%PINNED)
     ENDIF
 
     CALL SELF%${ftn}$_FINAL
-		write(*,*)"FIN _OWNER_FINAL"
   END SUBROUTINE ${ftn}$_OWNER_FINAL
 
   SUBROUTINE ${ftn}$_COPY_OBJECT (SELF, LDCREATED)
@@ -457,11 +447,9 @@ CONTAINS
     INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
 
     INTEGER(KIND=JPIM) :: LBOUNDS(${ft.rank}$)
-		write(*,*)"_GET_HOST_DATA",self%print_status()
 
     LBOUNDS=SELF%LBOUNDS
     IF (SELF%IS_STATUS(NDEVFRESH) .AND. .NOT. SELF%IS_STATUS(NHSTFRESH)) THEN
-		write(*,*)"copie des donnéés sur CPU depuis le GPU"
       CALL SELF%COPY_DATA (ND2H, QUEUE)
       CALL SELF%ADD_STATUS (NHSTFRESH)
       CALL SELF%REMOVE_STATUS (UNINITIALIZED_CPU)
@@ -471,7 +459,6 @@ CONTAINS
       CALL SELF%REMOVE_STATUS (NDEVFRESH)
       CALL SELF%ADD_STATUS (NHSTFRESH)
     ENDIF
-		write(*,*)"FIN _GET_HOST_DATA",self%print_status()
 
   END SUBROUTINE ${ftn}$_GET_HOST_DATA
 
@@ -480,20 +467,16 @@ CONTAINS
     INTEGER (KIND=JPIM),           INTENT(IN)    :: MODE
     ${ft.type}$, POINTER,          INTENT(INOUT) :: PTR(${ft.shape}$)
     INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
-		write(*,*)"_OWNER_GET_HOST_DATA",self%print_status()
 
     IF(.NOT. ASSOCIATED(SELF%PTR))THEN
       CALL SELF%CREATE_HOST_DATA ()
       IF (.NOT. ASSOCIATED(SELF%DEVPTR) .AND. SELF%HAS_INIT_VALUE) THEN
-			write(*,*)"USE INIT VALUE"
         SELF%PTR=SELF%INIT_VALUE
         CALL SELF%REMOVE_STATUS (UNINITIALIZED_CPU)
         CALL SELF%ADD_STATUS (NHSTFRESH)
       ENDIF
     ENDIF
-		write(*,*)"PREFIN _OWNER_GET_HOST_DATA",self%print_status()
     CALL SELF%${ftn}$_GET_HOST_DATA(MODE, PTR, QUEUE)
-		write(*,*)"FIN _OWNER_GET_HOST_DATA",self%print_status()
 
   END SUBROUTINE ${ftn}$_OWNER_GET_HOST_DATA
 
@@ -546,7 +529,6 @@ CONTAINS
     ${ft.type}$, POINTER,          INTENT(INOUT) :: PTR(${ft.shape}$)
     INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
     INTEGER(KIND=JPIM)                           :: LBOUNDS(${ft.rank}$)
-		write(*,*)"_GET_DEVICE_DATA",self%PRINT_STATUS()
 
     LBOUNDS=SELF%LBOUNDS
     IF (.NOT. ASSOCIATED (SELF%DEVPTR)) THEN
@@ -558,12 +540,10 @@ CONTAINS
     ENDIF
     PTR (${ft.lbptr}$) => SELF%DEVPTR (${','.join(':' for _ in range(ft.rank))}$)
     IF (IAND (MODE, NWR) /= 0) THEN
-		write(*,*)"APPEL TRUC BIZARRE"
       CALL SELF%REMOVE_STATUS (NHSTFRESH)
       CALL SELF%ADD_STATUS (NDEVFRESH)
     ENDIF
 		CALL SELF%REMOVE_STATUS(UNINITIALIZED_GPU)
-		write(*,*)"FIN _GET_DEVICE_DATA",self%PRINT_STATUS()
 
   END SUBROUTINE ${ftn}$_GET_DEVICE_DATA
 
@@ -600,7 +580,6 @@ CONTAINS
     ${ft.type}$, POINTER,          INTENT(INOUT) :: PTR(${ft.shape}$)
     INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
 
-write(*,*)"_OWNER_GET_DEVICE_DATA",self%PRINT_STATUS()
     IF(.NOT. ASSOCIATED(SELF%DEVPTR))THEN
       !CALL SELF%CREATE_HOST_DATA ()
       CALL SELF%CREATE_DEVICE_DATA
@@ -614,7 +593,6 @@ write(*,*)"_OWNER_GET_DEVICE_DATA",self%PRINT_STATUS()
       ENDIF
     ENDIF
     CALL SELF%${ftn}$_GET_DEVICE_DATA(MODE, PTR, QUEUE)
-write(*,*)"FIN _OWNER_GET_DEVICE_DATA",self%PRINT_STATUS()
 
   END SUBROUTINE ${ftn}$_OWNER_GET_DEVICE_DATA
 
