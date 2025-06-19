@@ -26,11 +26,9 @@ PROGRAM INIT_OWNER_DELAYED_GPU
         !$ACC KERNELS PRESENT(PTR)
         PTR=42
         !$ACC END KERNELS
-        write(*,*)"Ici",__LINE__
 
         PTR=>NULL()
         CALL O%GET_HOST_DATA_RDONLY(PTR)
-        write(*,*)"Ici",__LINE__
 
         OKAY=.TRUE.
         DO I=10,21
@@ -40,12 +38,10 @@ PROGRAM INIT_OWNER_DELAYED_GPU
             ENDIF
           ENDDO
         ENDDO
-        WRITE(*,*)"ICI",__LINE__, OKAY,ptr
 
         IF(OKAY .EQV. .FALSE.)THEN
           CALL FIELD_ABORT ("ERROR")
         ENDIF
-        write(*,*)"Ici",__LINE__
 
         CALL FIELD_DELETE(O)
 END PROGRAM INIT_OWNER_DELAYED_GPU
