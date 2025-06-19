@@ -39,7 +39,6 @@ PROGRAM INIT_OWNER_DELAYED_GPU
           ENDDO
         ENDDO
         !$ACC END KERNELS
-        write(*,*)"Result",OKAY
 
         IF(OKAY .EQV. .FALSE.)THEN
           CALL FIELD_ABORT ("ERROR")
