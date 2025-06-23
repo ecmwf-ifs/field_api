@@ -102,6 +102,7 @@ list(APPEND TEST_FILES
 
 if(HAVE_IO)
   list(APPEND HDF5_TEST_FILES
+       test_hdf5par_wr_field2d.F90
        test_hdf5_wr_parallel_field2d.F90
        test_hdf5_rw_parallel_general.F90)
 endif()
