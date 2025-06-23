@@ -61,7 +61,6 @@ macro(field_api_add_object_library)
            $<${fiat_FOUND}:fiat>
            $<${fiat_FOUND}:parkind_${DEFAULT_PRECISION}>
            OpenMP::OpenMP_Fortran
-	 PUBLIC_LIBS
 	   $<${HAVE_IO}:HDF5::HDF5>
         )
 

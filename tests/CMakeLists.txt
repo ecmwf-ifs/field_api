@@ -175,6 +175,7 @@ foreach(TEST_FILE ${TEST_FILES})
            fiat
            OpenMP::OpenMP_Fortran
            $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
+           $<${HAVE_IO}:HDF5::HDF5>
         DEFINITIONS
            $<${HAVE_FIELD_GANG}:HAVE_FIELD_GANG>
         LINKER_LANGUAGE Fortran
