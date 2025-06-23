@@ -147,7 +147,6 @@ foreach(prec ${precisions})
          $<${fiat_FOUND}:fiat>
          $<${fiat_FOUND}:parkind_${prec}>
          OpenMP::OpenMP_Fortran
-      PUBLIC_LIBS
          $<${HAVE_IO}:HDF5::HDF5>
       )
 
@@ -174,13 +173,6 @@ foreach(prec ${precisions})
     TARGET     ${LIBNAME}_${prec}
     LIBS       ${obj_libs}
   )
-
-if(HAVE_HDF5)
-  field_api_target_add_module_dirs(
-    TARGET     ${LIBNAME}_${prec}
-    LIBS       field_api_io
-  )
-endif()
 
   if( prec MATCHES sp )
       target_compile_definitions( ${LIBNAME}_${prec} PRIVATE PARKIND1_SINGLE )
