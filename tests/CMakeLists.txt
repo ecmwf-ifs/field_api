@@ -191,6 +191,7 @@ foreach(TEST_FILE ${TEST_FILES})
 
     target_link_options( ${TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:-gpu=pinned> )
     target_compile_definitions( ${TEST_NAME}.x PRIVATE
+                                $<${HAVE_IO}:HDF5::HDF5>
                                 $<${HAVE_OMP_OFFLOAD}:OMPGPU>
                                 $<${HAVE_CUDA}:_CUDA> )
 
@@ -205,6 +206,7 @@ foreach(FAILING_TEST_FILE ${FAILING_TEST_FILES})
     target_link_libraries(${FAILING_TEST_NAME}.x PRIVATE ${LIBNAME_PREC} parkind_${DEFAULT_PRECISION} fiat)
     target_link_libraries(${FAILING_TEST_NAME}.x PRIVATE OpenMP::OpenMP_Fortran)
     target_link_libraries(${FAILING_TEST_NAME}.x PRIVATE $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>)
+    target_link_libraries(${FAILING_TEST_NAME}.x PRIVATE $<${HAVE_IO}:HDF5::HDF5>)
     set_target_properties(${FAILING_TEST_NAME}.x PROPERTIES LINKER_LANGUAGE Fortran)
     add_test(NAME ${FAILING_TEST_NAME} COMMAND ${FAILING_TEST_NAME}.x)
     set_property(TEST ${FAILING_TEST_NAME} PROPERTY WILL_FAIL TRUE)
@@ -218,6 +220,7 @@ foreach(ABOR1_TEST_FILE ${ABOR1_TEST_FILES})
     add_executable(${ABOR1_TEST_NAME}.x ${ABOR1_TEST_FILE})
     target_link_libraries(${ABOR1_TEST_NAME}.x PRIVATE ${LIBNAME_PREC} parkind_${DEFAULT_PRECISION} fiat)
     target_link_libraries(${ABOR1_TEST_NAME}.x PRIVATE OpenMP::OpenMP_Fortran)
+    target_link_libraries(${ABOR1_TEST_NAME}.x PRIVATE $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>)
     target_link_libraries(${ABOR1_TEST_NAME}.x PRIVATE $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>)
     set_target_properties(${ABOR1_TEST_NAME}.x PROPERTIES LINKER_LANGUAGE Fortran)
     add_test(NAME ${ABOR1_TEST_NAME} COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/abor1catcher.sh "./${ABOR1_TEST_NAME}.x")
