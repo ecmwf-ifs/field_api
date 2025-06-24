@@ -284,8 +284,6 @@ CONTAINS
 
     INTEGER (KIND=JPIM) :: JFLD
 
-	write(*,*)"call gang add status"
-	!call field_abort("ici")
     CALL SELF%${ftn}$_${type}$%ADD_STATUS (KSTATUS)
 
     DO JFLD = 1, SIZE (SELF%CHILDREN)
@@ -300,8 +298,6 @@ CONTAINS
 
     INTEGER (KIND=JPIM) :: JFLD
 
-	write(*,*)"call gang remove status"
-	!call field_abort("ici")
     CALL SELF%${ftn}$_${type}$%REMOVE_STATUS (KSTATUS)
 
     DO JFLD = 1, SIZE (SELF%CHILDREN)
