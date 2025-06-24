@@ -87,6 +87,8 @@ list(APPEND TEST_FILES
         delayed_by_default.F90
         not_delayed_by_default.F90
         gpu_to_cpu.F90
+        gpu_to_cpu_delayed_init_value.F90
+        gpu_to_cpu_init_value.F90
 	)
 
 #Place-holder for failing tests
