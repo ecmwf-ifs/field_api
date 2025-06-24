@@ -22,6 +22,7 @@ ecbuild_add_test(
         fiat
         OpenMP::OpenMP_Fortran
         $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
+        $<${HAVE_IO}:HDF5::HDF5>
     LINKER_LANGUAGE Fortran
 	ENVIRONMENT "DEV_ALLOC_SIZE=${dev_alloc_size}"
 )
@@ -141,6 +142,7 @@ foreach(TEST_FILE ${HDF5_TEST_FILES})
            fiat
            OpenMP::OpenMP_Fortran
            $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
+           $<${HAVE_IO}:HDF5::HDF5>
         DEFINITIONS
            $<${HAVE_FIELD_GANG}:HAVE_FIELD_GANG>
         LINKER_LANGUAGE Fortran
@@ -234,6 +236,7 @@ ecbuild_add_test(
       parkind_sp
       OpenMP::OpenMP_Fortran
       $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
+      $<${HAVE_IO}:HDF5::HDF5>
     LINKER_LANGUAGE Fortran
     CONDITION ${HAVE_SINGLE_PRECISION}
 )
