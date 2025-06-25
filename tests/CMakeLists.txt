@@ -25,33 +25,26 @@ target_compile_definitions( main.x PRIVATE $<${HAVE_CUDA}:_CUDA> )
 
 ## Unit tests
 list(APPEND TEST_FILES
-        test_legacy.F90
-        test_field_array.F90
-        gather_scatter_lastdim.F90
-        reshuffle_lastdim.F90
-        test_lastdim.F90
-        test_statistics.F90
-        test_sizeof.F90
-        test_bc.F90
-        reshuffle.F90
-        test_wrappernosynconfinal.F90
-        test_field1d.F90
-        test_pinned.F90
         async_host.F90
         cpu_to_gpu.F90
         cpu_to_gpu_delayed_init_value.F90
         cpu_to_gpu_init_value.F90
+        delayed_by_default.F90
         delete_device_wrapper.F90
         final_owner.F90
         final_wrapper.F90
         final_wrapper_gpu.F90
         gather_scatter.F90
+        gather_scatter_lastdim.F90
         get_dims.F90
         get_stats.F90
         get_view.F90
         get_view_get_device_data.F90
         get_view_when_nhstfresh.F90
         get_view_when_uninitialized.F90
+        gpu_to_cpu.F90
+        gpu_to_cpu_delayed_init_value.F90
+        gpu_to_cpu_init_value.F90
         init_owner.F90
         init_owner2.F90
         init_owner_0_size.F90
@@ -76,19 +69,26 @@ list(APPEND TEST_FILES
         init_wrapper_non_contiguous_multi.F90
         no_transfer_get_device.F90
         no_transfer_get_host.F90
+        not_delayed_by_default.F90
         pointer_to_owner_wrapper.F90
+        reshuffle.F90
+        reshuffle_lastdim.F90
         resize_owner.F90
         resize_owner2.F90
         sync_device.F90
         sync_host.F90
+        test_bc.F90
         test_crc64.F90
-        wrapper_modify_gpu.F90
+        test_field1d.F90
+        test_field_array.F90
         test_gang.F90
-        delayed_by_default.F90
-        not_delayed_by_default.F90
-        gpu_to_cpu.F90
-        gpu_to_cpu_delayed_init_value.F90
-        gpu_to_cpu_init_value.F90
+        test_lastdim.F90
+        test_legacy.F90
+        test_pinned.F90
+        test_sizeof.F90
+        test_statistics.F90
+        test_wrappernosynconfinal.F90
+        wrapper_modify_gpu.F90
 	)
 
 #Place-holder for failing tests
