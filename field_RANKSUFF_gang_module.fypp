@@ -102,8 +102,10 @@ CONTAINS
     INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
     INTEGER(KIND=JPIM)                           :: LBOUNDS(${ft1.rank}$)
 
+    write(*,*)"${ftn1}$_GET_${what}$_DATA_WRAPPER_HELPER"
     IF (ASSOCIATED (SELF%PARENT)) THEN
       IF (IAND (MODE, NWR) /= 0) THEN
+			write(*,*)"mode nwr"
         CALL SELF%PARENT%SYNC_${what}$_RDWR (QUEUE)
       ELSEIF (IAND (MODE, NRD) /= 0) THEN
         CALL SELF%PARENT%SYNC_${what}$_RDONLY (QUEUE)

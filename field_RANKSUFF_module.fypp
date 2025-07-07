@@ -296,19 +296,19 @@ CONTAINS
     LOGICAL, OPTIONAL,  INTENT(IN) :: ZERO
     INTEGER(KIND=JPIM) :: IDX
     INTEGER(KIND=JPIM) :: LBOUNDS(${ft.rank}$)
+    ${ft.type}$, POINTER :: ZPTR(${ft.shape}$)
 
-    ! Get view is only supposed to work if the data on CPU have been allocated
-    IF(.NOT. ASSOCIATED(SELF%PTR)) THEN
-      CALL FIELD_ABORT ("GET_VIEW WAS CALLED, BUT DATA IS NOT ALLOCATED ON HOST")
+
+    IF(.NOT. ASSOCIATED(SELF%PTR) .OR. (SELF%IS_STATUS(NDEVFRESH) .AND. .NOT. SELF%IS_STATUS(NHSTFRESH))) THEN
+!$omp critical
+        IF(.NOT. ASSOCIATED(SELF%PTR) .OR. (SELF%IS_STATUS(NDEVFRESH) .AND. .NOT. SELF%IS_STATUS(NHSTFRESH))) THEN
+				write(*,*)"moving data"
+            CALL SELF%GET_HOST_DATA(NWR, ZPTR)
+				write(*,*)"end moving data"
+        ENDIF
+!$omp end critical
     ENDIF
 
-
-    !Only checking that data is fresh on CPU is not sufficient, because after createing the field
-    !without the INIT_VALUE argument, the data is set to UNINITIALIZED, so neither fresh on CPU or GPU.
-    !So we check that data is never set to fresh on GPU without being also fresh on CPU.
-    IF(SELF%IS_STATUS(NDEVFRESH) .AND. .NOT. SELF%IS_STATUS (NHSTFRESH)) THEN
-      CALL FIELD_ABORT ("GET_VIEW WAS CALLED, BUT DATA IS NOT PRESENT ON HOST")
-    ENDIF
 
     IDX = BLOCK_INDEX
     IF (SELF%THREAD_BUFFER) IDX = OML_MY_THREAD ()
@@ -490,6 +490,7 @@ CONTAINS
     INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
     ${ft.type}$, POINTER                        :: ZPTR(${ft.shape}$)
 
+write(*,*)"sync_host_rdonly"
     CALL SELF%GET_HOST_DATA_RDONLY (ZPTR, QUEUE)
 
   END SUBROUTINE ${ftn}$_SYNC_HOST_RDONLY
@@ -508,6 +509,7 @@ CONTAINS
     INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
     ${ft.type}$, POINTER                        :: ZPTR(${ft.shape}$)
 
+write(*,*)"sync_host_rdwr"
     CALL SELF%GET_HOST_DATA_RDWR (ZPTR, QUEUE)
 
   END SUBROUTINE ${ftn}$_SYNC_HOST_RDWR
@@ -604,6 +606,7 @@ CONTAINS
     INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
     ${ft.type}$, POINTER                        :: ZPTR(${ft.shape}$)
 
+write(*,*)"sync_device_rdonly"
     CALL SELF%GET_DEVICE_DATA_RDONLY (ZPTR, QUEUE)
 
   END SUBROUTINE ${ftn}$_SYNC_DEVICE_RDONLY
@@ -621,6 +624,7 @@ CONTAINS
     CLASS(${ftn}$) :: SELF
     INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
     ${ft.type}$, POINTER                        :: ZPTR(${ft.shape}$)
+write(*,*)"sync_device_rdwr"
 
     CALL SELF%GET_DEVICE_DATA_RDWR (ZPTR, QUEUE)
 

@@ -40,7 +40,9 @@ list(APPEND TEST_FILES
         get_stats.F90
         get_view.F90
         get_view_get_device_data.F90
+        get_view_when_ndevfresh.F90
         get_view_when_nhstfresh.F90
+        get_view_when_unallocated.F90
         get_view_when_uninitialized.F90
         gpu_to_cpu.F90
         gpu_to_cpu_delayed_init_value.F90
@@ -97,8 +99,6 @@ set(FAILING_TEST_FILES
 
 #These tests will call abor1
 set(ABOR1_TEST_FILES
-	get_view_when_ndevfresh.F90
-	get_view_when_unallocated.F90
 	resize_wrapper.F90
 	)
 
