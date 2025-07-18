@@ -1,0 +1,170 @@
+#! (C) Copyright 2022- ECMWF.
+#! (C) Copyright 2022- Meteo-France.
+#!
+#! This software is licensed under the terms of the Apache Licence Version 2.0
+#! which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
+#! In applying this licence, ECMWF does not waive the privileges and immunities
+#! granted to it by virtue of its status as an intergovernmental organisation
+#! nor does it submit to any jurisdiction.
+
+MODULE FIELD_${RANK}$${SUFF}$_HDF5_MODULE
+
+#:set fieldTypeList = fieldType.getFieldTypeList (ranks=[RANK], kinds=['JP' + str (SUFF)])
+
+USE HDF5_COMMON_MODULE, ONLY: OPEN_HDF5_STORAGE, NAME_HDF5_STORAGE, CLOSE_HDF5_STORAGE
+USE HDF5_COMMON_MODULE, ONLY: INIT_HDF5_STORAGE, FINALIZE_HDF5_STORAGE
+#:for ft in fieldTypeList
+#:set ftn = ft.name
+USE FIELD_${RANK}$${SUFF}$_MODULE, ONLY: ${ftn}$
+#:endfor
+USE FIELD_ABORT_MODULE, ONLY: FIELD_ABORT
+USE ISO_C_BINDING, ONLY : C_PTR, C_LOC
+USE HDF5, ONLY: H5Screate_simple_F, H5Screate_simple_F
+USE HDF5, ONLY: H5Lexists_F
+USE HDF5, ONLY: H5Dcreate_F, H5Dopen_F, H5Dwrite_F, H5Dopen_F, H5Dread_F
+USE HDF5, ONLY: HID_T, HSIZE_T, H5KIND_TO_TYPE
+USE HDF5, ONLY: H5_REAL_KIND, H5_INTEGER_KIND
+USE PARKIND1, ONLY:JPRB
+${fieldType.useParkind1 ()}$
+
+IMPLICIT NONE
+
+INTERFACE WRITE_HDF5_PERRANK_DATA
+#:for ft in fieldTypeList
+#:set ftn = ft.name
+   MODULE PROCEDURE ${ft.name}$_WRITE_HDF5_PERRANK_DATA
+#:endfor
+END INTERFACE
+INTERFACE READ_HDF5_PERRANK_DATA
+#:for ft in fieldTypeList
+#:set ftn = ft.name
+   MODULE PROCEDURE ${ft.name}$_READ_HDF5_PERRANK_DATA
+#:endfor
+END INTERFACE
+
+CONTAINS
+
+#:for ft in fieldTypeList
+#:set ftn = ft.name
+
+SUBROUTINE ${ftn}$_WRITE_HDF5_PERRANK_DATA (SELF, PTR, FILENAME, VARNAME, LSYNC, HDFEXISTS)
+
+   CLASS(${ftn}$) :: SELF
+   ${ft.type}$, POINTER, INTENT(INOUT) :: PTR(${ft.shape}$)
+   CHARACTER(LEN=*),     INTENT(IN)    :: FILENAME
+   CHARACTER(LEN=*),     INTENT(IN)    :: VARNAME
+   CHARACTER(LEN=:),     ALLOCATABLE   :: FNAME_WITH_RANK
+   LOGICAL, OPTIONAL :: LSYNC
+   LOGICAL, OPTIONAL :: HDFEXISTS 
+
+   INTEGER(KIND=JPIM) :: LBOUNDS(${ft.rank}$)
+   INTEGER(KIND=JPIM) :: UBOUNDS(${ft.rank}$)
+   TYPE(C_PTR) :: CPTR
+
+   INTEGER(HID_T) :: FILE_ID, SPACE_ID
+   INTEGER(HID_T) :: DSET_ID, HDF5FILE_DSET_ID
+   INTEGER(HID_T) :: IFORT_FIX_TYPE_ID
+   INTEGER(HSIZE_T), DIMENSION(${ft.rank}$) :: DIMS
+   ${ft.type}$     , DIMENSION(${ft.shape}$), ALLOCATABLE, TARGET :: TMP_ARRAY
+   INTEGER :: HDFERR
+   LOGICAL :: HDF5_DATASET_EXISTS
+   
+!Make sure that the field is present on host
+   IF(PRESENT(LSYNC)) CALL SELF%SYNC_HOST_RDONLY()
+
+!Make sure that the field is continuous
+   ALLOCATE(TMP_ARRAY, MOLD=SELF%PTR)
+   TMP_ARRAY = SELF%PTR
+!Prepare array of sizes of the variable at hand
+   LBOUNDS=LBOUND(SELF%PTR)
+   UBOUNDS=UBOUND(SELF%PTR)
+   DIMS(1:${ft.rank}$)=UBOUNDS(1:${ft.rank}$)-LBOUNDS(1:${ft.rank}$)+1
+
+   IF(.NOT.PRESENT(HDFEXISTS)) &
+  &CALL INIT_HDF5_STORAGE()
+!Define separate filename for each MPI rank
+   CALL NAME_HDF5_STORAGE(FILENAME,FNAME_WITH_RANK)
+   CALL OPEN_HDF5_STORAGE(FNAME_WITH_RANK, FILE_ID)
+
+!Create HDF5 space
+   CALL H5Screate_simple_F(${ft.rank}$, DIMS, SPACE_ID, HDFERR)
+   IF (HDFERR /= 0) CALL FIELD_ABORT("Unable to create HDF5 space of rank ${ft.rank}$") 
+!Check if the dataset named VARNAME already exists in the HDF5 file, if not create it
+   CALL H5Lexists_F(FILE_ID, TRIM(VARNAME), HDF5_DATASET_EXISTS, HDFERR)
+   IF (HDFERR /= 0) CALL FIELD_ABORT("Unable to check if the variable: "//TRIM(VARNAME)//" exists") 
+   IF( .NOT. HDF5_DATASET_EXISTS) THEN
+     CALL H5Dcreate_F(FILE_ID, TRIM(VARNAME), H5KIND_TO_TYPE(${ft.kind}$,${ft.h5kind}$), SPACE_ID, DSET_ID, HDFERR)
+     IF (HDFERR /= 0) CALL FIELD_ABORT("Unable to create variable: "//TRIM(VARNAME)//" of type ${ft.kind}$,${ft.h5kind}$") 
+   ELSE
+     CALL H5Dopen_F  (FILE_ID, TRIM(VARNAME), DSET_ID, HDFERR)
+     IF (HDFERR /= 0) CALL FIELD_ABORT("Unable to open existing variable: "//TRIM(VARNAME)) 
+   ENDIF
+!Write the data to a file
+   CPTR=C_LOC(TMP_ARRAY)
+   CALL H5Dwrite_F(DSET_ID,  H5KIND_TO_TYPE(${ft.kind}$, ${ft.h5kind}$), CPTR, HDFERR)
+     IF (HDFERR /= 0) CALL FIELD_ABORT("Unable to write variable: "//TRIM(VARNAME)//"of type ${ft.kind}$,${ft.h5kind}$") 
+!Sanitize HDF5 environment and close the file
+   CALL CLOSE_HDF5_STORAGE(DSET_ID, SPACE_ID, FILE_ID)
+   IF(.NOT.PRESENT(HDFEXISTS)) &
+  &CALL FINALIZE_HDF5_STORAGE()
+
+END SUBROUTINE ${ftn}$_WRITE_HDF5_PERRANK_DATA
+
+
+SUBROUTINE ${ftn}$_READ_HDF5_PERRANK_DATA (SELF, PTR, FILENAME, VARNAME, LSYNC, HDFEXISTS)
+
+   CLASS(${ftn}$) :: SELF
+   ${ft.type}$, POINTER, INTENT(INOUT) :: PTR(${ft.shape}$)
+   CHARACTER(LEN=*),     INTENT(IN)    :: FILENAME
+   CHARACTER(LEN=*),     INTENT(IN)    :: VARNAME
+   CHARACTER(LEN=:),     ALLOCATABLE   :: FNAME_WITH_RANK
+   LOGICAL, OPTIONAL :: LSYNC
+   LOGICAL, OPTIONAL :: HDFEXISTS 
+
+   INTEGER(KIND=JPIM) :: LBOUNDS(${ft.rank}$)
+   INTEGER(KIND=JPIM) :: UBOUNDS(${ft.rank}$)
+   TYPE(C_PTR) :: CPTR
+
+   INTEGER(HID_T) :: FILE_ID, SPACE_ID
+   INTEGER(HID_T) :: DSET_ID, HDF5FILE_DSET_ID
+   INTEGER(HSIZE_T), DIMENSION(${ft.rank}$) :: DIMS
+   ${ft.type}$     , DIMENSION(${ft.shape}$), ALLOCATABLE, TARGET :: TMP_ARRAY
+   INTEGER :: HDFERR
+   LOGICAL :: HDF5_DATASET_EXISTS
+
+!Prepare array of sizes of the variable at hand
+   LBOUNDS=LBOUND(SELF%PTR)
+   UBOUNDS=UBOUND(SELF%PTR)
+   DIMS(1:${ft.rank}$)=UBOUNDS(1:${ft.rank}$)-LBOUNDS(1:${ft.rank}$)+1
+
+   IF(.NOT.PRESENT(HDFEXISTS)) &
+  &CALL INIT_HDF5_STORAGE()
+!Define separate filename for each MPI rank
+   CALL NAME_HDF5_STORAGE(FILENAME,FNAME_WITH_RANK)
+   CALL OPEN_HDF5_STORAGE(FNAME_WITH_RANK, FILE_ID)
+!Create HDF5 space
+   CALL H5Screate_simple_F(${ft.rank}$, DIMS, SPACE_ID, HDFERR)
+!Check if the dataset named VARNAME already exists in the HDF5 file, if not create it
+   CALL H5Lexists_F(FILE_ID, TRIM(VARNAME), HDF5_DATASET_EXISTS, HDFERR)
+   IF( .NOT. HDF5_DATASET_EXISTS) THEN
+     CALL FIELD_ABORT ('Requested variable '//TRIM(VARNAME)//' not found in the HDF5 file')
+   ELSE
+     CALL H5Dopen_F(FILE_ID, TRIM(VARNAME), DSET_ID, HDFERR)
+   ENDIF
+!Make sure that the field is continuous
+   ALLOCATE(TMP_ARRAY, MOLD=SELF%PTR)
+   CPTR = C_LOC(TMP_ARRAY)
+!Read the data from a  HDF5 file
+   CALL H5Dread_F(DSET_ID,  H5KIND_TO_TYPE(${ft.kind}$, ${ft.h5kind}$), CPTR, HDFERR)
+   SELF%PTR = TMP_ARRAY
+!Sanitize HDF5 environment and close the file
+   CALL CLOSE_HDF5_STORAGE(DSET_ID, SPACE_ID, FILE_ID)
+
+!Make sure that the field is present on the device
+   IF(PRESENT(LSYNC)) CALL SELF%SYNC_DEVICE_RDWR()
+   IF(.NOT.PRESENT(HDFEXISTS)) &
+  &CALL FINALIZE_HDF5_STORAGE()
+END SUBROUTINE ${ftn}$_READ_HDF5_PERRANK_DATA
+#:endfor
+
+END MODULE FIELD_${RANK}$${SUFF}$_HDF5_MODULE
