@@ -298,17 +298,18 @@ CONTAINS
     INTEGER(KIND=JPIM) :: LBOUNDS(${ft.rank}$)
     ${ft.type}$, POINTER :: ZPTR(${ft.shape}$)
 
-
+!When the first thread reach this line it checks if the data are available
+!on cpu. If not, it then reachs a critical area, and check again in case
+!another thread has moved them meanwhile. The acc_set_device_num call is
+!necessary to create the gpu context in which the thread will operate
     IF(.NOT. ASSOCIATED(SELF%PTR) .OR. (SELF%IS_STATUS(NDEVFRESH) .AND. .NOT. SELF%IS_STATUS(NHSTFRESH))) THEN
 !$omp critical
-        IF(.NOT. ASSOCIATED(SELF%PTR) .OR. (SELF%IS_STATUS(NDEVFRESH) .AND. .NOT. SELF%IS_STATUS(NHSTFRESH))) THEN
-				write(*,*)"moving data"
-            CALL SELF%GET_HOST_DATA(NWR, ZPTR)
-				write(*,*)"end moving data"
-        ENDIF
+      CALL ACC_SET_DEVICE_NUM(0,ACC_DEVICE_NVIDIA)
+      IF(.NOT. ASSOCIATED(SELF%PTR) .OR. (SELF%IS_STATUS(NDEVFRESH) .AND. .NOT. SELF%IS_STATUS(NHSTFRESH))) THEN
+        CALL SELF%GET_HOST_DATA(NWR, ZPTR)
+      ENDIF
 !$omp end critical
     ENDIF
-
 
     IDX = BLOCK_INDEX
     IF (SELF%THREAD_BUFFER) IDX = OML_MY_THREAD ()
@@ -319,9 +320,10 @@ CONTAINS
     IF (PRESENT(ZERO)) THEN
       IF (ZERO) VIEW_PTR(${ft.viewShape}$) = ${ft.default}$
     END IF
-
+!$omp critical
     CALL SELF%REMOVE_STATUS(UNINITIALIZED_CPU)
     CALL SELF%SET_DEVICE_DIRTY()
+!$omp end critical
 
   END FUNCTION ${ftn}$_GET_VIEW
 #:endif
