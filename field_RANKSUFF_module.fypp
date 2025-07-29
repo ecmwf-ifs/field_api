@@ -492,7 +492,6 @@ CONTAINS
     INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
     ${ft.type}$, POINTER                        :: ZPTR(${ft.shape}$)
 
-write(*,*)"sync_host_rdonly"
     CALL SELF%GET_HOST_DATA_RDONLY (ZPTR, QUEUE)
 
   END SUBROUTINE ${ftn}$_SYNC_HOST_RDONLY
@@ -511,7 +510,6 @@ write(*,*)"sync_host_rdonly"
     INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
     ${ft.type}$, POINTER                        :: ZPTR(${ft.shape}$)
 
-write(*,*)"sync_host_rdwr"
     CALL SELF%GET_HOST_DATA_RDWR (ZPTR, QUEUE)
 
   END SUBROUTINE ${ftn}$_SYNC_HOST_RDWR
@@ -608,7 +606,6 @@ write(*,*)"sync_host_rdwr"
     INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
     ${ft.type}$, POINTER                        :: ZPTR(${ft.shape}$)
 
-write(*,*)"sync_device_rdonly"
     CALL SELF%GET_DEVICE_DATA_RDONLY (ZPTR, QUEUE)
 
   END SUBROUTINE ${ftn}$_SYNC_DEVICE_RDONLY
@@ -626,7 +623,6 @@ write(*,*)"sync_device_rdonly"
     CLASS(${ftn}$) :: SELF
     INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
     ${ft.type}$, POINTER                        :: ZPTR(${ft.shape}$)
-write(*,*)"sync_device_rdwr"
 
     CALL SELF%GET_DEVICE_DATA_RDWR (ZPTR, QUEUE)
 
