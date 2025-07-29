@@ -30,6 +30,7 @@ target_compile_definitions( main.x PRIVATE $<${HAVE_OMP_OFFLOAD}:OMPGPU> )
 
 ## Unit tests
 list(APPEND TEST_FILES
+        async_host.F90
         cpu_to_gpu.F90
         cpu_to_gpu_delayed_init_value.F90
         cpu_to_gpu_init_value.F90
@@ -44,7 +45,10 @@ list(APPEND TEST_FILES
         get_stats.F90
         get_view.F90
         get_view_get_device_data.F90
+        get_view_when_ndevfresh.F90
+        get_view_when_ndevfresh2.F90
         get_view_when_nhstfresh.F90
+        get_view_when_unallocated.F90
         get_view_when_uninitialized.F90
         gpu_to_cpu.F90
         gpu_to_cpu_delayed_init_value.F90
@@ -95,6 +99,7 @@ list(APPEND TEST_FILES
         test_field_clone_null.F90
         test_field_clone_optional.F90
         test_field_delete_on_null.F90
+        test_gang.F90
         test_get_device_data_non_contiguous.F90
         test_get_device_data_wronly.F90
         test_host_mem_pool.F90
@@ -123,8 +128,6 @@ set(FAILING_TEST_FILES
 
 #These tests will call abor1
 set(ABOR1_TEST_FILES
-	get_view_when_ndevfresh.F90
-	get_view_when_unallocated.F90
 	resize_wrapper.F90
 	)
 

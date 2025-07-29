@@ -310,18 +310,21 @@ CONTAINS
     LOGICAL, OPTIONAL,  INTENT(IN) :: ZERO
     INTEGER(KIND=JPIM) :: IDX
     INTEGER(KIND=JPIM) :: LBOUNDS(${ft.rank}$)
+    ${ft.type}$, POINTER :: ZPTR(${ft.shape}$)
 
-    ! Get view is only supposed to work if the data on CPU have been allocated
-    IF(.NOT. ASSOCIATED(SELF%PTR)) THEN
-      CALL FIELD_ABORT ("GET_VIEW WAS CALLED, BUT DATA IS NOT ALLOCATED ON HOST")
-    ENDIF
-
-
-    !Only checking that data is fresh on CPU is not sufficient, because after createing the field
-    !without the INIT_VALUE argument, the data is set to UNINITIALIZED, so neither fresh on CPU or GPU.
-    !So we check that data is never set to fresh on GPU without being also fresh on CPU.
-    IF(SELF%IS_STATUS(NDEVFRESH) .AND. .NOT. SELF%IS_STATUS (NHSTFRESH)) THEN
-      CALL FIELD_ABORT ("GET_VIEW WAS CALLED, BUT DATA IS NOT PRESENT ON HOST")
+!When the first thread reach this line it checks if the data are available
+!on cpu. If not, it then reachs a critical area, and check again in case
+!another thread has moved them meanwhile. The acc_set_device_num call is
+!necessary to create the gpu context in which the thread will operate
+    IF(.NOT. ASSOCIATED(SELF%PTR) .OR. (SELF%IS_STATUS(NDEVFRESH) .AND. .NOT. SELF%IS_STATUS(NHSTFRESH))) THEN
+!$omp critical
+#ifdef _OPENACC
+      CALL ACC_SET_DEVICE_NUM(ACC_GET_DEVICE_NUM(ACC_DEVICE_NVIDIA),ACC_DEVICE_NVIDIA)
+#endif
+      IF(.NOT. ASSOCIATED(SELF%PTR) .OR. (SELF%IS_STATUS(NDEVFRESH) .AND. .NOT. SELF%IS_STATUS(NHSTFRESH))) THEN
+        CALL SELF%GET_HOST_DATA(NWR, ZPTR)
+      ENDIF
+!$omp end critical
     ENDIF
 
     IDX = BLOCK_INDEX
@@ -333,9 +336,10 @@ CONTAINS
     IF (PRESENT(ZERO)) THEN
       IF (ZERO) VIEW_PTR(${ft.viewShape}$) = ${ft.default}$
     END IF
-
+!$omp critical
     CALL SELF%REMOVE_STATUS(UNINITIALIZED_CPU)
     CALL SELF%SET_DEVICE_DIRTY()
+!$omp end critical
 
   END FUNCTION ${ftn}$_GET_VIEW
 #:endif
