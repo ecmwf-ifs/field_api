@@ -41,6 +41,7 @@ list(APPEND TEST_FILES
         get_view.F90
         get_view_get_device_data.F90
         get_view_when_ndevfresh.F90
+        get_view_when_ndevfresh2.F90
         get_view_when_nhstfresh.F90
         get_view_when_unallocated.F90
         get_view_when_uninitialized.F90
