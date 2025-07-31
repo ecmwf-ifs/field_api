@@ -25,7 +25,11 @@ PROGRAM INIT_OWNER_DELAYED_INIT_VALUE
         MAX_THREADS=OMP_GET_MAX_THREADS()
 
         OKAY=.TRUE.
-!$acc kernels present(ptr) copy(okay)
+#ifdef OMPGPU
+        !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO MAP(TO:PTR, MAX_THREADS) MAP(TOFROM:OKAY)
+#else
+        !$ACC KERNELS PRESENT(PTR) COPY(OKAY)
+#endif
         DO I=1,10
           DO J=1,MAX_THREADS
             IF(PTR(I,J) /= 7) THEN
@@ -33,7 +37,11 @@ PROGRAM INIT_OWNER_DELAYED_INIT_VALUE
             ENDIF
           ENDDO
         ENDDO
-!$acc end kernels
+#ifdef OMPGPU
+        !$OMP END TARGET TEAMS DISTRIBUTE PARALLEL DO
+#else
+        !$ACC END KERNELS
+#endif
 
         IF(.NOT. OKAY) THEN
           CALL FIELD_ABORT("ERROR")

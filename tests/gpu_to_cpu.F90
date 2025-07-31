@@ -22,18 +22,30 @@ PROGRAM GPU_TO_CPU
 
         CALL FIELD_NEW(O, LBOUNDS=[1,1], UBOUNDS=[11,11], PERSISTENT=.TRUE.)
         CALL O%GET_DEVICE_DATA_RDWR(PTR_DEV)
+#ifdef OMPGPU
+        !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO
+#else
         !$ACC KERNELS PRESENT(PTR_DEV)
-        PTR_DEV=7
+#endif
+        DO I=1,11
+          DO J=1,11
+            PTR_DEV=7
+          ENDDO
+        ENDDO
+#ifdef OMPGPU
+        !$OMP END TARGET TEAMS DISTRIBUTE PARALLEL DO
+#else
         !$ACC END KERNELS
+#endif
 
         CALL O%GET_HOST_DATA_RDONLY(PTR_HOST)
 
         DO I=1,11
-        DO J=1,11
-          IF(PTR_HOST(I,J)/=7)THEN
-                CALL FIELD_ABORT ("ERROR")
-          ENDIF
-        ENDDO
+          DO J=1,11
+            IF(PTR_HOST(I,J)/=7)THEN
+              CALL FIELD_ABORT ("ERROR")
+            ENDIF
+          ENDDO
         ENDDO
 
         CALL FIELD_DELETE(O)

@@ -303,6 +303,7 @@ CONTAINS
   FUNCTION ${ftn}$_GET_VIEW(SELF, BLOCK_INDEX, ZERO) RESULT(VIEW_PTR)
 
     USE FIELD_ABORT_MODULE
+$:offload_macros.runtime_api_import(indent=4)
 
     CLASS(${ftn}$) :: SELF
     ${ft.type}$, POINTER :: VIEW_PTR(${ft.viewShape}$)
@@ -314,13 +315,11 @@ CONTAINS
 
 !When the first thread reach this line it checks if the data are available
 !on cpu. If not, it then reachs a critical area, and check again in case
-!another thread has moved them meanwhile. The acc_set_device_num call is
-!necessary to create the gpu context in which the thread will operate
+!another thread has moved them meanwhile.
     IF(.NOT. ASSOCIATED(SELF%PTR) .OR. (SELF%IS_STATUS(NDEVFRESH) .AND. .NOT. SELF%IS_STATUS(NHSTFRESH))) THEN
 !$omp critical
-#ifdef _OPENACC
-      CALL ACC_SET_DEVICE_NUM(ACC_GET_DEVICE_NUM(ACC_DEVICE_NVIDIA),ACC_DEVICE_NVIDIA)
-#endif
+!Reinit GPU context for the local OpenMP thread
+$:offload_macros.reinit_gpu_context(indent=6)
       IF(.NOT. ASSOCIATED(SELF%PTR) .OR. (SELF%IS_STATUS(NDEVFRESH) .AND. .NOT. SELF%IS_STATUS(NHSTFRESH))) THEN
         CALL SELF%GET_HOST_DATA(NWR, ZPTR)
       ENDIF
@@ -633,14 +632,23 @@ ${indent}$ ENDDO
     INTEGER (KIND=JPIM),           INTENT(IN)    :: MODE
     ${ft.type}$, POINTER,          INTENT(INOUT) :: PTR(${ft.shape}$)
     INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
+#:for i in range(1, RANK+1)
+    INTEGER(KIND=JPIM) :: I${i}$
+#:endfor
 
     IF(.NOT. ASSOCIATED(SELF%DEVPTR))THEN
       CALL SELF%CREATE_DEVICE_DATA
     ENDIF
     IF (SELF%IS_STATUS(UNINITIALIZED) .AND. SELF%HAS_INIT_VALUE) THEN
-!$acc kernels
-      SELF%DEVPTR=SELF%INIT_VALUE
-!$acc end kernels
+$:offload_macros.parallel_gang_vector_loop(present=['SELF%DEVPTR'], copyin=['SELF'], collapse=RANK)
+#:for i in range(1, RANK+1)
+      DO I${i}$=SELF%LBOUNDS(${i}$), SELF%UBOUNDS(${i}$)
+#:endfor
+#:set array_indexes = ",".join("I" + str(i) for i in range(1, RANK+1))
+      SELF%DEVPTR(${array_indexes}$)=SELF%INIT_VALUE
+#:for i in range(1, RANK+1)
+      ENDDO
+#:endfor
       CALL SELF%ADD_STATUS(NDEVFRESH)
       CALL SELF%REMOVE_STATUS(UNINITIALIZED_GPU)
     ENDIF

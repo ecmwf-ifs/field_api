@@ -23,9 +23,21 @@ PROGRAM INIT_OWNER_DELAYED_GPU
 
         CALL FIELD_NEW(O, LBOUNDS=[10,1], UBOUNDS=[21,11], DELAYED=.TRUE.)
         CALL O%GET_DEVICE_DATA_RDWR(PTR)
+#ifdef OMPGPU
+        !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO
+#else
         !$ACC KERNELS PRESENT(PTR)
-        PTR=42
+#endif
+        DO I=10,21
+          DO J=1,O%UBOUNDS(2)
+            PTR(I,J)=42
+          ENDDO
+        ENDDO
+#ifdef OMPGPU
+        !$OMP END TARGET TEAMS DISTRIBUTE PARALLEL DO
+#else
         !$ACC END KERNELS
+#endif
 
         PTR=>NULL()
         CALL O%GET_HOST_DATA_RDONLY(PTR)
