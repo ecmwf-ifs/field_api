@@ -155,7 +155,9 @@ would then happen only if the data would be requested at some point, later in
 the program. It can be useful if one doesn't want to waste memory on data that
 might be only conditionally used. But please keep in mind, that allocating data
 can be slow and will slow down the program if done during a computation heavy
-part of the code.
+part of the code. The default value for the delayed option is false, but it can
+be changed to true by modifying the delayed\_default\_value in
+field\_defaults\_module.F90
 
 ```
 SUBROUTINE SUB(MYTEST)
