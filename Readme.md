@@ -156,8 +156,7 @@ the program. It can be useful if one doesn't want to waste memory on data that
 might be only conditionally used. But please keep in mind, that allocating data
 can be slow and will slow down the program if done during a computation heavy
 part of the code. The default value for the delayed option is false, but it can
-be changed to true by modifying the delayed\_default\_value in
-field\_defaults\_module.F90
+be switched by setting delayed\_default\_value to true.
 
 ```
 SUBROUTINE SUB(MYTEST)
