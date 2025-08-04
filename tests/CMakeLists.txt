@@ -22,6 +22,7 @@ ecbuild_add_test(
         fiat
         OpenMP::OpenMP_Fortran
         $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
+        $<${HAVE_IO}:HDF5::HDF5>
     LINKER_LANGUAGE Fortran
 	ENVIRONMENT "DEV_ALLOC_SIZE=${dev_alloc_size}"
 )
@@ -111,6 +112,12 @@ list(APPEND TEST_FILES
         wrapper_modify_gpu.F90
 	)
 
+if(HAVE_IO)
+  list(APPEND HDF5_TEST_FILES
+       test_hdf5_wr_parallel_field2d.F90
+       test_hdf5_rw_parallel_general.F90)
+endif()
+
 if(HAVE_FIELD_GANG)
   list(APPEND TEST_FILES
         test_gang.F90
@@ -132,7 +139,8 @@ set(ABOR1_TEST_FILES
 #Set OMP_NUM_THREADS for tests
 set(omp_num_threads 8)
 
-foreach(TEST_FILE ${TEST_FILES})
+if(HAVE_IO AND fiat_HAVE_MPI)
+foreach(TEST_FILE ${HDF5_TEST_FILES})
     get_filename_component(TEST_NAME ${TEST_FILE} NAME_WE)
     ecbuild_add_test(
         TARGET ${TEST_NAME}.x
@@ -143,11 +151,13 @@ foreach(TEST_FILE ${TEST_FILES})
            fiat
            OpenMP::OpenMP_Fortran
            $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
+           $<${HAVE_IO}:HDF5::HDF5>
         DEFINITIONS
            $<${HAVE_FIELD_GANG}:HAVE_FIELD_GANG>
         LINKER_LANGUAGE Fortran
+        MPI 2
         OMP ${omp_num_threads}
-		ENVIRONMENT "DEV_ALLOC_SIZE=${dev_alloc_size}"
+        ENVIRONMENT "DEV_ALLOC_SIZE=${dev_alloc_size}"
     )
 
     set_target_properties(${TEST_NAME}.x
@@ -163,6 +173,41 @@ foreach(TEST_FILE ${TEST_FILES})
        target_compile_definitions( ${TEST_NAME}.x PRIVATE PARKIND1_SINGLE )
     endif()
 endforeach()
+endif()
+
+foreach(TEST_FILE ${TEST_FILES})
+    get_filename_component(TEST_NAME ${TEST_FILE} NAME_WE)
+    ecbuild_add_test(
+        TARGET ${TEST_NAME}.x
+        SOURCES ${TEST_FILE}
+        LIBS
+           ${LIBNAME_PREC}
+           parkind_${DEFAULT_PRECISION}
+           fiat
+           OpenMP::OpenMP_Fortran
+           $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
+           $<${HAVE_IO}:HDF5::HDF5>
+        DEFINITIONS
+           $<${HAVE_FIELD_GANG}:HAVE_FIELD_GANG>
+        LINKER_LANGUAGE Fortran
+        OMP ${omp_num_threads}
+		ENVIRONMENT "DEV_ALLOC_SIZE=${dev_alloc_size}"
+    )
+
+    set_target_properties(${TEST_NAME}.x
+        PROPERTIES Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/include/tests
+    )
+
+    target_link_options( ${TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:-gpu=pinned> )
+    target_compile_definitions( ${TEST_NAME}.x PRIVATE
+                                $<${HAVE_IO}:HDF5::HDF5>
+                                $<${HAVE_OMP_OFFLOAD}:OMPGPU>
+                                $<${HAVE_CUDA}:_CUDA> )
+
+    if( DEFAULT_PRECISION MATCHES sp )
+       target_compile_definitions( ${TEST_NAME}.x PRIVATE PARKIND1_SINGLE )
+    endif()
+endforeach()
 
 foreach(FAILING_TEST_FILE ${FAILING_TEST_FILES})
     get_filename_component(FAILING_TEST_NAME ${FAILING_TEST_FILE} NAME_WE)
@@ -170,6 +215,7 @@ foreach(FAILING_TEST_FILE ${FAILING_TEST_FILES})
     target_link_libraries(${FAILING_TEST_NAME}.x PRIVATE ${LIBNAME_PREC} parkind_${DEFAULT_PRECISION} fiat)
     target_link_libraries(${FAILING_TEST_NAME}.x PRIVATE OpenMP::OpenMP_Fortran)
     target_link_libraries(${FAILING_TEST_NAME}.x PRIVATE $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>)
+    target_link_libraries(${FAILING_TEST_NAME}.x PRIVATE $<${HAVE_IO}:HDF5::HDF5>)
     set_target_properties(${FAILING_TEST_NAME}.x PROPERTIES LINKER_LANGUAGE Fortran)
     add_test(NAME ${FAILING_TEST_NAME} COMMAND ${FAILING_TEST_NAME}.x)
     set_property(TEST ${FAILING_TEST_NAME} PROPERTY WILL_FAIL TRUE)
@@ -184,6 +230,7 @@ foreach(ABOR1_TEST_FILE ${ABOR1_TEST_FILES})
     target_link_libraries(${ABOR1_TEST_NAME}.x PRIVATE ${LIBNAME_PREC} parkind_${DEFAULT_PRECISION} fiat)
     target_link_libraries(${ABOR1_TEST_NAME}.x PRIVATE OpenMP::OpenMP_Fortran)
     target_link_libraries(${ABOR1_TEST_NAME}.x PRIVATE $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>)
+    target_link_libraries(${ABOR1_TEST_NAME}.x PRIVATE $<${HAVE_IO}:HDF5::HDF5>)
     set_target_properties(${ABOR1_TEST_NAME}.x PROPERTIES LINKER_LANGUAGE Fortran)
     add_test(NAME ${ABOR1_TEST_NAME} COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/abor1catcher.sh "./${ABOR1_TEST_NAME}.x")
     set_property(TEST ${ABOR1_TEST_NAME} PROPERTY ENVIRONMENT "OMP_NUM_THREADS=${omp_num_threads};DEV_ALLOC_SIZE=${dev_alloc_size}")
@@ -201,6 +248,7 @@ ecbuild_add_test(
       parkind_sp
       OpenMP::OpenMP_Fortran
       $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
+      $<${HAVE_IO}:HDF5::HDF5>
     LINKER_LANGUAGE Fortran
     CONDITION ${HAVE_SINGLE_PRECISION}
 )

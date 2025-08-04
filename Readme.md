@@ -52,10 +52,10 @@ Features of FIELD_API can be toggled by passing the following argument to the CM
 | FIELD_GANG | ON | Enable packed storage of groups of fields. This feature is not supported for the Cray compiler as it cannot resolve the underlying polymorphism.|
 
 ## Supported compilers
-The library has been tested with the nvhpc toolkit from Nvidia, version 23.9
+The library has been tested with the nvhpc toolkit from Nvidia, version 23.9/24.5
 and is continually tested with newer releases. Please note that GPU offload is currently
 only supported for Nvidia compilers. It has also been tested on CPU (-DENABLE_ACC=OFF)
-with GCC 12, Intel 2021 and CCE17.
+with GCC 12/14, Intel 2021 and CCE17.
 
 # Field API types
 
@@ -357,6 +357,28 @@ users from the nightmarish derived-type casting syntax in Fortran. Finally, just
 data movement between host and device on the `FIELD_STACK` always happens as a group. Further examples
 of the `FIELD_STACK` can be found in `tests/test_field_stack_*.F90`.
 
+## HDF5 I/O 
+
+Optional HDF5 module provides two routines to write and read FieldAPI data. The call requires: 
+* ``Field object``,
+* ``CPU or GPU data pointer``,
+* ``name of the HDF5 file to read from/write to ``,
+* ``variable name``.
+
+Optional arguments:
+* `` lsync``
+
+ parameter is enforcing  data sync when the GPU data pointer is provided.
+* `` hdfexists``
+
+ parameter disables creation of the HDF5 context 
+(e.g. when the HDF5 functionality is used in a pre-existing HDF5 context of the CLOUDSC dwarf).
+
+Example HDF5 output and input calls:
+```
+CALL WRITE_HDF5_PERRANK_DATA(FIELD_DATA_1RB, DATA_GPU_1RB, h5filename, "DATA_GPU_1RB", LSYNC=.TRUE.)
+CALL  READ_HDF5_PERRANK_DATA(FIELD_DATA_1RB, DATA_CPU_1RB, h5filename, "DATA_CPU_1RB") 
+```
 # Public API
 
 For field api type:
