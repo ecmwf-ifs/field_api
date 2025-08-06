@@ -31,6 +31,7 @@ class ROCMAFAROpenMPHIP(ROCMAFAROpenMP):
 
         _import = [super().runtime_api_import(),]
         _import += ["USE HIPFORT",]
+        _import += ["USE HIPFORT_HIPHOSTREGISTER",]
 
         return _import
 
