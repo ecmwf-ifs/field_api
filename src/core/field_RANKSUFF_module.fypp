@@ -303,6 +303,7 @@ CONTAINS
   FUNCTION ${ftn}$_GET_VIEW(SELF, BLOCK_INDEX, ZERO) RESULT(VIEW_PTR)
 
     USE FIELD_ABORT_MODULE
+    USE FIELD_DEFAULTS_MODULE, ONLY: GET_VIEW_ABORT
 $:offload_macros.runtime_api_import(indent=4)
 
     CLASS(${ftn}$) :: SELF
@@ -313,14 +314,23 @@ $:offload_macros.runtime_api_import(indent=4)
     INTEGER(KIND=JPIM) :: LBOUNDS(${ft.rank}$)
     ${ft.type}$, POINTER :: ZPTR(${ft.shape}$)
 
-!When the first thread reach this line it checks if the data are available
-!on cpu. If not, it then reachs a critical area, and check again in case
-!another thread has moved them meanwhile.
-    IF(.NOT. ASSOCIATED(SELF%PTR) .OR. (SELF%IS_STATUS(NDEVFRESH) .AND. .NOT. SELF%IS_STATUS(NHSTFRESH))) THEN
+!When the first thread reach this line it checks if the data are available on cpu.
+!If not:
+! - if GET_VIEW_ABORT is TRUE then GET_VIEW will abort the program
+! - otherwise it then reachs a critical area, and check again in case another
+!   thread has moved them meanwhile. And if they are still not, then they are moved.
+    IF(.NOT. ASSOCIATED(SELF%PTR) &
+        .OR. (SELF%IS_STATUS(NDEVFRESH) .AND. .NOT. SELF%IS_STATUS(NHSTFRESH)) &
+    ) THEN
+      IF(GET_VIEW_ABORT) THEN
+        CALL FIELD_ABORT ("GET_VIEW WAS CALLED, BUT DATA IS NOT PRESENT ON HOST")
+      ENDIF
 !$omp critical
 !Reinit GPU context for the local OpenMP thread
 $:offload_macros.reinit_gpu_context(indent=6)
-      IF(.NOT. ASSOCIATED(SELF%PTR) .OR. (SELF%IS_STATUS(NDEVFRESH) .AND. .NOT. SELF%IS_STATUS(NHSTFRESH))) THEN
+      IF(.NOT. ASSOCIATED(SELF%PTR) &
+          .OR. (SELF%IS_STATUS(NDEVFRESH) .AND. .NOT. SELF%IS_STATUS(NHSTFRESH)) &
+      ) THEN
         CALL SELF%GET_HOST_DATA(NWR, ZPTR)
       ENDIF
 !$omp end critical
