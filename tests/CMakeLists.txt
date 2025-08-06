@@ -127,6 +127,19 @@ if(HAVE_FIELD_GANG)
       )
 endif()
 
+if(HAVE_GET_VIEW_ABORT)
+	list(REMOVE_ITEM TEST_FILES
+		get_view_when_ndevfresh.F90
+		get_view_when_ndevfresh2.F90
+		get_view_when_unallocated.F90
+	)
+	list(APPEND ABOR1_TEST_FILES
+		get_view_when_ndevfresh.F90
+		get_view_when_ndevfresh2.F90
+		get_view_when_unallocated.F90
+	)
+endif()
+
 #Place-holder for failing tests
 set(FAILING_TEST_FILES
 	)
