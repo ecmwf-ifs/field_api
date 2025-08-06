@@ -17,12 +17,6 @@ USE, INTRINSIC :: ISO_C_BINDING
 
 IMPLICIT NONE
 
-INTERFACE DEV_ALLOCATE_HST
-#:for ft in fieldTypeList
-  MODULE PROCEDURE ${ft.name}$_DEV_ALLOCATE_HST
-#:endfor
-END INTERFACE
-
 #:if defined('USE_BUDDY_MALLOC')
 INTERFACE DEV_ALLOCATE_DIM
 #:for ft in fieldTypeList
@@ -64,22 +58,6 @@ CONTAINS
 #:for ft in fieldTypeList
 
 #:if defined('USE_BUDDY_MALLOC') or defined('WITH_HIC')
-
-SUBROUTINE ${ft.name}$_DEV_ALLOCATE_HST (DEV, HST, MAP_DEVPTR)
-
-${ft.type}$, POINTER :: DEV(${ft.shape}$)
-${ft.type}$, POINTER :: HST(${ft.shape}$)
-LOGICAL, INTENT(IN) :: MAP_DEVPTR
-
-INTEGER :: ILBOUNDS (${ft.rank}$)
-INTEGER :: IUBOUNDS (${ft.rank}$)
-
-ILBOUNDS = LBOUND (HST)
-IUBOUNDS = UBOUND (HST)
-
-CALL ${ft.name}$_DEV_ALLOCATE_DIM (DEV, UBOUNDS=IUBOUNDS, LBOUNDS=ILBOUNDS, MAP_DEVPTR=MAP_DEVPTR)
-
-END SUBROUTINE ${ft.name}$_DEV_ALLOCATE_HST
 
 SUBROUTINE ${ft.name}$_DEV_ALLOCATE_DIM (DEV, UBOUNDS, LBOUNDS, MAP_DEVPTR)
 
@@ -166,27 +144,6 @@ ENDIF
 END SUBROUTINE ${ft.name}$_DEV_DEALLOCATE
 
 #:else
-
-SUBROUTINE ${ft.name}$_DEV_ALLOCATE_HST (DEV, HST, MAP_DEVPTR)
-
-USE FIELD_STATISTICS_MODULE
-
-${ft.type}$, POINTER :: DEV(${ft.shape}$)
-${ft.type}$, POINTER :: HST(${ft.shape}$)
-LOGICAL, INTENT(IN) :: MAP_DEVPTR
-
-#if __INTEL_COMPILER == 1800 && __INTEL_COMPILER_UPDATE == 5
-! Bug with Intel 18.0.5.274
-ALLOCATE (DEV (${ ', '.join (map (lambda i: 'LBOUND (HST, ' + str (i) + '):UBOUND (HST,' + str (i) + ')', range (1, ft.rank+1))) }$))
-#else
-ALLOCATE (DEV, MOLD=HST)
-#endif
-
-$:offload_macros.create(symbols=['DEV',])
-
-IF (FIELD_STATISTICS_ENABLE) CALL FIELD_STATISTICS_DEVICE_ALLOCATE (SIZE (DEV, KIND=JPIB) * INT (KIND (DEV), KIND=JPIB))
-
-END SUBROUTINE ${ft.name}$_DEV_ALLOCATE_HST
 
 SUBROUTINE ${ft.name}$_DEV_DEALLOCATE (DEV, MAP_DEVPTR)
 

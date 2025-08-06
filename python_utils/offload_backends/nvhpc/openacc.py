@@ -265,3 +265,13 @@ class NVHPCOpenACC():
 
 
         return "!$acc end data"
+
+    @classmethod
+    def reinit_gpu_context(cls):
+        """
+        Used to force reinitialization of GPU device.
+        Usefull when not calling GPU transfer function from OpenMP master thread
+        To use it you must have called the method *runtime_api_import* before
+        """
+
+        return "CALL ACC_SET_DEVICE_NUM(ACC_GET_DEVICE_NUM(ACC_DEVICE_NVIDIA), ACC_DEVICE_NVIDIA)"

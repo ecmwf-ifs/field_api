@@ -582,3 +582,15 @@ def memcpy_2D_intf(indent=0):
     method = _get_method(backend, 'memcpy_2D_intf')
 
     return _format_lines(method(), indent=indent)
+
+def reinit_gpu_context(indent=0):
+    """
+    Used to force reinitialization of GPU device.
+    Usefull when not calling GPU transfer function from OpenMP master thread
+    To use it you must have called the method *runtime_api_import* before
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'reinit_gpu_context')
+
+    return _format_lines(method(), indent=indent)

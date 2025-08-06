@@ -62,9 +62,9 @@ jobs:
           - name: linux nvhpc-24.5
             os: ubuntu-22.04
             compiler: nvhpc-24.5
-            compiler_cc: mpicc
-            compiler_cxx: mpic++
-            compiler_fc: mpifort
+            compiler_cc: nvc
+            compiler_cxx: nvc++
+            compiler_fc: nvfortran
             python-version: '3.8'
             caching: true
 
