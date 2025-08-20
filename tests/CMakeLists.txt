@@ -26,7 +26,14 @@ ecbuild_add_test(
     LINKER_LANGUAGE Fortran
 	ENVIRONMENT "DEV_ALLOC_SIZE=${dev_alloc_size}"
 )
-target_link_options( main.x PRIVATE $<${HAVE_CUDA}:-gpu=pinned> )
+
+if(HAVE_CUDA)
+  if(CMAKE_Fortran_COMPILER_VERSION VERSION_LESS "25.5")
+     target_link_options( main.x PRIVATE -gpu=pinned )
+  else()
+     target_link_options( main.x PRIVATE -gpu=mem:separate:pinnedalloc )
+  endif()
+endif()
 target_compile_definitions( main.x PRIVATE $<${HAVE_OMP_OFFLOAD}:OMPGPU> )
 
 ## Unit tests
@@ -155,7 +162,13 @@ foreach(TEST_FILE ${HDF5_TEST_FILES})
         PROPERTIES Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/include/tests
     )
 
-    target_link_options( ${TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:-gpu=pinned> )
+    if(HAVE_CUDA)
+      if(CMAKE_Fortran_COMPILER_VERSION VERSION_LESS "25.5")
+         target_link_options( ${TEST_NAME}.x PRIVATE -gpu=pinned )
+      else()
+         target_link_options( ${TEST_NAME}.x PRIVATE -gpu=mem:separate:pinnedalloc )
+      endif()
+    endif()
     target_compile_definitions( ${TEST_NAME}.x PRIVATE
                                 $<${HAVE_OMP_OFFLOAD}:OMPGPU>
                                 $<${HAVE_CUDA}:_CUDA> )
@@ -189,7 +202,13 @@ foreach(TEST_FILE ${TEST_FILES})
         PROPERTIES Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/include/tests
     )
 
-    target_link_options( ${TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:-gpu=pinned> )
+    if(HAVE_CUDA)
+      if(CMAKE_Fortran_COMPILER_VERSION VERSION_LESS "25.5")
+         target_link_options( ${TEST_NAME}.x PRIVATE -gpu=pinned )
+      else()
+         target_link_options( ${TEST_NAME}.x PRIVATE -gpu=mem:separate:pinnedalloc )
+      endif()
+    endif()
     target_compile_definitions( ${TEST_NAME}.x PRIVATE
                                 $<${HAVE_IO}:HDF5::HDF5>
                                 $<${HAVE_OMP_OFFLOAD}:OMPGPU>
@@ -211,7 +230,13 @@ foreach(FAILING_TEST_FILE ${FAILING_TEST_FILES})
     add_test(NAME ${FAILING_TEST_NAME} COMMAND ${FAILING_TEST_NAME}.x)
     set_property(TEST ${FAILING_TEST_NAME} PROPERTY WILL_FAIL TRUE)
     set_property(TEST ${FAILING_TEST_NAME} PROPERTY ENVIRONMENT "OMP_NUM_THREADS=${omp_num_threads};DEV_ALLOC_SIZE=${dev_alloc_size}")
-    target_link_options( ${FAILING_TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:-gpu=pinned> )
+    if(HAVE_CUDA)
+      if(CMAKE_Fortran_COMPILER_VERSION VERSION_LESS "25.5")
+         target_link_options( ${FAILING_TEST_NAME}.x PRIVATE -gpu=pinned )
+      else()
+         target_link_options( ${FAILING_TEST_NAME}.x PRIVATE -gpu=mem:separate:pinnedalloc )
+      endif()
+    endif()
     target_compile_definitions( ${FAILING_TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:_CUDA> )
 endforeach()
 
@@ -225,7 +250,13 @@ foreach(ABOR1_TEST_FILE ${ABOR1_TEST_FILES})
     set_target_properties(${ABOR1_TEST_NAME}.x PROPERTIES LINKER_LANGUAGE Fortran)
     add_test(NAME ${ABOR1_TEST_NAME} COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/abor1catcher.sh "./${ABOR1_TEST_NAME}.x")
     set_property(TEST ${ABOR1_TEST_NAME} PROPERTY ENVIRONMENT "OMP_NUM_THREADS=${omp_num_threads};DEV_ALLOC_SIZE=${dev_alloc_size}")
-    target_link_options( ${ABOR1_TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:-gpu=pinned> )
+    if(HAVE_CUDA)
+      if(CMAKE_Fortran_COMPILER_VERSION VERSION_LESS "25.5")
+         target_link_options( ${ABOR1_TEST_NAME}.x PRIVATE -gpu=pinned )
+      else()
+         target_link_options( ${ABOR1_TEST_NAME}.x PRIVATE -gpu=mem:separate:pinnedalloc )
+      endif()
+    endif()
     target_compile_definitions( ${ABOR1_TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:_CUDA> )
 endforeach()
 
