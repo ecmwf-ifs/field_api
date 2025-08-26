@@ -45,7 +45,9 @@ CONTAINS
   PROCEDURE :: FINAL => ${ftn}$_STACK_${type}$_FINAL
   PROCEDURE :: CREATE_DEVICE_DATA => ${ftn}$_STACK_${type}$_CREATE_DEVICE_DATA
   PROCEDURE :: DELETE_DEVICE_DATA => ${ftn}$_STACK_${type}$_DELETE_DEVICE_DATA
-  PROCEDURE :: SET_STATUS => ${ftn}$_STACK_${type}$_SET_STATUS
+#:for what in ['HOST', 'DEVICE']
+  PROCEDURE :: GET_${what}$_DATA => ${ftn}$_STACK_${type}$_GET_${what}$_DATA
+#:endfor
 END TYPE ${ftn}$_STACK_${type}$
 
 PUBLIC :: ${ftn}$_STACK_${type}$
@@ -160,6 +162,19 @@ CONTAINS
       END SUBROUTINE STACK_MEMBER_INIT_1
 
   END SUBROUTINE INIT_MEMBERS
+
+  SUBROUTINE ${ftn}$_STACK_CHECK_CHILDREN_STATUS(MEMBERS, ISTATUS, STAT)
+   TYPE(FIELD_BASIC_PTR), INTENT(INOUT):: MEMBERS(:)
+   INTEGER(KIND=JPIM), INTENT(IN) :: ISTATUS
+   LOGICAL, INTENT(OUT) :: STAT
+   INTEGER(KIND=JPIM) :: I
+
+   STAT = .TRUE.
+   DO I=1,SIZE(MEMBERS)
+      IF(MEMBERS(I)%PTR%ISTATUS /= ISTATUS) STAT = .FALSE.
+   ENDDO
+
+  END SUBROUTINE ${ftn}$_STACK_CHECK_CHILDREN_STATUS
 
   SUBROUTINE CREATE_MEMBER_DEVICE_DATA(DEVPTR, MEMBERS, MEMBER_MAP, LBOUNDS, MEMBER_LBOUNDS)
     ${ft.type}$, INTENT(IN) :: DEVPTR(${ft.shape}$)
@@ -318,20 +333,6 @@ CONTAINS
   END SUBROUTINE ${ftn}$_STACK_OWNER_INIT
 
 #:for type in ['WRAPPER', 'OWNER']
-  SUBROUTINE ${ftn}$_STACK_${type}$_SET_STATUS (SELF, KSTATUS)
-    CLASS(${ftn}$_STACK_${type}$) :: SELF
-    INTEGER (KIND=JPIM), INTENT (IN) :: KSTATUS
-
-    INTEGER (KIND=JPIM) :: JFLD
-
-    CALL SELF%${ftn}$_${type}$%SET_STATUS (KSTATUS)
-
-    DO JFLD = 1, SIZE (SELF%MEMBERS)
-      CALL SELF%MEMBERS(JFLD)%PTR%SET_STATUS (KSTATUS)
-    ENDDO
-
-  END SUBROUTINE ${ftn}$_STACK_${type}$_SET_STATUS
-
   SUBROUTINE ${ftn}$_STACK_${type}$_CREATE_DEVICE_DATA (SELF)
     CLASS(${ftn}$_STACK_${type}$) :: SELF
     INTEGER (KIND=JPIM) :: JFLD
@@ -402,6 +403,74 @@ CONTAINS
     DEALLOCATE (SELF%MEMBER_RANKS)
 
   END SUBROUTINE ${ftn}$_STACK_${type}$_FINAL
+
+  #:for what in ['HOST', 'DEVICE']
+  SUBROUTINE ${ftn}$_STACK_${type}$_GET_${what}$_DATA(SELF, MODE, PTR, QUEUE)
+    CLASS(${ftn}$_STACK_${type}$)                 :: SELF
+    INTEGER (KIND=JPIM),           INTENT(IN)    :: MODE
+    ${ft.type}$, POINTER,          INTENT(INOUT) :: PTR(${ft.shape}$)
+    INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
+  
+    LOGICAL :: STAT
+    INTEGER(KIND=JPIM) :: IFIELD
+    INTEGER(KIND=JPIM) :: LBOUNDS(${ft.rank}$)
+    ${ft.type}$, POINTER :: CHILD_PTR_0(${ft.viewShape}$)
+    ${ft.type}$, POINTER :: CHILD_PTR_1(${ft.shape}$)
+  
+    CALL ${ftn}$_STACK_CHECK_CHILDREN_STATUS(SELF%MEMBERS, SELF%ISTATUS, STAT)
+  
+    ! If the MEMBERS all have the same ISTATUS as the BUFFER, then we can safely
+    ! exchange data on a per STACK basis. Otherwise, data exchange must be done
+    ! on a per field basis
+    IF(STAT)THEN
+    #:if type == 'OWNER'
+      CALL SELF%${ftn}$_OWNER_GET_${what}$_DATA(MODE, PTR, QUEUE=QUEUE)
+    #:else
+      CALL SELF%${ftn}$_GET_${what}$_DATA(MODE, PTR, QUEUE=QUEUE)
+    #:endif
+    ELSE
+      DO IFIELD=1,SIZE(SELF%MEMBERS)
+         ASSOCIATE(FIELD => SELF%MEMBERS(IFIELD)%PTR)
+
+         SELECT TYPE(FIELD)
+         CLASS IS(${ftn}$)
+            CALL FIELD%GET_${what}$_DATA(MODE, CHILD_PTR_1, QUEUE=QUEUE)
+         CLASS IS(FIELD_${RANK-1}$${SUFF}$)
+            CALL FIELD%GET_${what}$_DATA(MODE, CHILD_PTR_0, QUEUE=QUEUE)
+         END SELECT
+
+         END ASSOCIATE
+      ENDDO
+  
+  #:if what == 'HOST'
+      LBOUNDS = LBOUND(SELF%PTR)
+      PTR(${ft.lbptr}$) => SELF%PTR (${','.join(':' for _ in range(ft.rank))}$)
+  #:else
+      LBOUNDS = LBOUND(SELF%DEVPTR)
+      PTR(${ft.lbptr}$) => SELF%DEVPTR (${','.join(':' for _ in range(ft.rank))}$)
+  #:endif
+  
+  #:if what == 'HOST'
+      IF (IAND (SELF%GET_STATUS (), NHSTFRESH) == 0) THEN
+        CALL SELF%${ftn}$_${type}$%SET_STATUS (IOR (SELF%GET_STATUS (), NHSTFRESH))
+      ENDIF
+  #:else
+      IF (IAND (SELF%GET_STATUS (), NDEVFRESH) == 0) THEN
+        CALL SELF%${ftn}$_${type}$%SET_STATUS (IOR (SELF%GET_STATUS (), NDEVFRESH))
+      ENDIF
+  #:endif
+  
+      IF (IAND (MODE, NWR) /= 0) THEN
+  #:if what == 'HOST'
+        CALL SELF%${ftn}$_${type}$%SET_STATUS (IAND (SELF%GET_STATUS(), NOT (NDEVFRESH)))
+  #:else
+        CALL SELF%${ftn}$_${type}$%SET_STATUS (IAND (SELF%GET_STATUS(), NOT (NHSTFRESH)))
+  #:endif
+      ENDIF
+    ENDIF
+  
+  END SUBROUTINE ${ftn}$_STACK_${type}$_GET_${what}$_DATA
+#:endfor
 #:endfor
 
 #:endfor
