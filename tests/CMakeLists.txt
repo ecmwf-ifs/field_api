@@ -154,6 +154,7 @@ endif()
 list(APPEND TEST_FILES
       test_field_stack_cpu.F90
       test_field_stack_gpu.F90
+      test_field_stack_gpu_sparse_copy.F90
       test_field_stack_member_ranks.F90
       test_field_stack_simple.F90
     )
