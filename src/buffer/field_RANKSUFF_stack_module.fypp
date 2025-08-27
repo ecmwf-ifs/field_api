@@ -45,6 +45,7 @@ CONTAINS
   PROCEDURE :: FINAL => ${ftn}$_STACK_${type}$_FINAL
   PROCEDURE :: CREATE_DEVICE_DATA => ${ftn}$_STACK_${type}$_CREATE_DEVICE_DATA
   PROCEDURE :: DELETE_DEVICE_DATA => ${ftn}$_STACK_${type}$_DELETE_DEVICE_DATA
+  PROCEDURE :: SET_STATUS => ${ftn}$_STACK_${type}$_SET_STATUS
 #:for what in ['HOST', 'DEVICE']
   PROCEDURE :: GET_${what}$_DATA => ${ftn}$_STACK_${type}$_GET_${what}$_DATA
 #:endfor
@@ -333,6 +334,20 @@ CONTAINS
   END SUBROUTINE ${ftn}$_STACK_OWNER_INIT
 
 #:for type in ['WRAPPER', 'OWNER']
+  SUBROUTINE ${ftn}$_STACK_${type}$_SET_STATUS (SELF, KSTATUS)
+    CLASS(${ftn}$_STACK_${type}$) :: SELF
+    INTEGER (KIND=JPIM), INTENT (IN) :: KSTATUS
+
+    INTEGER (KIND=JPIM) :: JFLD
+
+    CALL SELF%${ftn}$_${type}$%SET_STATUS (KSTATUS)
+
+    DO JFLD = 1, SIZE (SELF%MEMBERS)
+      CALL SELF%MEMBERS(JFLD)%PTR%SET_STATUS (KSTATUS)
+    ENDDO
+
+  END SUBROUTINE ${ftn}$_STACK_${type}$_SET_STATUS
+
   SUBROUTINE ${ftn}$_STACK_${type}$_CREATE_DEVICE_DATA (SELF)
     CLASS(${ftn}$_STACK_${type}$) :: SELF
     INTEGER (KIND=JPIM) :: JFLD
@@ -449,24 +464,24 @@ CONTAINS
       LBOUNDS = LBOUND(SELF%DEVPTR)
       PTR(${ft.lbptr}$) => SELF%DEVPTR (${','.join(':' for _ in range(ft.rank))}$)
   #:endif
+    ENDIF
   
   #:if what == 'HOST'
-      IF (IAND (SELF%GET_STATUS (), NHSTFRESH) == 0) THEN
-        CALL SELF%${ftn}$_${type}$%SET_STATUS (IOR (SELF%GET_STATUS (), NHSTFRESH))
-      ENDIF
+    IF (IAND (SELF%GET_STATUS (), NHSTFRESH) == 0) THEN
+      CALL SELF%SET_STATUS (IOR (SELF%GET_STATUS (), NHSTFRESH))
+    ENDIF
   #:else
-      IF (IAND (SELF%GET_STATUS (), NDEVFRESH) == 0) THEN
-        CALL SELF%${ftn}$_${type}$%SET_STATUS (IOR (SELF%GET_STATUS (), NDEVFRESH))
-      ENDIF
+    IF (IAND (SELF%GET_STATUS (), NDEVFRESH) == 0) THEN
+      CALL SELF%SET_STATUS (IOR (SELF%GET_STATUS (), NDEVFRESH))
+    ENDIF
   #:endif
   
-      IF (IAND (MODE, NWR) /= 0) THEN
+    IF (IAND (MODE, NWR) /= 0) THEN
   #:if what == 'HOST'
-        CALL SELF%${ftn}$_${type}$%SET_STATUS (IAND (SELF%GET_STATUS(), NOT (NDEVFRESH)))
+      CALL SELF%SET_STATUS (IAND (SELF%GET_STATUS(), NOT (NDEVFRESH)))
   #:else
-        CALL SELF%${ftn}$_${type}$%SET_STATUS (IAND (SELF%GET_STATUS(), NOT (NHSTFRESH)))
+      CALL SELF%SET_STATUS (IAND (SELF%GET_STATUS(), NOT (NHSTFRESH)))
   #:endif
-      ENDIF
     ENDIF
   
   END SUBROUTINE ${ftn}$_STACK_${type}$_GET_${what}$_DATA
