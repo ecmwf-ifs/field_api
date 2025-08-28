@@ -51,6 +51,7 @@ Features of FIELD_API can be toggled by passing the following argument to the CM
 | CUDA | OFF | Enable the use of CUDA for GPU offload. Disables the use of the buddy memory allocator, removes the shadow host allocation for `FIELD%DEVPTR` and allocates owned fields (see below) in pinned (page-locked) host memory.|
 | FIELD_GANG | ON | Enable packed storage of groups of fields. This feature is not supported for the Cray compiler as it cannot resolve the underlying polymorphism.|
 | GET_VIEW_ABORT | ON | If activated, get_view will abort when the data are not present on CPU. |
+| DELAYED | OFF | If activated, field owners will be delayed by default. |
 
 ## Supported compilers
 The library has been tested with the nvhpc toolkit from Nvidia, version 23.9/24.5

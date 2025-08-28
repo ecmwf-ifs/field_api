@@ -88,6 +88,12 @@ ecbuild_add_option( FEATURE GET_VIEW_ABORT
 	DEFAULT ON
 )
 
+##Delayed
+ecbuild_add_option( FEATURE DELAYED
+	DESCRIPTION "Enable this option to delayed by default the allocation of field owner"
+	DEFAULT OFF
+)
+
 
 ## fypp preprocessor flags
 if(HAVE_BUDDY_MALLOC)

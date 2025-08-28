@@ -57,6 +57,11 @@ if(HAVE_GET_VIEW_ABORT)
 else()
   target_compile_definitions( field_api_core PRIVATE "-DGET_VIEW_ABORT_DEFAULT_VALUE=.FALSE.")
 endif()
+if(HAVE_DELAYED)
+	target_compile_definitions( field_api_core PRIVATE "-DDELAYED_DEFAULT_VALUE=.TRUE.")
+else()
+	target_compile_definitions( field_api_core PRIVATE "-DDELAYED_DEFAULT_VALUE=.FALSE.")
+endif()
 
 
 set_source_files_properties( ${CMAKE_CURRENT_BINARY_DIR}/dev_alloc_module.F90 PROPERTIES COMPILE_OPTIONS $<${HAVE_CUDA}:-cuda>)
