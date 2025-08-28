@@ -58,9 +58,9 @@ else()
   target_compile_definitions( field_api_core PRIVATE "-DGET_VIEW_ABORT_DEFAULT_VALUE=.FALSE.")
 endif()
 if(HAVE_DELAYED)
-	target_compile_definitions( field_api_core PRIVATE "-DDELAYED_DEFAULT_VALUE=.TRUE.")
+	target_compile_definitions( field_api_core PRIVATE "-DDELAYED_DEFAULT_VALUE_FROM_CMAKE=.TRUE.")
 else()
-	target_compile_definitions( field_api_core PRIVATE "-DDELAYED_DEFAULT_VALUE=.FALSE.")
+	target_compile_definitions( field_api_core PRIVATE "-DDELAYED_DEFAULT_VALUE_FROM_CMAKE=.FALSE.")
 endif()
 
 

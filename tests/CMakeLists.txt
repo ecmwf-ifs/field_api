@@ -150,6 +150,16 @@ if(HAVE_GET_VIEW_ABORT)
 	)
 endif()
 
+if(HAVE_DELAYED)
+	list(APPEND ABOR1_TEST_FILES
+		is_delayed_by_default.F90
+	)
+else()
+	list(APPEND TEST_FILES
+		is_delayed_by_default.F90
+	)
+endif()
+
 #Set OMP_NUM_THREADS for tests
 set(omp_num_threads 8)
 
