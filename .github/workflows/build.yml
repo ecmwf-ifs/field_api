@@ -39,6 +39,7 @@ jobs:
           - linux intel-modern
           - macos
         get_view_abort: [ON,OFF]
+        delayed: [ON,OFF]
 
         include:
 
@@ -226,5 +227,5 @@ jobs:
         dependency_branch: develop
         dependency_cmake_options: |
           ecmwf-ifs/fiat: "-DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DENABLE_TESTS=OFF
-        cmake_options: "-DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ${{ matrix.cmake_options }} -DENABLE_ACC=OFF -DENABLE_IO=ON -DENABLE_GET_VIEW_ABORT=${{ matrix.get_view_abort }}"
+        cmake_options: "-DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ${{ matrix.cmake_options }} -DENABLE_ACC=OFF -DENABLE_IO=ON -DENABLE_GET_VIEW_ABORT=${{ matrix.get_view_abort }} -DENABLE_DELAYED=${{ matrix.delayed }}"
         ctest_options: "${{ matrix.ctest_options }}"
