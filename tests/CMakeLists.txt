@@ -36,6 +36,7 @@ list(APPEND TEST_FILES
         cpu_to_gpu_init_value.F90
         delayed_by_default.F90
         delete_device_wrapper.F90
+        field_0_size_wrapper_get_view.F90
         final_owner.F90
         final_wrapper.F90
         final_wrapper_gpu.F90
