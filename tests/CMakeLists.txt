@@ -113,6 +113,15 @@ list(APPEND TEST_FILES
         wrapper_modify_gpu.F90
 	)
 
+#Place-holder for failing tests
+set(FAILING_TEST_FILES
+	)
+
+#These tests will call abor1
+set(ABOR1_TEST_FILES
+	resize_wrapper.F90
+	)
+
 if(HAVE_IO)
   list(APPEND HDF5_TEST_FILES
        test_hdf5_wr_parallel_field2d.F90
@@ -140,15 +149,6 @@ if(HAVE_GET_VIEW_ABORT)
 		get_view_when_unallocated.F90
 	)
 endif()
-
-#Place-holder for failing tests
-set(FAILING_TEST_FILES
-	)
-
-#These tests will call abor1
-set(ABOR1_TEST_FILES
-	resize_wrapper.F90
-	)
 
 #Set OMP_NUM_THREADS for tests
 set(omp_num_threads 8)
