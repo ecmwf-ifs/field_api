@@ -160,6 +160,17 @@ else()
 	)
 endif()
 
+if(HAVE_DELAYED AND HAVE_GET_VIEW_ABORT)
+	list(REMOVE_ITEM TEST_FILES
+		get_view_get_device_data.F90
+		get_view_when_uninitialized.F90
+	) 
+	list(APPEND ABOR1_TEST_FILES
+		get_view_get_device_data.F90
+		get_view_when_uninitialized.F90
+	)
+endif()
+
 #Set OMP_NUM_THREADS for tests
 set(omp_num_threads 8)
 
