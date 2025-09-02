@@ -38,6 +38,8 @@ jobs:
           - linux intel-classic
           - linux intel-modern
           - macos
+        get_view_abort: [ON,OFF]
+        delayed: [ON,OFF]
 
         include:
 
@@ -62,9 +64,9 @@ jobs:
           - name: linux nvhpc-24.5
             os: ubuntu-22.04
             compiler: nvhpc-24.5
-            compiler_cc: mpicc
-            compiler_cxx: mpic++
-            compiler_fc: mpifort
+            compiler_cc: nvc
+            compiler_cxx: nvc++
+            compiler_fc: nvfortran
             python-version: '3.8'
             caching: true
 
@@ -225,5 +227,5 @@ jobs:
         dependency_branch: develop
         dependency_cmake_options: |
           ecmwf-ifs/fiat: "-DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DENABLE_TESTS=OFF
-        cmake_options: "-DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ${{ matrix.cmake_options }} -DENABLE_ACC=OFF -DENABLE_IO=ON"
+        cmake_options: "-DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ${{ matrix.cmake_options }} -DENABLE_ACC=OFF -DENABLE_IO=ON -DENABLE_GET_VIEW_ABORT=${{ matrix.get_view_abort }} -DENABLE_DELAYED=${{ matrix.delayed }}"
         ctest_options: "${{ matrix.ctest_options }}"

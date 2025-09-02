@@ -50,6 +50,8 @@ Features of FIELD_API can be toggled by passing the following argument to the CM
 | DOUBLE_PRECISION | ON | Enable the compilation of field_api in double precision |
 | CUDA | OFF | Enable the use of CUDA for GPU offload. Disables the use of the buddy memory allocator, removes the shadow host allocation for `FIELD%DEVPTR` and allocates owned fields (see below) in pinned (page-locked) host memory.|
 | FIELD_GANG | ON | Enable packed storage of groups of fields. This feature is not supported for the Cray compiler as it cannot resolve the underlying polymorphism.|
+| GET_VIEW_ABORT | ON | If activated, get_view will abort when the data are not present on CPU. |
+| DELAYED | OFF | If activated, field owners will be delayed by default. |
 
 ## Supported compilers
 The library has been tested with the nvhpc toolkit from Nvidia, version 23.9/24.5
@@ -156,6 +158,10 @@ the program. It can be useful if one doesn't want to waste memory on data that
 might be only conditionally used. But please keep in mind, that allocating data
 can be slow and will slow down the program if done during a computation heavy
 part of the code.
+
+The default value for the delayed option is false, but it can be switched by
+setting delayed\_default\_value to true, or by setting the ENABLE\_DELAYED
+cmake option to ON at compile time.
 
 ```
 SUBROUTINE SUB(MYTEST)
@@ -279,13 +285,6 @@ write(*,*)"Num transfer CPU->GPU", NUM_CPU_GPU_TR
 write(*,*)"Total/Avg Time spend on transfer CPU->GPU", NUM_CPU_GPU_TR, "/" AVG, 
 ...
 ```
-
-## Note on GET\_VIEW
-
-GET\_VIEW must only be called in sections of code running on the host. The
-field's data must be present on the host. It will not work if the data are on
-the device or if the field has not been allocated yet (when using the DELAY
-option).
 
 ## Cloning fields with FIELD\_CLONE\_ON_
 

@@ -82,6 +82,18 @@ ecbuild_add_option( FEATURE FIELD_GANG
     DEFAULT ON
 )
 
+##Get_view abort
+ecbuild_add_option( FEATURE GET_VIEW_ABORT
+	DESCRIPTION "Enable this option to make get_view abort when data are not on CPU"
+	DEFAULT ON
+)
+
+##Delayed
+ecbuild_add_option( FEATURE DELAYED
+	DESCRIPTION "Enable this option to delayed by default the allocation of field owner"
+	DEFAULT OFF
+)
+
 
 ## fypp preprocessor flags
 if(HAVE_BUDDY_MALLOC)
