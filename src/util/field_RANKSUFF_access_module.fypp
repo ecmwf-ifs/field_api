@@ -13,6 +13,7 @@ MODULE FIELD_${RANK}$${SUFF}$_ACCESS_MODULE
 #:set dumsize = '1'
 
 USE FIELD_${RANK}$${SUFF}$_MODULE
+USE, INTRINSIC :: ISO_FORTRAN_ENV, ONLY : INT64
 
 ${fieldType.useParkind1 ()}$
 
@@ -63,12 +64,26 @@ CONTAINS
     CHARACTER*1024 :: CLBT
     CHARACTER*10 :: CLF
     INTEGER :: ILEN, IP1, IP2
+    INTEGER :: ILBOUNDS(${ft.rank}$), IUBOUNDS(${ft.rank}$)
+    LOGICAL :: LEXISTS
+    INTEGER(KIND=INT64) :: ISIZE
+
+    LEXISTS = .FALSE.
 
 
     ICRC = 0
 
     IF (PRESENT (FIELD_PTR)) THEN
       IF (ASSOCIATED (FIELD_PTR)) THEN
+         CALL FIELD_PTR%GET_DIMS(ILBOUNDS, IUBOUNDS)
+
+         ISIZE = 1
+#:for rank in range(ft.rank)
+         ISIZE = ISIZE * (IUBOUNDS(${rank + 1}$) - ILBOUNDS(${rank + 1}$) + 1)
+#:endfor
+         IF (ISIZE > 0) LEXISTS = .TRUE.
+      ENDIF
+      IF (LEXISTS) THEN
         CALL FIELD_PTR%GET_${what}$_DATA_${mode}$ (PTR)
 
 #:if defined('WITH_FIAT')

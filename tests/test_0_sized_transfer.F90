@@ -20,10 +20,15 @@ PROGRAM TEST_0_SIZED_TRANSFER
         REAL(KIND=JPRB), POINTER :: PTR(:,:) => NULL()
 
         CALL FIELD_NEW(O, LBOUNDS=[10,1], UBOUNDS=[9,11], PERSISTENT=.TRUE.)
-        PTR => GET_HOST_DATA_RDONLY(O)
+        CALL O%GET_HOST_DATA_RDONLY(PTR)
 
         IF( SIZE(PTR) > 0 )THEN
           CALL FIELD_ABORT("ALLOCATION SHOULD BE 0 SIZED")
+        ENDIF
+
+        PTR => GET_HOST_DATA_RDONLY(O)
+        IF( SIZE(PTR) /= 1 )THEN
+          CALL FIELD_ABORT("ALLOCATION SHOULD BE OF SIZE==1")
         ENDIF
 
         !...Ensure data can be copied to device and back safely
