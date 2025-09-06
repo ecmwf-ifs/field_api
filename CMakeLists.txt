@@ -70,12 +70,6 @@ endif()
 ## find FIAT or at least its components 
 field_api_find_fiat_modules()
 
-## buddy allocator option
-ecbuild_add_option( FEATURE BUDDY_MALLOC
-    DESCRIPTION "Use buddy allocator for shadow host allocation"
-    DEFAULT ON
-)
-
 ## Field Gang
 ecbuild_add_option( FEATURE FIELD_GANG
     DESCRIPTION "Enable packed storage of fields"
@@ -96,9 +90,6 @@ ecbuild_add_option( FEATURE DELAYED
 
 
 ## fypp preprocessor flags
-if(HAVE_BUDDY_MALLOC)
-  list( APPEND fypp_defines "-DUSE_BUDDY_MALLOC")
-endif()
 if(HAVE_CUDA)
   list( APPEND fypp_defines "-DWITH_HIC")
 endif()
