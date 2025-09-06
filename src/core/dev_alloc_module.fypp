@@ -17,13 +17,11 @@ USE, INTRINSIC :: ISO_C_BINDING
 
 IMPLICIT NONE
 
-#:if defined('USE_BUDDY_MALLOC')
 INTERFACE DEV_ALLOCATE_DIM
 #:for ft in fieldTypeList
   MODULE PROCEDURE ${ft.name}$_DEV_ALLOCATE_DIM
 #:endfor
 END INTERFACE
-#:endif
 
 INTERFACE DEV_DEALLOCATE
 #:for ft in fieldTypeList
@@ -31,7 +29,6 @@ INTERFACE DEV_DEALLOCATE
 #:endfor
 END INTERFACE
 
-#:if defined('USE_BUDDY_MALLOC')
 INTERFACE
   SUBROUTINE DEV_MALLOC (SIZ, PTR) BIND (C, NAME='dev_malloc')
     IMPORT :: C_PTR, C_SIZE_T
@@ -43,7 +40,6 @@ INTERFACE
     TYPE (C_PTR), VALUE, INTENT(IN) :: PTR
   END SUBROUTINE
 END INTERFACE
-#:endif
 
 #:if defined('WITH_HIC')
 INTERFACE
@@ -56,8 +52,6 @@ CONTAINS
 
 
 #:for ft in fieldTypeList
-
-#:if defined('USE_BUDDY_MALLOC') or defined('WITH_HIC')
 
 SUBROUTINE ${ft.name}$_DEV_ALLOCATE_DIM (DEV, UBOUNDS, LBOUNDS, MAP_DEVPTR)
 
@@ -142,28 +136,6 @@ $:offload_macros.dev_free(ptr='PTR', return_val='ISTAT', indent=6)
 ENDIF
 
 END SUBROUTINE ${ft.name}$_DEV_DEALLOCATE
-
-#:else
-
-SUBROUTINE ${ft.name}$_DEV_DEALLOCATE (DEV, MAP_DEVPTR)
-
-USE FIELD_STATISTICS_MODULE
-
-${ft.type}$, POINTER :: DEV(${ft.shape}$)
-LOGICAL, INTENT(IN) :: MAP_DEVPTR
-
-IF (ASSOCIATED (DEV)) THEN
-
-  IF (FIELD_STATISTICS_ENABLE) CALL FIELD_STATISTICS_DEVICE_DEALLOCATE (SIZE (DEV, KIND=JPIB) * INT (KIND (DEV), KIND=JPIB))
-
-$:offload_macros.delete(symbols=['DEV',], indent=2)
-  DEALLOCATE (DEV)
-  NULLIFY (DEV)
-ENDIF
-
-END SUBROUTINE ${ft.name}$_DEV_DEALLOCATE
-
-#:endif
 
 #:endfor
 
