@@ -21,8 +21,9 @@ IMPLICIT NONE
 
 PRIVATE
 
-#:for mode in ['RDONLY', 'RDWR']
+#:for mode in ['RDONLY', 'RDWR', 'WRONLY']
 #:for what in ['DEVICE', 'HOST']
+#:if not (what == 'HOST' and mode == 'WRONLY')
 
 INTERFACE SGET_${what}$_DATA_${mode}$
 #:for ft in fieldTypeList
@@ -40,6 +41,7 @@ END INTERFACE GET_${what}$_DATA_${mode}$
 
 PUBLIC :: GET_${what}$_DATA_${mode}$
 
+#:endif
 #:endfor
 #:endfor
 
@@ -51,9 +53,10 @@ $:offload_macros.declare(create=[f'DUMMY_{ft.name}',])
 
 CONTAINS
 
-#:for mode in ['RDONLY', 'RDWR']
+#:for mode in ['RDONLY', 'RDWR', 'WRONLY']
 #:for what in ['DEVICE', 'HOST']
 
+#:if not (what == 'HOST' and mode == 'WRONLY')
 #:for ft in fieldTypeList
   SUBROUTINE SGET_${what}$_DATA_${mode}$_${ft.name}$ (PTR, FIELD_PTR) 
     USE FIELD_DEFAULTS_MODULE
@@ -136,6 +139,7 @@ CONTAINS
   END FUNCTION GET_${what}$_DATA_${mode}$_${ft.name}$
 
 #:endfor
+#:endif
 
 #:endfor
 #:endfor
