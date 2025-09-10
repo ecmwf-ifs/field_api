@@ -33,6 +33,15 @@ field_api_add_object_library(
     SRCS           ${srcs}
     LIBRARIES      field_api_core field_api_debug
 )
+if(HAVE_IO_SERIAL)
+target_compile_definitions( field_api_io PRIVATE HAVE_IO_SERIAL )
+elseif(HAVE_IO_MPI)
+ecbuild_enable_mpi( COMPONENTS FORTRAN REQUIRED)
+target_compile_definitions( field_api_io PRIVATE HAVE_IO_MPI )
+
+elseif(HAVE_IO_MPL)
+target_compile_definitions( field_api_io PRIVATE HAVE_IO_MPL )
+endif()
 
 ## don't build precision dependent sourcefile
 set_source_files_properties( ${CMAKE_CURRENT_BINARY_DIR}/field_hdf5_module.F90 PROPERTIES HEADER_FILE_ONLY ON)
