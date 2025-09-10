@@ -62,8 +62,26 @@ ecbuild_add_option( FEATURE IO
     REQUIRED_PACKAGES "HDF5 COMPONENTS Fortran"
     DEFAULT OFF
 )
+ecbuild_add_option( FEATURE IO_SERIAL
+    DESCRIPTION "Use serial HDF5 to read and write FieldAPI variables"
+    REQUIRED_PACKAGES "HDF5 COMPONENTS Fortran"
+    DEFAULT OFF
+)
+ecbuild_add_option( FEATURE IO_MPI
+    DESCRIPTION "Use HDF5 (rank defined by MPI) to read and write FieldAPI variables"
+    REQUIRED_PACKAGES "HDF5 COMPONENTS Fortran"
+    REQUIRED_PACKAGES "MPI COMPONENTS Fortran"
+    DEFAULT OFF
+)
 
-if(HAVE_IO)
+ecbuild_add_option( FEATURE IO_MPL
+    DESCRIPTION "Use HDF5 (rank defined by MPL) to read and write FieldAPI variables"
+    REQUIRED_PACKAGES "HDF5 COMPONENTS Fortran"
+    REQUIRED_PACKAGES "FIAT"
+    DEFAULT OFF
+)
+
+if( HAVE_IO_MPL )
     list(APPEND fiat_components MPI)
 endif()
 
@@ -125,7 +143,7 @@ list(APPEND prec_srcs
     ${CMAKE_CURRENT_BINARY_DIR}/src/util/field_array_util_module.F90
     ${CMAKE_CURRENT_BINARY_DIR}/src/util/field_util_module.F90)
 
-if(HAVE_IO)
+if( HAVE_IO )
 list(APPEND prec_srcs
     ${CMAKE_CURRENT_BINARY_DIR}/src/io/field_hdf5_module.F90)
 endif()
@@ -158,6 +176,8 @@ foreach(prec ${precisions})
          $<${fiat_FOUND}:parkind_${prec}>
          OpenMP::OpenMP_Fortran
          $<${HAVE_IO}:HDF5::HDF5>
+         $<${HAVE_IO_MPI}:MPI::MPI_Fortran>
+         $<${HAVE_IO_MPL}:fiat> 
       )
 
   set_property(TARGET ${LIBNAME}_${prec} PROPERTY C_STANDARD 99)
