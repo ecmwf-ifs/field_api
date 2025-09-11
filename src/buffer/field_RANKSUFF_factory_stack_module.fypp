@@ -69,9 +69,11 @@ IF (PRESENT(MEMBER_MAP)) THEN
 ELSE
 !... Assume each entry in ${member_dim}$ corresponds to a separate member
   ALLOCATE(FIELD_STACK%MEMBER_MAP(SIZE(DATA, ${member_dim}$) * 2))
+  IFLD = 1
   DO JFLD=1,SIZE(FIELD_STACK%MEMBER_MAP),2
-    FIELD_STACK%MEMBER_MAP(JFLD) = JFLD
-    FIELD_STACK%MEMBER_MAP(JFLD + 1) = JFLD
+    FIELD_STACK%MEMBER_MAP(JFLD) = IFLD
+    FIELD_STACK%MEMBER_MAP(JFLD + 1) = IFLD
+    IFLD = IFLD + 1
   ENDDO
 ENDIF
 
@@ -140,9 +142,11 @@ IF (PRESENT(MEMBER_MAP)) THEN
 ELSE
 !... Assume each entry in ${member_dim}$ corresponds to a separate member
   ALLOCATE(FIELD_STACK%MEMBER_MAP((UBOUNDS(${member_dim}$) - LLBOUNDS(${member_dim}$) + 1) * 2))
+  IFLD = 1
   DO JFLD=1,SIZE(FIELD_STACK%MEMBER_MAP),2
-    FIELD_STACK%MEMBER_MAP(JFLD) = JFLD
-    FIELD_STACK%MEMBER_MAP(JFLD + 1) = JFLD
+    FIELD_STACK%MEMBER_MAP(JFLD) = IFLD
+    FIELD_STACK%MEMBER_MAP(JFLD + 1) = IFLD
+    IFLD = IFLD + 1
   ENDDO
 ENDIF
 
