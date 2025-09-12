@@ -81,7 +81,7 @@ ecbuild_add_option( FEATURE IO_MPL
     DEFAULT OFF
 )
 
-if(HAVE_IO)
+if( HAVE_IO_MPL )
     list(APPEND fiat_components MPI)
 endif()
 
@@ -134,7 +134,7 @@ list(APPEND prec_srcs
     ${CMAKE_CURRENT_BINARY_DIR}/src/util/field_array_util_module.F90
     ${CMAKE_CURRENT_BINARY_DIR}/src/util/field_util_module.F90)
 
-if(HAVE_IO)
+if( HAVE_IO )
 list(APPEND prec_srcs
     ${CMAKE_CURRENT_BINARY_DIR}/src/io/field_hdf5_module.F90)
 endif()
