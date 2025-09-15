@@ -67,7 +67,7 @@ if(HAVE_IO)
     list(APPEND fiat_components MPI)
 endif()
 
-## find fiat
+## find FIAT or at least its components 
 field_api_find_fiat_modules()
 
 ## buddy allocator option
@@ -151,7 +151,6 @@ foreach(prec ${precisions})
   ecbuild_add_library(
       TARGET ${LIBNAME}_${prec}
       SOURCES ${prec_srcs}
-      DEFINITIONS $<$<NOT:${fiat_FOUND}>:${FIELD_API_DEFINITIONS}>
       OBJECTS
          ${obj_libs}
       PRIVATE_LIBS
