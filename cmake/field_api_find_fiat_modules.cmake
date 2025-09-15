@@ -33,6 +33,13 @@ macro( field_api_find_fiat_modules )
          HINTS ${UTIL_MODULE_PATH} ${UTIL_MODULE_PATH}/src/fiat/util
      )
      ecbuild_info( "Found ABOR1: ${ABOR1_PATH}" )
+
+     find_file( ABOR1_HEADER_PATH abor1.intfb.h REQUIRED
+         HINTS ${UTIL_MODULE_PATH} ${UTIL_MODULE_PATH}/src/fiat/include/fiat
+     )
+     ecbuild_info( "Found ABOR1_HEADER: ${ABOR1_HEADER_PATH}" )
+     get_filename_component(ABOR1_HEADER_DIR "${ABOR1_HEADER_PATH}" DIRECTORY)
+     ecbuild_info( "Found ABOR1_HEADER_DIR: ${ABOR1_HEADER_DIR}" )
    
      find_file( OML_PATH oml_mod.F90 REQUIRED
          HINTS ${UTIL_MODULE_PATH} ${UTIL_MODULE_PATH}/src/fiat/oml
@@ -43,7 +50,17 @@ macro( field_api_find_fiat_modules )
          HINTS ${UTIL_MODULE_PATH} ${UTIL_MODULE_PATH}/src/parkind
      )
      ecbuild_info( "Found PARKIND1: ${PARKIND1_PATH}" )
-     list(APPEND srcs ${ABOR1_PATH} ${OML_PATH} ${PARKIND1_PATH})
+
+     find_file( ECPARKIND_PATH ec_parkind.F90 REQUIRED
+         HINTS ${UTIL_MODULE_PATH} ${UTIL_MODULE_PATH}/src/fiat/util
+     )
+     ecbuild_info( "Found ECPARKIND: ${ECPARKIND_PATH}" )
+
+     find_file( ECLUN_PATH ec_lun.F90 REQUIRED
+         HINTS ${UTIL_MODULE_PATH} ${UTIL_MODULE_PATH}/src/fiat/util
+     )
+     ecbuild_info( "Found ECPARKIND: ${ECLUN_PATH}" )
+     list(APPEND srcs ${ABOR1_PATH} ${OML_PATH} ${PARKIND1_PATH} ${ECPARKIND_PATH} ${ECLUN_PATH})
    endif()
 
 endmacro()

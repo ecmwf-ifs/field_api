@@ -19,7 +19,7 @@ Building FIELD_API requires:
 - [fypp](https://github.com/aradi/fypp) (cloned if not found)
 - [fiat](https://github.com/ecmwf-ifs/fiat/) (optional)
 
-To build FIELD_API without fiat, the path to the directory containing the utility modules `oml_mod.F90`, `abor1.F90` and `parkind1.F90` must be specified using the CMake variable `UTIL_MODULE_PATH`.
+To build FIELD_API without fiat, the path to the directory containing the utility modules `oml_mod.F90`, `abor1.F90` and `parkind1.F90` must be specified using the CMake variable `UTIL_MODULE_PATH`. In particular, it is sufficent to specify cmake .. -DUTIL_MODULE_PATH=path_to_fiat_root_dir.
 
 ## Build and test
 ```

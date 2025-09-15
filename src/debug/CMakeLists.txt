@@ -23,4 +23,6 @@ field_api_add_object_library(
     LIBNAME      field_api_debug
     SRCS         ${srcs}
     DEFINITIONS  ${_definitions}
+
 )
+target_include_directories(field_api_debug PUBLIC $<$<NOT:${fiat_FOUND}>:${ABOR1_HEADER_DIR}>)

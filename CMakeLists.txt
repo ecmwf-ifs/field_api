@@ -172,7 +172,7 @@ foreach(prec ${precisions})
   if( HAVE_OMP_OFFLOAD )
      target_link_options( ${LIBNAME}_${prec} INTERFACE SHELL:${OpenMP_Fortran_FLAGS} )
   endif()
-
+  
   # export target usage interface
   target_include_directories( ${LIBNAME}_${prec}
                               INTERFACE $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include/${LIBNAME}_${prec}> 
