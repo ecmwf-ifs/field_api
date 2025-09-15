@@ -21,12 +21,12 @@
 
 macro( field_api_find_fiat_modules )
 
-   ecbuild_find_package(NAME fiat COMPONENTS ${fiat_components})
-   if( NOT fiat_FOUND )
-     if(NOT UTIL_MODULE_PATH)
-       ecbuild_critical("If not building with fiat, then the path for utility modules must be specified")
-     endif()
-   
+   if( NOT UTIL_MODULE_PATH )
+     ecbuild_info("Looking for FIAT or the path for utility modules must be specified, e.g. using -DUTIL_MODULE_PATH=")
+     ecbuild_find_package(NAME fiat COMPONENTS ${fiat_components} REQUIRED)
+   else() 
+     ecbuild_info( "UTIL_MODULE_PATH is provided. We will build independent of the full FIAT." )
+     set(fiat_FOUND 0)
      ecbuild_info( "Checking for FIAT components in ${UTIL_MODULE_PATH}" )
    
      find_file( ABOR1_PATH abor1.F90 REQUIRED
