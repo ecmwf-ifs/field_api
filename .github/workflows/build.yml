@@ -90,11 +90,11 @@ jobs:
 
           - name: macos
             # Xcode compiler requires empty environment variables, so we pass null (~) here
-            os: macos-13
-            compiler: clang-14
+            os: macos-15
+            compiler: clang-17
             compiler_cc: ~
             compiler_cxx: ~
-            compiler_fc: gfortran-13
+            compiler_fc: gfortran-15
             python-version: '3.11'
             caching: true
 
