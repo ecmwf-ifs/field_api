@@ -22,7 +22,9 @@ PROGRAM TEST_HDF5_PARALLEL_OUTPUT
         USE HDF5, ONLY: H5_REAL_KIND, H5_INTEGER_KIND
         USE HDF5, ONLY: H5T_NATIVE_DOUBLE, H5T_NATIVE_INTEGER
         USE HDF5, ONLY: H5T_NATIVE_REAL, H5F_ACC_TRUNC_F
-        USE MPL_MODULE, ONLY: MPL_INIT, MPL_END, MPL_RANK
+#if(HAVE_MPI)
+        USE MPI, ONLY: MPI_INIT, MPI_FINALIZE, MPI_COMM_WORLD, MPI_COMM_RANK
+#endif
         USE ISO_C_BINDING, ONLY : C_PTR, C_LOC
         IMPLICIT NONE
 
@@ -52,6 +54,7 @@ PROGRAM TEST_HDF5_PARALLEL_OUTPUT
         TYPE(C_PTR) :: DI_CPUPTR 
         TYPE(C_PTR) :: DL_CPUPTR 
         INTEGER :: I, J
+        INTEGER :: mpierr, mpi_Rank
 
         ! HDF5 variables
         INTEGER(HID_T) ::  file_id, space_id, kind_id
@@ -61,8 +64,13 @@ PROGRAM TEST_HDF5_PARALLEL_OUTPUT
         INTEGER(JPIM) :: NPROCS
         CHARACTER(LEN=100) :: filename,filenames
 
-        CALL MPL_INIT(KPROCS=NPROCS,LDINFO=.FALSE.,LDENV=.TRUE.)
-        WRITE(filename, '(A,I0)') "field_data_rank", MPL_RANK 
+        mpi_rank=1
+#if(HAVE_MPI)
+        CALL MPI_INIT(mpierr)
+        CALL MPI_COMM_RANK(MPI_COMM_WORLD, mpi_rank, mpierr)
+        mpi_rank=mpi_rank+1
+#endif
+        WRITE(filename, '(A,I0)') "field_data_rank", mpi_rank 
         WRITE(filenames, '(A,I0)') "field_store"
         filename = TRIM(filename) // ".hdf5"
         filenames = TRIM(filenames) 
@@ -186,7 +194,9 @@ PROGRAM TEST_HDF5_PARALLEL_OUTPUT
         CALL WRITE_HDF5_PERRANK_DATA(WI,filenames,"WI")
         CALL WRITE_HDF5_PERRANK_DATA(WL,filenames,"WL")
 
-        CALL MPL_END(LDMEMINFO=.FALSE.)
+#if(HAVE_MPI)
+        CALL MPI_FINALIZE(mpierr)
+#endif
 
         CALL FIELD_DELETE(WB)
         CALL FIELD_DELETE(WM)

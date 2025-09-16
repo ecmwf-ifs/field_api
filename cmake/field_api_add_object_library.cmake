@@ -60,8 +60,9 @@ macro(field_api_add_object_library)
            $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
            $<${fiat_FOUND}:fiat>
            $<${fiat_FOUND}:parkind_${DEFAULT_PRECISION}>
+           $<${HAVE_MPI}:MPI::MPI_Fortran>
            OpenMP::OpenMP_Fortran
-           $<${HAVE_IO}:HDF5::HDF5>
+           $<$<BOOL:${HAVE_IO}>:HDF5::HDF5>
         )
 
     target_include_directories( ${_PAR_LIBNAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
