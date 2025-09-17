@@ -24,7 +24,7 @@ macro( field_api_find_fiat_modules )
    ecbuild_find_package(NAME fiat COMPONENTS ${fiat_components})
    if( NOT fiat_FOUND )
      if(NOT UTIL_MODULE_PATH)
-       ecbuild_critical("If not building with fiat, then the path for utility modules must be specified")
+       ecbuild_critical("If not building with fiat, then the path for utility modules must be specified in UTIL_MODULE_PATH")
      endif()
    
      ecbuild_info( "Checking for FIAT components in ${UTIL_MODULE_PATH}" )
