@@ -67,7 +67,7 @@ if(HAVE_IO)
     list(APPEND fiat_components MPI)
 endif()
 
-## find fiat
+## find FIAT or at least its components 
 field_api_find_fiat_modules()
 
 ## Field Gang
