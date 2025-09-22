@@ -11,7 +11,8 @@ check_symbol_exists(backtrace execinfo.h HAVE_BACKTRACE)
 
 list(APPEND srcs
     field_statistics_module.F90
-    field_backtrace.c)
+    field_backtrace.c
+    ${fiat_srcs})
 
 unset( _definitions )
 if( HAVE_BACKTRACE )
