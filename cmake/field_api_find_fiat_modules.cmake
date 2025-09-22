@@ -45,7 +45,7 @@ macro( field_api_find_fiat_modules )
          HINTS ${UTIL_MODULE_PATH} ${UTIL_MODULE_PATH}/src/parkind
      )
      ecbuild_info( "Found PARKIND1: ${PARKIND1_PATH}" )
-     list(APPEND srcs ${ABOR1_PATH} ${OML_PATH} ${PARKIND1_PATH})
+     list(APPEND fiat_srcs ${ABOR1_PATH} ${OML_PATH} ${PARKIND1_PATH})
    endif()
 
 endmacro()
