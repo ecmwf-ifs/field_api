@@ -19,7 +19,7 @@ Building FIELD_API requires:
 - [fypp](https://github.com/aradi/fypp) (cloned if not found)
 - [fiat](https://github.com/ecmwf-ifs/fiat/) (required, may optionally be replaced with a set of prepared FIAT components.)
 
-To build FIELD_API without FIAT, the path to the directory containing the utility modules `oml_mod.F90`, `abor1.F90` and `parkind1.F90` must be specified using the CMake variable `UTIL_MODULE_PATH`. The files must not carry further dependencies, refer to source of CLOUDSC dwarf for a demonstration.
+To build FIELD_API without FIAT, the path to the directory containing the utility modules `oml_mod.F90`, `abor1.F90` and `parkind1.F90` must be specified using the CMake variable `UTIL_MODULE_PATH`. The files must not carry further dependencies, refer for a sample implementation of such modules in [CLOUDSC dwarf](https://github.com/ecmwf-ifs/dwarf-p-cloudsc/blob/main/src/common/module).
 ## Build and test
 ```
 mkdir build

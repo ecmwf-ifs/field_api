@@ -142,7 +142,6 @@ foreach(prec ${precisions})
   ecbuild_add_library(
       TARGET ${LIBNAME}_${prec}
       SOURCES ${prec_srcs}
-      DEFINITIONS $<$<NOT:${fiat_FOUND}>:${FIELD_API_DEFINITIONS}>
       OBJECTS
          ${obj_libs}
       PRIVATE_LIBS
