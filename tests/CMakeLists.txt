@@ -139,7 +139,7 @@ if(HAVE_ACC)
       )
 endif()
 
-if(HAVE_IO_SERIAL OR HAVE_IO_PARALLEL)
+if(HAVE_IO)
   list(APPEND HDF5_TEST_FILES
        test_hdf5_wr_parallel_field2d.F90
        test_hdf5_rw_parallel_general.F90)
@@ -193,7 +193,8 @@ endif()
 set(omp_num_threads 8)
 
 
-if(HAVE_IO_PARALLEL)
+if(HAVE_IO)
+set(H5MPI_PROCS "$<IF:$<BOOL:${HAVE_IO_PARALLEL}>,2,1>")
 foreach(TEST_FILE ${HDF5_TEST_FILES})
     get_filename_component(TEST_NAME ${TEST_FILE} NAME_WE)
     ecbuild_add_test(
@@ -204,13 +205,13 @@ foreach(TEST_FILE ${HDF5_TEST_FILES})
            $<${fiat_FOUND}:parkind_${DEFAULT_PRECISION}>
            $<${fiat_FOUND}:fiat>
            OpenMP::OpenMP_Fortran
-           MPI::MPI_Fortran
+	   $<${HAVE_MPI}:MPI::MPI_Fortran>
            $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
            $<$<BOOL:${HAVE_IO}>:HDF5::HDF5>
         DEFINITIONS
            $<${HAVE_FIELD_GANG}:HAVE_FIELD_GANG>
         LINKER_LANGUAGE Fortran
-        MPI 2
+	MPI ${H5MPI_PROCS} 
         OMP ${omp_num_threads}
         ENVIRONMENT "DEV_ALLOC_SIZE=${dev_alloc_size}"
     )
