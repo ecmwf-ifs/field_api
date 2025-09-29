@@ -198,13 +198,13 @@ foreach(TEST_FILE ${HDF5_TEST_FILES})
            $<${fiat_FOUND}:parkind_${DEFAULT_PRECISION}>
            $<${fiat_FOUND}:fiat>
            OpenMP::OpenMP_Fortran
-	   $<${HAVE_MPI}:MPI::MPI_Fortran>
+           $<${HAVE_MPI}:MPI::MPI_Fortran>
            $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
            $<$<BOOL:${HAVE_IO}>:HDF5::HDF5>
         DEFINITIONS
            $<${HAVE_FIELD_GANG}:HAVE_FIELD_GANG>
         LINKER_LANGUAGE Fortran
-	MPI ${H5MPI_PROCS} 
+        MPI ${H5MPI_PROCS} 
         OMP ${omp_num_threads}
         ENVIRONMENT "DEV_ALLOC_SIZE=${dev_alloc_size}"
     )

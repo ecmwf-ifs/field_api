@@ -75,7 +75,7 @@ ecbuild_add_option( FEATURE IO_PARALLEL
     DEFAULT OFF
 )
 
-if(HAVE_IO_SERIAL OR HAVE_IO_PARALLEL)
+if( HAVE_IO_SERIAL OR HAVE_IO_PARALLEL )
     option( HAVE_IO "HAVE_IO" TRUE)
 else()
     option( HAVE_IO "HAVE_IO" FALSE)
@@ -140,8 +140,8 @@ list(APPEND prec_srcs
     ${CMAKE_CURRENT_BINARY_DIR}/src/util/field_util_module.F90)
 
 if( HAVE_IO )
-list(APPEND prec_srcs
-    ${CMAKE_CURRENT_BINARY_DIR}/src/io/field_hdf5_module.F90)
+  list(APPEND prec_srcs
+      ${CMAKE_CURRENT_BINARY_DIR}/src/io/field_hdf5_module.F90)
 endif()
 
 list(APPEND obj_libs
