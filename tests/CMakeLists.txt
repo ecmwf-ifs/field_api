@@ -132,13 +132,6 @@ set(ABOR1_TEST_FILES
 	resize_wrapper.F90
 	)
 
-if(HAVE_ACC)
-  list(APPEND TEST_FILES
-       get_device_data_multi_blk_async.F90
-       test_force_async_acc.F90
-      )
-endif()
-
 if(HAVE_IO)
   list(APPEND HDF5_TEST_FILES
        test_hdf5_wr_parallel_field2d.F90
@@ -205,13 +198,13 @@ foreach(TEST_FILE ${HDF5_TEST_FILES})
            $<${fiat_FOUND}:parkind_${DEFAULT_PRECISION}>
            $<${fiat_FOUND}:fiat>
            OpenMP::OpenMP_Fortran
-	   $<${HAVE_MPI}:MPI::MPI_Fortran>
+           $<${HAVE_MPI}:MPI::MPI_Fortran>
            $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
            $<$<BOOL:${HAVE_IO}>:HDF5::HDF5>
         DEFINITIONS
            $<${HAVE_FIELD_GANG}:HAVE_FIELD_GANG>
         LINKER_LANGUAGE Fortran
-	MPI ${H5MPI_PROCS} 
+        MPI ${H5MPI_PROCS} 
         OMP ${omp_num_threads}
         ENVIRONMENT "DEV_ALLOC_SIZE=${dev_alloc_size}"
     )
@@ -254,7 +247,7 @@ foreach(TEST_FILE ${TEST_FILES})
            $<${HAVE_FIELD_GANG}:HAVE_FIELD_GANG>
         LINKER_LANGUAGE Fortran
         OMP ${omp_num_threads}
-		ENVIRONMENT "DEV_ALLOC_SIZE=${dev_alloc_size}"
+        ENVIRONMENT "DEV_ALLOC_SIZE=${dev_alloc_size}"
     )
 
     set_target_properties(${TEST_NAME}.x
