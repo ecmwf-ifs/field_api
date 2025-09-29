@@ -45,8 +45,8 @@ ecbuild_add_option( FEATURE SINGLE_PRECISION
 ecbuild_add_option( FEATURE DOUBLE_PRECISION
 	DESCRIPTION "Compile field_api in double precision" DEFAULT ON)
 
+set(DEFAULT_PRECISION sp)
 if(HAVE_SINGLE_PRECISION)
-    set(DEFAULT_PRECISION sp)
     list(APPEND fiat_components single)
     list(APPEND precisions sp)
 endif()
@@ -172,7 +172,7 @@ foreach(prec ${precisions})
          $<${fiat_FOUND}:parkind_${prec}>
          OpenMP::OpenMP_Fortran
          $<$<BOOL:${HAVE_IO}>:HDF5::HDF5>
-	 $<${HAVE_IO_PARALLEL}:MPI::MPI_Fortran>
+         $<${HAVE_IO_PARALLEL}:MPI::MPI_Fortran>
       )
 
   set_property(TARGET ${LIBNAME}_${prec} PROPERTY C_STANDARD 99)
