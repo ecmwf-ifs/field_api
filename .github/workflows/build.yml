@@ -90,11 +90,11 @@ jobs:
 
           - name: macos
             # Xcode compiler requires empty environment variables, so we pass null (~) here
-            os: macos-13
-            compiler: clang-14
+            os: macos-15
+            compiler: clang-17
             compiler_cc: ~
             compiler_cxx: ~
-            compiler_fc: gfortran-13
+            compiler_fc: gfortran-15
             python-version: '3.11'
             caching: true
 
@@ -227,5 +227,5 @@ jobs:
         dependency_branch: develop
         dependency_cmake_options: |
           ecmwf-ifs/fiat: "-DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DENABLE_TESTS=OFF
-        cmake_options: "-DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ${{ matrix.cmake_options }} -DENABLE_ACC=OFF -DENABLE_IO=ON -DENABLE_GET_VIEW_ABORT=${{ matrix.get_view_abort }} -DENABLE_DELAYED=${{ matrix.delayed }}"
+        cmake_options: "-DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ${{ matrix.cmake_options }} -DENABLE_ACC=OFF -DENABLE_MPI=ON -DENABLE_IO_PARALLEL=ON -DENABLE_GET_VIEW_ABORT=${{ matrix.get_view_abort }} -DENABLE_DELAYED=${{ matrix.delayed }}"
         ctest_options: "${{ matrix.ctest_options }}"
