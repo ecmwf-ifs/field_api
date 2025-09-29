@@ -35,9 +35,9 @@ field_api_add_object_library(
 )
 
 if(HAVE_IO_SERIAL)
-target_compile_definitions( field_api_io PRIVATE HAVE_IO_SERIAL )
+  target_compile_definitions( field_api_io PRIVATE HAVE_IO_SERIAL )
 elseif(HAVE_IO_PARALLEL)
-target_compile_definitions( field_api_io PRIVATE HAVE_IO_PARALLEL )
+  target_compile_definitions( field_api_io PRIVATE HAVE_IO_PARALLEL )
 endif()
 
 ## don't build precision dependent sourcefile
