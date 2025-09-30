@@ -19,7 +19,10 @@ PROGRAM TEST_HDF5_PARALLEL_OUTPUT
         USE FIELD_ABORT_MODULE, ONLY: FIELD_ABORT
         USE HDF5, ONLY: HSIZE_T, HID_T
         USE ISO_C_BINDING, ONLY : C_PTR, C_LOC
-        USE MPL_MODULE, ONLY: MPL_INIT, MPL_END, MPL_RANK
+#if(HAVE_MPI)
+        USE MPI, ONLY: MPI_INIT, MPI_FINALIZE
+#endif
+
         IMPLICIT NONE
 
         CLASS(FIELD_1RB), POINTER :: FIELD_DATA_1RB => NULL()
@@ -119,6 +122,7 @@ PROGRAM TEST_HDF5_PARALLEL_OUTPUT
         TYPE(C_PTR) :: DI_CPUPTR 
         TYPE(C_PTR) :: DL_CPUPTR 
         INTEGER :: I, J
+        INTEGER :: mpierr
 
         ! HDF5 variables
         INTEGER(HID_T) :: file_id, space_id, kind_id
@@ -126,9 +130,10 @@ PROGRAM TEST_HDF5_PARALLEL_OUTPUT
         INTEGER(HSIZE_T), DIMENSION(2) :: dims
         INTEGER :: hdferr
         INTEGER(JPIM) :: k,l,m 
-        INTEGER(JPIM) :: NPROCS
         CHARACTER(LEN=100) :: h5filename
-        CALL MPL_INIT(KPROCS=NPROCS,LDINFO=.FALSE.,LDENV=.TRUE.)
+#if(HAVE_MPI)
+        CALL MPI_INIT(mpierr)
+#endif
         WRITE(h5filename, '(A,I0)') "field_general"
         h5filename = TRIM(h5filename) 
 
@@ -484,7 +489,9 @@ PROGRAM TEST_HDF5_PARALLEL_OUTPUT
            CALL FIELD_ABORT("Wrong HDF5 write/read of 5D data")
         ENDIF
 
-        CALL MPL_END(LDMEMINFO=.FALSE.)
+#if(HAVE_MPI)
+        CALL MPI_FINALIZE(mpierr)
+#endif
 
         CALL FIELD_DELETE(FIELD_DATA_1RB)
         CALL FIELD_DELETE(FIELD_DATA_1RM)

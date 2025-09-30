@@ -18,11 +18,11 @@ ecbuild_add_test(
     SOURCES main.F90
     LIBS
         ${LIBNAME_PREC}
-        parkind_${DEFAULT_PRECISION}
-        fiat
+        $<${fiat_FOUND}:parkind_${DEFAULT_PRECISION}>
+        $<${fiat_FOUND}:fiat>
         OpenMP::OpenMP_Fortran
         $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
-        $<${HAVE_IO}:HDF5::HDF5>
+        $<$<BOOL:${HAVE_IO}>:HDF5::HDF5>
     LINKER_LANGUAGE Fortran
 	ENVIRONMENT "DEV_ALLOC_SIZE=${dev_alloc_size}"
 )
@@ -97,7 +97,6 @@ list(APPEND TEST_FILES
         test_0_sized_transfer_wrap.F90
         test_async.F90
         test_bc.F90
-        test_crc64.F90
         test_field1d.F90
         test_field_array.F90
         test_field_array_0_size.F90
@@ -121,6 +120,10 @@ list(APPEND TEST_FILES
         test_wrappernosynconfinal.F90
         wrapper_modify_gpu.F90
 	)
+if(fiat_FOUND)
+  list(APPEND TEST_FILES
+          test_crc64.F90 )
+endif()
 
 #Place-holder for failing tests
 set(FAILING_TEST_FILES
@@ -138,7 +141,7 @@ if(HAVE_ACC)
       )
 endif()
 
-if(HAVE_IO)
+if(HAVE_IO_SERIAL OR HAVE_IO_PARALLEL)
   list(APPEND HDF5_TEST_FILES
        test_hdf5_wr_parallel_field2d.F90
        test_hdf5_rw_parallel_general.F90)
@@ -191,7 +194,8 @@ endif()
 #Set OMP_NUM_THREADS for tests
 set(omp_num_threads 8)
 
-if(HAVE_IO AND fiat_HAVE_MPI)
+
+if(HAVE_IO_PARALLEL)
 foreach(TEST_FILE ${HDF5_TEST_FILES})
     get_filename_component(TEST_NAME ${TEST_FILE} NAME_WE)
     ecbuild_add_test(
@@ -199,11 +203,12 @@ foreach(TEST_FILE ${HDF5_TEST_FILES})
         SOURCES ${TEST_FILE}
         LIBS
            ${LIBNAME_PREC}
-           parkind_${DEFAULT_PRECISION}
-           fiat
+           $<${fiat_FOUND}:parkind_${DEFAULT_PRECISION}>
+           $<${fiat_FOUND}:fiat>
            OpenMP::OpenMP_Fortran
+           MPI::MPI_Fortran
            $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
-           $<${HAVE_IO}:HDF5::HDF5>
+           $<$<BOOL:${HAVE_IO}>:HDF5::HDF5>
         DEFINITIONS
            $<${HAVE_FIELD_GANG}:HAVE_FIELD_GANG>
         LINKER_LANGUAGE Fortran
@@ -225,6 +230,7 @@ foreach(TEST_FILE ${HDF5_TEST_FILES})
     endif()
     target_compile_definitions( ${TEST_NAME}.x PRIVATE
                                 $<${HAVE_OMP_OFFLOAD}:OMPGPU>
+                                $<${HAVE_MPI}:HAVE_MPI>
                                 $<${HAVE_CUDA}:_CUDA> )
 
     if( DEFAULT_PRECISION MATCHES sp )
@@ -240,11 +246,11 @@ foreach(TEST_FILE ${TEST_FILES})
         SOURCES ${TEST_FILE}
         LIBS
            ${LIBNAME_PREC}
-           parkind_${DEFAULT_PRECISION}
-           fiat
+           $<${fiat_FOUND}:parkind_${DEFAULT_PRECISION}>
+           $<${fiat_FOUND}:fiat>
            OpenMP::OpenMP_Fortran
            $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
-           $<${HAVE_IO}:HDF5::HDF5>
+           $<$<BOOL:${HAVE_IO}>:HDF5::HDF5>
         DEFINITIONS
            $<${HAVE_FIELD_GANG}:HAVE_FIELD_GANG>
         LINKER_LANGUAGE Fortran
@@ -264,7 +270,7 @@ foreach(TEST_FILE ${TEST_FILES})
       endif()
     endif()
     target_compile_definitions( ${TEST_NAME}.x PRIVATE
-                                $<${HAVE_IO}:HDF5::HDF5>
+                                $<$<BOOL:${HAVE_IO}>:HDF5::HDF5>
                                 $<${HAVE_OMP_OFFLOAD}:OMPGPU>
                                 $<${HAVE_CUDA}:_CUDA> )
 
@@ -276,10 +282,10 @@ endforeach()
 foreach(FAILING_TEST_FILE ${FAILING_TEST_FILES})
     get_filename_component(FAILING_TEST_NAME ${FAILING_TEST_FILE} NAME_WE)
     add_executable(${FAILING_TEST_NAME}.x ${FAILING_TEST_FILE})
-    target_link_libraries(${FAILING_TEST_NAME}.x PRIVATE ${LIBNAME_PREC} parkind_${DEFAULT_PRECISION} fiat)
+    target_link_libraries(${FAILING_TEST_NAME}.x PRIVATE ${LIBNAME_PREC} $<${fiat_FOUND}:parkind_${DEFAULT_PRECISION} fiat>)
     target_link_libraries(${FAILING_TEST_NAME}.x PRIVATE OpenMP::OpenMP_Fortran)
     target_link_libraries(${FAILING_TEST_NAME}.x PRIVATE $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>)
-    target_link_libraries(${FAILING_TEST_NAME}.x PRIVATE $<${HAVE_IO}:HDF5::HDF5>)
+    target_link_libraries(${FAILING_TEST_NAME}.x PRIVATE $<$<BOOL:${HAVE_IO}>:HDF5::HDF5>)
     set_target_properties(${FAILING_TEST_NAME}.x PROPERTIES LINKER_LANGUAGE Fortran)
     add_test(NAME ${FAILING_TEST_NAME} COMMAND ${FAILING_TEST_NAME}.x)
     set_property(TEST ${FAILING_TEST_NAME} PROPERTY WILL_FAIL TRUE)
@@ -297,10 +303,10 @@ endforeach()
 foreach(ABOR1_TEST_FILE ${ABOR1_TEST_FILES})
     get_filename_component(ABOR1_TEST_NAME ${ABOR1_TEST_FILE} NAME_WE)
     add_executable(${ABOR1_TEST_NAME}.x ${ABOR1_TEST_FILE})
-    target_link_libraries(${ABOR1_TEST_NAME}.x PRIVATE ${LIBNAME_PREC} parkind_${DEFAULT_PRECISION} fiat)
+    target_link_libraries(${ABOR1_TEST_NAME}.x PRIVATE ${LIBNAME_PREC} $<${fiat_FOUND}:parkind_${DEFAULT_PRECISION} fiat>)
     target_link_libraries(${ABOR1_TEST_NAME}.x PRIVATE OpenMP::OpenMP_Fortran)
     target_link_libraries(${ABOR1_TEST_NAME}.x PRIVATE $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>)
-    target_link_libraries(${ABOR1_TEST_NAME}.x PRIVATE $<${HAVE_IO}:HDF5::HDF5>)
+    target_link_libraries(${ABOR1_TEST_NAME}.x PRIVATE $<$<BOOL:${HAVE_IO}>:HDF5::HDF5>)
     set_target_properties(${ABOR1_TEST_NAME}.x PROPERTIES LINKER_LANGUAGE Fortran)
     add_test(NAME ${ABOR1_TEST_NAME} COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/abor1catcher.sh "./${ABOR1_TEST_NAME}.x")
     set_property(TEST ${ABOR1_TEST_NAME} PROPERTY ENVIRONMENT "OMP_NUM_THREADS=${omp_num_threads};DEV_ALLOC_SIZE=${dev_alloc_size}")
@@ -314,20 +320,22 @@ foreach(ABOR1_TEST_FILE ${ABOR1_TEST_FILES})
     target_compile_definitions( ${ABOR1_TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:_CUDA> )
 endforeach()
 
+if(fiat_FOUND)
 ## Mixed precision unit-test
-ecbuild_add_test(
-    TARGET  init_wrapper_mixed_precision.x
-    SOURCES init_wrapper_mixed_precision.F90
-    LIBS
-      ${LIBNAME}_sp
-      fiat
-      parkind_sp
-      OpenMP::OpenMP_Fortran
-      $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
-      $<${HAVE_IO}:HDF5::HDF5>
-    LINKER_LANGUAGE Fortran
-    CONDITION ${HAVE_SINGLE_PRECISION}
-)
+  ecbuild_add_test(
+      TARGET  init_wrapper_mixed_precision.x
+      SOURCES init_wrapper_mixed_precision.F90
+      LIBS
+        ${LIBNAME}_sp
+        $<${fiat_FOUND}:parkind_sp>
+        $<${fiat_FOUND}:fiat>
+        OpenMP::OpenMP_Fortran
+        $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
+        $<$<BOOL:${HAVE_IO}>:HDF5::HDF5>
+      LINKER_LANGUAGE Fortran
+      CONDITION ${HAVE_SINGLE_PRECISION}
+  )
+endif()
 
 ## Test presence of GPUs
 add_executable(check_gpu_num.x check_gpu_num.F90)
