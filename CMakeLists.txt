@@ -135,11 +135,6 @@ list(APPEND prec_srcs
     ${CMAKE_CURRENT_BINARY_DIR}/src/io/field_hdf5_module.F90)
 endif()
 
-if( HAVE_MPI )
-list(APPEND prec_srcs
-    ${CMAKE_CURRENT_BINARY_DIR}/src/io/field_hdf5_module.F90)
-endif()
-
 list(APPEND obj_libs
         field_api_core
         field_api_debug
