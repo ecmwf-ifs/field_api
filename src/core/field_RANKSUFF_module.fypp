@@ -347,10 +347,9 @@ $:offload_macros.reinit_gpu_context(indent=6)
     IF (PRESENT(ZERO)) THEN
       IF (ZERO) VIEW_PTR(${ft.viewShape}$) = ${ft.default}$
     END IF
-!$omp critical
+
     CALL SELF%REMOVE_STATUS(UNINITIALIZED_CPU)
     CALL SELF%SET_DEVICE_DIRTY()
-!$omp end critical
 
   END FUNCTION ${ftn}$_GET_VIEW
 #:endif
