@@ -43,6 +43,7 @@ Features of FIELD_API can be toggled by passing the following argument to the CM
 |:--- |:--- |:--- |
 | TESTS | ON | Build the testing suite. |
 | BUDDY_MALLOC | ON | Enable the use of a binary buddy memory allocator for the shadow host allocation for `FIELD%DEVPTR`. This option is switched off if CUDA is enabled.|
+| MPI | OFF | Support for MPI distributed parallelism (currently used in parallel IO feature) |
 | ACC | ON | Enable the use of OpenACC for GPU offload. Currently only supported on NVHPC. |
 | OMP_OFFLOAD | OFF | Enable the use of OpenMP for GPU offload. Currently only supported on NVHPC. |
 | SINGLE_PRECISION | ON | Enable the compilation of field_api in single precision |
@@ -51,6 +52,8 @@ Features of FIELD_API can be toggled by passing the following argument to the CM
 | FIELD_GANG | ON | Enable packed storage of groups of fields. This feature is not supported for the Cray compiler as it cannot resolve the underlying polymorphism.|
 | GET_VIEW_ABORT | ON | If activated, get_view will abort when the data are not present on CPU. |
 | DELAYED | OFF | If activated, field owners will be delayed by default. |
+| IO_SERIAL | OFF | Use serial HDF5 to read and write FieldAPI variables.  |
+| IO_PARALLEL | OFF | Use  HDF5 (rank defined by MPI) to read and write FieldAPI variables.  |
 
 ## Supported compilers
 The library has been tested with the nvhpc toolkit from Nvidia, version 23.9/24.5
@@ -380,8 +383,8 @@ Optional arguments:
 
 Example HDF5 output and input calls:
 ```
-CALL WRITE_HDF5_PERRANK_DATA(FIELD_DATA_1RB, DATA_GPU_1RB, h5filename, "DATA_GPU_1RB", LSYNC=.TRUE.)
-CALL  READ_HDF5_PERRANK_DATA(FIELD_DATA_1RB, DATA_CPU_1RB, h5filename, "DATA_CPU_1RB") 
+CALL WRITE_HDF5_PERRANK_DATA(FIELD_DATA_1RB, h5filename, "DATA_GPU_1RB", LSYNC=.TRUE.)
+CALL  READ_HDF5_PERRANK_DATA(FIELD_DATA_1RB, h5filename, "DATA_CPU_1RB") 
 ```
 # Public API
 
