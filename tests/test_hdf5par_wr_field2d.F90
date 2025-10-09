@@ -46,11 +46,6 @@ PROGRAM TEST_HDF5_PARALLEL_OUTPUT
         REAL(KIND=JPRD), POINTER :: DD_CPU(:,:)
         INTEGER(KIND=JPIM), POINTER :: DI_CPU(:,:)
         LOGICAL(KIND=JPLM), POINTER :: DL_CPU(:,:)
-        TYPE(C_PTR) :: DB_CPUPTR 
-        TYPE(C_PTR) :: DM_CPUPTR 
-        TYPE(C_PTR) :: DD_CPUPTR 
-        TYPE(C_PTR) :: DI_CPUPTR 
-        TYPE(C_PTR) :: DL_CPUPTR 
         INTEGER :: I, J
 
         ! HDF5 variables
@@ -59,12 +54,10 @@ PROGRAM TEST_HDF5_PARALLEL_OUTPUT
         INTEGER(HSIZE_T), DIMENSION(2) :: dims
         INTEGER :: hdferr
         INTEGER(JPIM) :: NPROCS
-        CHARACTER(LEN=100) :: filename,filenames
+        CHARACTER(LEN=100) :: filenames
 
         CALL MPL_INIT(KPROCS=NPROCS,LDINFO=.FALSE.,LDENV=.TRUE.)
-        WRITE(filename, '(A,I0)') "field_data_rank", MPL_RANK 
         WRITE(filenames, '(A,I0)') "field_store"
-        filename = TRIM(filename) // ".hdf5"
         filenames = TRIM(filenames) 
 
         ALLOCATE(DB(10,10))
@@ -141,40 +134,6 @@ PROGRAM TEST_HDF5_PARALLEL_OUTPUT
         CALL WD%GET_HOST_DATA_RDWR(DD_CPU)
         CALL WI%GET_HOST_DATA_RDWR(DI_CPU)
         CALL WL%GET_HOST_DATA_RDWR(DL_CPU)
-        DB_CPUPTR = C_LOC(DB_CPU)
-        DM_CPUPTR = C_LOC(DM_CPU)
-        DD_CPUPTR = C_LOC(DD_CPU)
-        DI_CPUPTR = C_LOC(DI_CPU)
-        DL_CPUPTR = C_LOC(DL_CPU)
-        CALL H5open_f(hdferr)
-        dims = SHAPE(DB)  ! Get dimensions of the array
-        CALL H5Screate_simple_f(2, dims, space_id, hdferr)
-        CALL H5Fcreate_f(filename, H5F_ACC_TRUNC_F, file_id, hdferr)
-        IF(JPRB == JPRD) THEN
-!Specialize the code instead using HDF5 functionality, see another HDF test for an alternative
-           CALL H5Dcreate_f(file_id, "WB", H5T_NATIVE_DOUBLE, space_id, dsetb_id, hdferr)
-           CALL H5Dwrite_f(dsetb_id,       H5T_NATIVE_DOUBLE, DB_CPUPTR, hdferr)
-        ELSE 
-           CALL H5Dcreate_f(file_id, "WB", H5T_NATIVE_REAL, space_id, dsetb_id, hdferr)
-           CALL H5Dwrite_f(dsetb_id,       H5T_NATIVE_REAL, DB_CPUPTR, hdferr)
-        ENDIF
-        CALL H5Dcreate_f(file_id, "WM", H5T_NATIVE_REAL   , space_id, dsetm_id, hdferr)
-        CALL H5Dcreate_f(file_id, "WD", H5T_NATIVE_DOUBLE , space_id, dsetd_id, hdferr)
-        CALL H5Dcreate_f(file_id, "WI", H5T_NATIVE_INTEGER, space_id, dseti_id, hdferr)
-        CALL H5Dcreate_f(file_id, "WL", H5T_NATIVE_INTEGER, space_id, dsetl_id, hdferr)
-        CALL H5Dwrite_f(dsetm_id, H5T_NATIVE_REAL, DM_CPUPTR, hdferr)
-        CALL H5Dwrite_f(dsetd_id, H5T_NATIVE_DOUBLE, DD_CPUPTR, hdferr)
-        CALL H5Dwrite_f(dseti_id, H5T_NATIVE_INTEGER, DI_CPUPTR, hdferr)
-        CALL H5Dwrite_f(dsetl_id, H5T_NATIVE_INTEGER, DL_CPUPTR, hdferr)
-
-        CALL H5Dclose_f(dsetb_id, hdferr)
-        CALL H5Dclose_f(dsetm_id, hdferr)
-        CALL H5Dclose_f(dsetd_id, hdferr)
-        CALL H5Dclose_f(dseti_id, hdferr)
-        CALL H5Dclose_f(dsetl_id, hdferr)
-        CALL H5Sclose_F(space_id, hdferr)
-        CALL H5Fclose_F(file_id, hdferr)
-        CALL H5close_f(hdferr)
 
         DO CONCURRENT(i=1:10, j=1:10)
            DL_CPU(I,J) = .FALSE. 
