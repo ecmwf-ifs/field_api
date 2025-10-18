@@ -196,4 +196,5 @@ jobs:
               {% endfor %}
               {{ cmake_options|join(' ') }}
             cmake --build build
+            ulimit -S -s unlimited
             ctest --test-dir build --output-on-failure
