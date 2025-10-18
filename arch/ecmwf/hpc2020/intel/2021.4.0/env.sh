@@ -33,11 +33,11 @@ module_unload java
 # Load modules
 module_load prgenv/intel
 module_load intel/2021.4.0
-module_load hpcx-openmpi/2.10.0
-module_load boost/1.71.0
-module_load hdf5/1.10.6
-module_load cmake/3.20.2
-module_load python3/3.8.8-01
+module_load hpcx-openmpi/2.18.1
+module_load boost/1.87.0
+module_load hdf5/1.14.6
+module_load cmake/4.0.2
+module_load python3/3.11.10-01
 module_load java/11.0.6
 
 set -x
@@ -45,4 +45,3 @@ set -x
 # Restore tracing to stored setting
 { if [[ -n "$tracing_" ]]; then set -x; else set +x; fi } 2>/dev/null
 
-export ECBUILD_TOOLCHAIN="./toolchain.cmake"

@@ -31,9 +31,10 @@ module_purge
 # Load modules
 module_load prgenv/nvidia
 module_load nvidia/24.5
-module_load python3/3.10.10-01
-module_load cmake/3.25.2
-module_load ecbuild/3.8.5
+module_load python3/3.11.10-01
+module_load cmake/4.0.2
+module_load ecbuild/3.12.0
+module load ninja/1.12.1  
 
 # Increase stack size to maximum
 ulimit -S -s unlimited
@@ -45,3 +46,4 @@ ulimit -S -l unlimited
 path=$BASH_SOURCE
 DIR_PATH=$(dirname $path)
 export ECBUILD_TOOLCHAIN=$DIR_PATH/toolchain.cmake
+
