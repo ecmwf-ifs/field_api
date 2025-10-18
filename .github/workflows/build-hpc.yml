@@ -189,7 +189,7 @@ jobs:
             git fetch origin $SHA
             git reset --hard FETCH_HEAD
             popd
-            cmake -G Ninja -S $REPO -B build \
+            cmake -G "Unix Makefiles" -S $REPO -B build \
               {% for name in dependencies %}
                 {% set org, proj = name.split('/') %}
                 -D{{proj}}_ROOT=$BASEDIR/{{name}}/installation \
