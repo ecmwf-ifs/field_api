@@ -50,6 +50,7 @@ jobs:
             compiler_fc: gfortran-14
             python-version: '3.11'
             caching: true
+            mpi: ON
 
           - name: linux nvhpc-24.5
             os: ubuntu-24.04
@@ -59,6 +60,7 @@ jobs:
             compiler_fc: nvfortran
             python-version: '3.11'
             caching: true
+            mpi: ON
 
           - name : linux intel-classic
             os: ubuntu-22.04
@@ -68,6 +70,7 @@ jobs:
             compiler_fc: ifort
             python-version: '3.11'
             caching: true
+            mpi: OFF
 
           - name : linux intel-modern
             os: ubuntu-24.04
@@ -77,6 +80,7 @@ jobs:
             compiler_fc: ifx
             python-version: '3.11'
             caching: true
+            mpi: ON
 
           - name: macos
             # Xcode compiler requires empty environment variables, so we pass null (~) here
@@ -87,6 +91,7 @@ jobs:
             compiler_fc: gfortran-15
             python-version: '3.11'
             caching: true
+            mpi: ON
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -217,5 +222,5 @@ jobs:
         dependency_branch: develop
         dependency_cmake_options: |
           ecmwf-ifs/fiat: "-DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DENABLE_TESTS=OFF
-        cmake_options: "-DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ${{ matrix.cmake_options }} -DENABLE_ACC=OFF -DENABLE_MPI=ON -DENABLE_IO_PARALLEL=ON -DENABLE_GET_VIEW_ABORT=${{ matrix.get_view_abort }} -DENABLE_DELAYED=${{ matrix.delayed }}"
+        cmake_options: "-DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ${{ matrix.cmake_options }} -DENABLE_ACC=OFF -DENABLE_MPI=${{ matrix.mpi }} -DENABLE_IO_PARALLEL=${{ matrix.mpi }} -DENABLE_GET_VIEW_ABORT=${{ matrix.get_view_abort }} -DENABLE_DELAYED=${{ matrix.delayed }}"
         ctest_options: "${{ matrix.ctest_options }}"
