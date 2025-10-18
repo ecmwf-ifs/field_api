@@ -13,7 +13,7 @@ on:
 
 jobs:
   ci-hpc:
-    name: ci-hpc - ${{ matrix.compiler }}
+    name: ci-hpc - ${{ matrix.name }}
     if: ${{ (!github.event.pull_request.head.repo.fork) && (github.event.action != 'labeled' || github.event.label.name == 'approved-for-ci') }}
 
     strategy:
@@ -40,9 +40,9 @@ jobs:
             openmp: false
             # Define CPU modules once, reuse via *modules_intel if needed elsewhere
             modules: &modules_intel
-              - cmake
-              - ninja
-              - ecbuild
+              - cmake/4.0.2
+              - ninja/1.12.1
+              - ecbuild/3.12.0
               - prgenv/intel
               - intel/2023.2.0
               - hpcx-openmpi/2.9.0
@@ -62,9 +62,9 @@ jobs:
             cuda: false
             openmp: false
             modules: &modules_gnu
-              - cmake
-              - ninja
-              - ecbuild
+              - cmake/4.0.2
+              - ninja/1.12.1
+              - ecbuild/3.12.0
               - prgenv/gnu
               - gcc/14.2.0
               - openmpi/4.1.1.1
@@ -81,9 +81,9 @@ jobs:
             openmp: false
             # Define NVHPC modules once, reuse in the next GPU entries
             modules: &modules_nvhpc
-              - cmake
-              - ninja
-              - ecbuild
+              - cmake/4.0.2
+              - ninja/1.12.1
+              - ecbuild/3.12.0
               - prgenv/nvidia
               - nvidia/24.5
               - hpcx-openmpi/2.19.0-cuda
@@ -189,7 +189,7 @@ jobs:
             git fetch origin $SHA
             git reset --hard FETCH_HEAD
             popd
-            cmake -G "Unix Makefiles" -S $REPO -B build \
+            cmake -G Ninja -S $REPO -B build \
               {% for name in dependencies %}
                 {% set org, proj = name.split('/') %}
                 -D{{proj}}_ROOT=$BASEDIR/{{name}}/installation \
