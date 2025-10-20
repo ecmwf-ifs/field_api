@@ -32,7 +32,6 @@ jobs:
       matrix:
         build_type: [Debug,RelWithDebInfo]
         name:
-          - linux gnu-10
           - linux gnu-14
           - linux nvhpc-24.5
           - linux intel-classic
@@ -42,15 +41,6 @@ jobs:
         delayed: [ON,OFF]
 
         include:
-
-          - name: linux gnu-10
-            os: ubuntu-22.04
-            compiler: gnu-10
-            compiler_cc: gcc-10
-            compiler_cxx: g++-10
-            compiler_fc: gfortran-10
-            python-version: '3.8'
-            caching: true
 
           - name: linux gnu-14
             os: ubuntu-24.04
@@ -62,12 +52,12 @@ jobs:
             caching: true
 
           - name: linux nvhpc-24.5
-            os: ubuntu-22.04
+            os: ubuntu-24.04
             compiler: nvhpc-24.5
             compiler_cc: nvc
             compiler_cxx: nvc++
             compiler_fc: nvfortran
-            python-version: '3.8'
+            python-version: '3.11'
             caching: true
 
           - name : linux intel-classic
@@ -76,7 +66,7 @@ jobs:
             compiler_cc: icc
             compiler_cxx: icpc
             compiler_fc: ifort
-            python-version: '3.8'
+            python-version: '3.11'
             caching: true
 
           - name : linux intel-modern
@@ -85,7 +75,7 @@ jobs:
             compiler_cc: icx
             compiler_cxx: icpx
             compiler_fc: ifx
-            python-version: '3.8'
+            python-version: '3.11'
             caching: true
 
           - name: macos
@@ -226,6 +216,6 @@ jobs:
           ecmwf-ifs/fiat
         dependency_branch: develop
         dependency_cmake_options: |
-          ecmwf-ifs/fiat: "-DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DENABLE_TESTS=OFF
+          ecmwf-ifs/fiat: "-DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DENABLE_TESTS=OFF -DENABLE_MPI=ON"
         cmake_options: "-DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ${{ matrix.cmake_options }} -DENABLE_ACC=OFF -DENABLE_MPI=ON -DENABLE_IO_PARALLEL=ON -DENABLE_GET_VIEW_ABORT=${{ matrix.get_view_abort }} -DENABLE_DELAYED=${{ matrix.delayed }}"
         ctest_options: "${{ matrix.ctest_options }}"
