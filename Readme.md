@@ -427,6 +427,16 @@ REAL :: TOTAL_TIME_TRANSFER_CPU_TO_GPU
 REAL :: TOTAL_TIME_TRANSFER_GPU_TO_CPU
 ```
 
+## Host memory pool
+
+FIELD_API also offers the possibility to use a memory pool for host allocations. This is implemented
+as a linked-list of blocks, with a base block size of 3GB. This can be configured via the environment
+variable `FIELD_API_HOST_POOL_BLOCK_SIZE`, or via the module variable `POOL_BLOCK_SIZE` in 
+`FIELD_DEFAULTS_MODULE`. The use of the memory pool can be requested by adding `LPOOLED=.TRUE.` to 
+the `FIELD_NEW` constructor, or the via the `POOL_OWNED_FIELDS` module variable, also in 
+`FIELD_DEFAULTS_MODULE`. To free the memory pool at the end of the run, the subroutine
+`FIELD_HOST_POOL_DELETE` in the `FIELD_FACTORY_MODULE` should be called.
+
 # License
 
 The field API library is licenced under the Apache licence, version 2.0.
