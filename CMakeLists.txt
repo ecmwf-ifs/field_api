@@ -128,7 +128,15 @@ add_subdirectory(src)
 
 ## determine lib type
 cmake_dependent_option(BUILD_SHARED_LIBS "Dynamically link field_api" ON "NOT (HAVE_ACC OR HAVE_OMP_OFFLOAD)" OFF)
-if( HAVE_ACC OR HAVE_OMP_OFFLOAD )
+
+if (CMAKE_Fortran_COMPILER_ID MATCHES "PGI|NVHPC")
+  if (CMAKE_Fortran_COMPILER_VERSION VERSION_GREATER_EQUAL 25.7.0)
+    ecbuild_warn ("NVHPC >= 25.7.0 can build shared libraries with OpenACC")
+    set (BUILD_SHARED_LIBS ON)
+  endif ()
+endif ()
+
+if( NOT BUILD_SHARED_LIBS )
   ecbuild_warn("Enabling GPU offload forces static linking.")
 endif()
 
