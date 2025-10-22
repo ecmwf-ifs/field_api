@@ -38,10 +38,14 @@ URL="https://support.hdfgroup.org/releases/hdf5/v${MAJOR__VERSION}/v${FULL_VERSI
 FOLDER="hdf5-${HDF5_VERSION}"
 
 # Download hdf5
+if [ ! -d "${TEMPORARY_FILES}/${FOLDER}" ]; then
   echo "Downloading ${TEMPORARY_FILES}/${FOLDER} from URL [${URL}]"
   mkdir -p ${TEMPORARY_FILES}
   curl --location \
        "${URL}" | tar zx -C "${TEMPORARY_FILES}"
+else
+   echo "Download already present in ${TEMPORARY_FILES}/${FOLDER}"
+fi
 
 # Build hdf5
 
