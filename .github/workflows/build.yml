@@ -234,6 +234,6 @@ jobs:
           ecmwf-ifs/fiat
         dependency_branch: develop
         dependency_cmake_options: |
-          ecmwf-ifs/fiat: "-DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DENABLE_TESTS=OFF -DENABLE_MPI=ON"
+          ecmwf-ifs/fiat: "-DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DENABLE_TESTS=OFF"
         cmake_options: "-DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ${{ matrix.cmake_options }} -DENABLE_ACC=OFF -DENABLE_MPI=ON -DENABLE_IO_PARALLEL=ON -DENABLE_GET_VIEW_ABORT=${{ matrix.get_view_abort }} -DENABLE_DELAYED=${{ matrix.delayed }}"
         ctest_options: "${{ matrix.ctest_options }}"
