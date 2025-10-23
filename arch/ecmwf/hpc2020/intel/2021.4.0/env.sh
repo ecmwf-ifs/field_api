@@ -1,5 +1,4 @@
-# (C) Copyright 2022- ECMWF.
-# (C) Copyright 2022- Meteo-France.
+# (C) Copyright 1988- ECMWF.
 #
 # This software is licensed under the terms of the Apache Licence Version 2.0
 # which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
@@ -20,34 +19,28 @@ module_unload() {
   echo "+ module unload $1"
   module unload $1
 }
-module_purge() {
-  echo "+ all existing modules unloaded"
-  module purge
-}
 
 # Unload all modules to be certain
-module_purge
+module_unload intel
+module_unload openmpi
+module_unload hpcx-openmpi
+module_unload hdf5
+module_unload cmake
+module_unload python3
 
 # Load modules
-module_load prgenv/nvidia
-module_load nvidia/24.5
-module_load python3/3.11.10-01
+module_load prgenv/intel
+module_load intel/2021.4.0
+module_load hpcx-openmpi/2.18.1
+module_load hdf5/1.12.2
 module_load cmake/4.0.2
+module_load python3/3.11.10-01
 module_load ecbuild/3.12.0
-module load ninja/1.12.1  
-module_load hdf5/1.14.3
-module_load hpcx-openmpi/2.19.0-cuda
+module_load ninja/1.12.1
 
 
-
-# Increase stack size to maximum
-ulimit -S -s unlimited
-ulimit -S -l unlimited
+set -x
 
 # Restore tracing to stored setting
 { if [[ -n "$tracing_" ]]; then set -x; else set +x; fi } 2>/dev/null
-
-path=$BASH_SOURCE
-DIR_PATH=$(dirname $path)
-export ECBUILD_TOOLCHAIN=$DIR_PATH/toolchain.cmake
 

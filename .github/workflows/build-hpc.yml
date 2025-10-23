@@ -2,53 +2,112 @@ name: build-hpc
 
 # Controls when the action will run
 on:
-
-  # Trigger the workflow on all pushes to main, except on tag creation
   push:
     branches:
-    - main
+      - main
     tags-ignore:
-    - '**'
-
+      - '**'
   # Trigger the workflow on all pull requests
   pull_request: ~
-
   # Allow workflow to be dispatched on demand
   workflow_dispatch: ~
-
   # Trigger after public PR approved for CI
   pull_request_target:
     types: [labeled]
 
 jobs:
   ci-hpc:
-    name: ci-hpc
-    if: ${{ !github.event.pull_request.head.repo.fork && github.event.action != 'labeled' || github.event.label.name == 'approved-for-ci' }}
+    name: ci-hpc - ${{ matrix.name }}
+    if: ${{ (!github.event.pull_request.head.repo.fork) && (github.event.action != 'labeled' || github.event.label.name == 'approved-for-ci') }}
 
     strategy:
       fail-fast: false    # false: try to complete all jobs
-
       matrix:
-        cuda: [False, True]
-        openmp: [False, True]
-        name:
-          - ac-gpu nvhpc
-
+        build_type: [RelWithDebInfo]
+        site: [ac-batch]
+        name: 
+          - "ac-cpu intel"
+          - "ac-cpu gnu"
+          - "ac-gpu nvhpc OpenACC + CUDA"
+          - "ac-gpu nvhpc OMP offload"
+          - "ac-gpu nvhpc OpenACC"
+          - "ac-gpu nvhpc OMP offload + CUDA"
+    
         include:
-          - name: ac-gpu nvhpc
-            site: ac-batch
-            sbatch_options: |
+
+          # ------------------
+          # CPU builds
+          # ------------------
+          - name: "ac-cpu intel"
+            compiler: intel-classic
+            cuda: false
+            openmp: false
+            # Define CPU sbatch once, reuse via *sbatch_cpu
+            sbatch_options: &sbatch_cpu |
               #SBATCH --time=00:20:00
               #SBATCH --nodes=1
-              #SBATCH --ntasks=1
+              #SBATCH --ntasks=2
+              #SBATCH --cpus-per-task=32
+              #SBATCH --hint=nomultithread
+              #SBATCH --qos=np
+            envfile: arch/ecmwf/hpc2020/intel/2021.4.0/env.sh
+
+          - name: "ac-cpu gnu"
+            compiler: gnu-14
+            cuda: false
+            openmp: false
+            sbatch_options: *sbatch_cpu
+            envfile: arch/ecmwf/hpc2020/gnu/14.2.0/env.sh
+
+
+          # ------------------
+          # GPU builds (nvhpc)
+          # ------------------
+          - name: "ac-gpu nvhpc OpenACC + CUDA"
+            compiler: nvhpc
+            cuda: true
+            openmp: false
+            # Define GPU sbatch once, reuse in the next GPU entries
+            sbatch_options: &sbatch_gpu |
+              #SBATCH --time=00:20:00
+              #SBATCH --nodes=1
+              #SBATCH --ntasks=2
               #SBATCH --cpus-per-task=32
               #SBATCH --gpus-per-task=1
               #SBATCH --mem=100G
               #SBATCH --qos=dg
+            cmake_toolchain: &nvhpc_toolchain -DCMAKE_TOOLCHAIN_FILE=arch/ecmwf/hpc2020/nvhpc/24.5/toolchain.cmake
+            envfile: &nvhpc_envfile arch/ecmwf/hpc2020/nvhpc/24.5/env.sh
+
+          - name: "ac-gpu nvhpc OMP offload"
+            compiler: nvhpc
+            cuda: false
+            openmp: true
+            sbatch_options: *sbatch_gpu
+            cmake_toolchain: *nvhpc_toolchain 
+            envfile: *nvhpc_envfile
+
+          - name: "ac-gpu nvhpc OMP offload + CUDA"
+            compiler: nvhpc
+            cuda: true
+            openmp: true
+            sbatch_options: *sbatch_gpu
+            cmake_toolchain: *nvhpc_toolchain
+            envfile: *nvhpc_envfile
+
+          - name: "ac-gpu nvhpc OpenACC"
+            compiler: nvhpc
+            cuda: false
+            openmp: false
+            sbatch_options: *sbatch_gpu
+            cmake_toolchain: *nvhpc_toolchain
+            envfile: *nvhpc_envfile
 
     runs-on: [self-hosted, linux, hpc]
+
     env:
       GH_TOKEN: ${{ github.token }}
+
     steps:
       - uses: ecmwf-actions/reusable-workflows/ci-hpc-generic@v2
         with:
@@ -56,52 +115,30 @@ jobs:
           troika_user: ${{ secrets.HPC_CI_SSH_USER }}
           sbatch_options: ${{ matrix.sbatch_options }}
           template_data: |
-            modules:
-              - cmake
-              - ninja
-              - ecbuild
-              - prgenv/nvidia
-              - nvidia/24.5
-              - python3
             cmake_options:
               - -DENABLE_OMP_OFFLOAD=${{ matrix.openmp }}
               - -DENABLE_CUDA=${{ matrix.cuda }}
+              - -DENABLE_IO_PARALLEL=ON
+              - -DENABLE_MPI=ON
               - -DENABLE_SINGLE_PRECISION=ON
               - -DENABLE_DOUBLE_PRECISION=ON
-              - -DCMAKE_TOOLCHAIN_FILE=arch/ecmwf/hpc2020/nvhpc/24.5/toolchain.cmake
+              - -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}${{ matrix.cmake_toolchain || '' }}
             dependencies:
               ecmwf/fckit:
-                version: 0.13.0
+                version: 0.14.0
                 cmake_options:
                   - -DENABLE_TESTS=OFF
                   - -DENABLE_FCKIT_VENV=ON
+                  - -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
               ecmwf-ifs/fiat:
-                version: 1.4.1
+                version: 1.6.1
                 cmake_options:
+                  - -DENABLE_TESTS=OFF
                   - -DENABLE_SINGLE_PRECISION=ON
                   - -DENABLE_DOUBLE_PRECISION=ON
+                  - -DENABLE_MPI=ON
+                  - -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} 
           template: |
-            {% for module in modules %}
-              module load {{module}}
-            {% endfor %}
-            BASEDIR=$PWD
-            {% for name, options in dependencies.items() %}
-                mkdir -p {{name}}
-                pushd {{name}}
-                git init
-                git remote add origin ${{ github.server_url }}/{{name}}
-                git fetch origin {{options['version']}}
-                git reset --hard FETCH_HEAD
-                cmake -G Ninja -S . -B build \
-                  {% for name in dependencies %}
-                    {% set org, proj = name.split('/') %}
-                    -D{{proj}}_ROOT=$BASEDIR/{{name}}/installation \
-                  {% endfor %}
-                  {{ options['cmake_options']|join(' ') }}
-                cmake --build build
-                cmake --install build --prefix installation
-                popd
-            {% endfor %}
             REPO=${{ github.event.pull_request.head.repo.full_name || github.repository }}
             SHA=${{ github.event.pull_request.head.sha || github.sha }}
             mkdir -p $REPO
@@ -110,12 +147,32 @@ jobs:
             git remote add origin ${{ github.server_url }}/$REPO
             git fetch origin $SHA
             git reset --hard FETCH_HEAD
+            source ${{ matrix.envfile }}
             popd
-            cmake -G Ninja -S $REPO -B build \
+            BASEDIR=$PWD
+            {% for name, options in dependencies.items() %}
+              mkdir -p {{ name }}
+              pushd {{ name }}
+              git init
+              git remote add origin ${{ github.server_url }}/{{ name }}
+              git fetch origin {{ options['version'] }}
+              git reset --hard FETCH_HEAD
+              cmake -G Ninja -S . -B build \
+                {% for name in dependencies %}
+                  {% set org, proj = name.split('/') %}
+                  -D{{proj}}_ROOT=$BASEDIR/{{name}}/installation \
+                {% endfor %}
+                {{ options['cmake_options']|join(' ') }}
+
+              cmake --build build
+              cmake --install build --prefix installation
+              popd
+            {% endfor %}
+            cmake -G "Unix Makefiles" -S $REPO -B build \
               {% for name in dependencies %}
                 {% set org, proj = name.split('/') %}
                 -D{{proj}}_ROOT=$BASEDIR/{{name}}/installation \
               {% endfor %}
               {{ cmake_options|join(' ') }}
             cmake --build build
-            ctest --test-dir build
+            ctest -VV --test-dir build --output-on-failure
