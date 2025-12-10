@@ -275,3 +275,49 @@ class NVHPCOpenACC():
         """
 
         return "CALL ACC_SET_DEVICE_NUM(ACC_GET_DEVICE_NUM(ACC_DEVICE_NVIDIA), ACC_DEVICE_NVIDIA)"
+
+    @classmethod
+    def map_device_addr_intf(cls):
+        """
+        The ISO_C interface for `acc_map_data` that maps a given device address to a given host address.
+        """
+
+        intf = """
+  SUBROUTINE ACC_MAP_DATA (HST_PTR, DEV_PTR, SIZ) BIND (C, NAME='acc_map_data')
+    IMPORT :: C_PTR, C_SIZE_T
+    TYPE (C_PTR), INTENT(IN) :: HST_PTR
+    TYPE (C_PTR), INTENT(IN) :: DEV_PTR
+    INTEGER (C_SIZE_T), VALUE, INTENT(IN) :: SIZ
+  END SUBROUTINE ACC_MAP_DATA
+  """
+        return intf.split('\n')
+
+    @classmethod
+    def unmap_device_addr_intf(cls):
+        """
+        The ISO_C interface for unmapping device memory associated to a given host address.
+        """
+
+        intf = """
+  SUBROUTINE ACC_UNMAP_DATA (HST_PTR) BIND (C, NAME='acc_unmap_data')
+    IMPORT :: C_PTR
+    TYPE (C_PTR), INTENT(IN) :: HST_PTR
+  END SUBROUTINE ACC_UNMAP_DATA
+  """
+        return intf.split('\n')
+
+    @classmethod
+    def map_device_addr(cls, hst_ptr, dev_ptr, siz, offset, dev_id, return_val):
+        """
+        Map device address to host address.
+        """
+
+        return f"CALL ACC_MAP_DATA({hst_ptr}, {dev_ptr}, {siz})"
+
+    @classmethod
+    def unmap_device_addr(cls, hst_ptr, dev_id, return_val):
+        """
+        Unmap device memory associated to a given host address.
+        """
+
+        return f"CALL ACC_UNMAP_DATA({hst_ptr})"
