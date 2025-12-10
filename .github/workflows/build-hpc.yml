@@ -4,9 +4,9 @@ name: build-hpc
 on:
   push:
     branches:
-      - main
+    - main
     tags-ignore:
-      - '**'
+    - '**'
   # Trigger the workflow on all pull requests
   pull_request: ~
   # Allow workflow to be dispatched on demand
@@ -17,8 +17,8 @@ on:
 
 jobs:
   ci-hpc:
-    name: ci-hpc - ${{ matrix.name }}
-    if: ${{ (!github.event.pull_request.head.repo.fork) && (github.event.action != 'labeled' || github.event.label.name == 'approved-for-ci') }}
+    name: ci-hpc
+    if: ${{ !github.event.pull_request.head.repo.fork && github.event.action != 'labeled' || github.event.label.name == 'approved-for-ci' }}
 
     strategy:
       fail-fast: false    # false: try to complete all jobs
