@@ -13,7 +13,8 @@ list(APPEND srcs
      dev_alloc.c
      c_malloc.c
      field_constants_module.F90
-     field_abort_module.F90)
+     field_abort_module.F90
+     mem_pool_module.F90)
 
 list( APPEND ranksuff_srcs _data)
 list( APPEND non_ranksuff_srcs dev_alloc_module field_module host_alloc_module field_async_module )
