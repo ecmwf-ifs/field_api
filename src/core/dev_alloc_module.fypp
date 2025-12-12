@@ -14,18 +14,34 @@ MODULE DEV_ALLOC_MODULE
 ${fieldType.useParkind1 ()}$
 
 USE, INTRINSIC :: ISO_C_BINDING
+USE MEM_POOL_MODULE, ONLY: MEM_POOL, DEVICE_MEM_BLOCK, DEV_MEM_BLK_INIT, DEV_MEM_BLK_FINAL
+USE FIELD_DEFAULTS_MODULE, ONLY : INIT_MAP_DEVPTR
 
 IMPLICIT NONE
 
-INTERFACE DEV_ALLOCATE_DIM
+PRIVATE
+
+INTERFACE DEV_ALLOCATE
 #:for ft in fieldTypeList
-  MODULE PROCEDURE ${ft.name}$_DEV_ALLOCATE_DIM
+  MODULE PROCEDURE ${ft.name}$_DEV_ALLOCATE
+#:endfor
+END INTERFACE
+
+INTERFACE DEV_ALLOCATE_POOLED
+#:for ft in fieldTypeList
+  MODULE PROCEDURE ${ft.name}$_DEV_ALLOCATE_POOLED
 #:endfor
 END INTERFACE
 
 INTERFACE DEV_DEALLOCATE
 #:for ft in fieldTypeList
   MODULE PROCEDURE ${ft.name}$_DEV_DEALLOCATE
+#:endfor
+END INTERFACE
+
+INTERFACE DEV_DEALLOCATE_POOLED
+#:for ft in fieldTypeList
+  MODULE PROCEDURE ${ft.name}$_DEV_DEALLOCATE_POOLED
 #:endfor
 END INTERFACE
 
@@ -45,15 +61,50 @@ END INTERFACE
 INTERFACE
 $:offload_macros.dev_malloc_intf(indent=2)
 $:offload_macros.dev_free_intf(indent=2)
+$:offload_macros.map_device_addr_intf(indent=2)
+$:offload_macros.unmap_device_addr_intf(indent=2)
 END INTERFACE
 #:endif
 
+TYPE(MEM_POOL) :: DEVICE_POOL
+
+PUBLIC :: DEVICE_POOL
+PUBLIC :: DEV_ALLOCATE
+PUBLIC :: DEV_ALLOCATE_POOLED
+PUBLIC :: DEV_DEALLOCATE
+PUBLIC :: DEV_DEALLOCATE_POOLED
+
 CONTAINS
 
+SUBROUTINE MEM_BLK_INIT( SIZE, DATA )
+   INTEGER(C_SIZE_T), INTENT(IN) :: SIZE
+   TYPE(C_PTR), INTENT(OUT) :: DATA
+   INTEGER (KIND=C_INT) :: ERR
+#:if defined('WITH_HIC')
+$:offload_macros.runtime_error_decl(symbols=['ISTAT',], indent=3)
+#:endif
+
+#:if defined('WITH_HIC')
+$:offload_macros.dev_malloc(ptr='DATA', size='SIZE', return_val='ISTAT', indent=5)
+#:endif
+
+END SUBROUTINE MEM_BLK_INIT
+
+SUBROUTINE MEM_BLK_FINAL( DATA )
+   TYPE(C_PTR), INTENT(INOUT) :: DATA
+#:if defined('WITH_HIC')
+$:offload_macros.runtime_error_decl(symbols=['ISTAT',], indent=3)
+#:endif
+
+#:if defined('WITH_HIC')
+$:offload_macros.dev_free(ptr='DATA', return_val='ISTAT', indent=3)
+#:endif
+
+END SUBROUTINE MEM_BLK_FINAL
 
 #:for ft in fieldTypeList
 
-SUBROUTINE ${ft.name}$_DEV_ALLOCATE_DIM (DEV, UBOUNDS, LBOUNDS, MAP_DEVPTR)
+SUBROUTINE ${ft.name}$_DEV_ALLOCATE (DEV, UBOUNDS, LBOUNDS, MAP_DEVPTR)
 
 USE FIELD_STATISTICS_MODULE
 
@@ -99,7 +150,70 @@ ENDIF
 
 IF (FIELD_STATISTICS_ENABLE) CALL FIELD_STATISTICS_DEVICE_ALLOCATE (SIZE (DEV, KIND=JPIB) * INT (KIND (DEV), KIND=JPIB))
 
-END SUBROUTINE ${ft.name}$_DEV_ALLOCATE_DIM
+END SUBROUTINE ${ft.name}$_DEV_ALLOCATE
+
+SUBROUTINE ${ft.name}$_DEV_ALLOCATE_POOLED (DEV, UBOUNDS, BLKID, MAP_DEVPTR, LBOUNDS)
+
+USE FIELD_STATISTICS_MODULE
+$:offload_macros.get_device_id_import()
+
+${ft.type}$, POINTER :: DEV(${ft.shape}$)
+INTEGER (KIND=JPIM), INTENT (IN) :: UBOUNDS (${ft.rank}$)
+INTEGER(KIND=JPIM), INTENT(INOUT) :: BLKID
+LOGICAL, INTENT(IN) :: MAP_DEVPTR
+INTEGER (KIND=JPIM), INTENT (IN), OPTIONAL :: LBOUNDS (${ft.rank}$)
+
+INTEGER (KIND=JPIM) :: ILBOUNDS (${ft.rank}$), ISHAPE (${ft.rank}$)
+INTEGER (C_SIZE_T) :: SIZ
+TYPE(C_PTR) :: DATA = C_NULL_PTR
+TYPE(C_PTR) :: HST_DATA
+INTEGER (KIND=C_INT) :: ERR, DEV_ID
+INTEGER (KIND=C_SIZE_T) :: OFFSET
+${ft.type}$, POINTER, CONTIGUOUS :: PTR(${ft.shape}$)
+#:if defined('WITH_HIC')
+$:offload_macros.runtime_error_decl(symbols=['ISTAT',])
+#:endif
+
+OFFSET = 0
+DEV_ID = -1
+$:offload_macros.get_device_id(dev_id='DEV_ID')
+ILBOUNDS = 1
+IF (PRESENT (LBOUNDS)) ILBOUNDS = LBOUNDS
+
+SIZ = KIND (DEV)
+#:for i in range (1, ft.rank+1, 1)
+ISHAPE(${i}$) = UBOUNDS(${i}$) - ILBOUNDS(${i}$) + 1
+SIZ = SIZ * ISHAPE(${i}$)
+#:endfor
+
+IF ( .NOT. ASSOCIATED(DEVICE_POOL%START_BLK) ) THEN
+   ALLOCATE(DEVICE_MEM_BLOCK::DEVICE_POOL%START_BLK)
+   DEV_MEM_BLK_INIT => MEM_BLK_INIT
+   DEV_MEM_BLK_FINAL => MEM_BLK_FINAL
+ENDIF
+
+IF(SIZ > 0)THEN
+   CALL DEVICE_POOL%ALLOC(SIZ, BLKID, DATA)
+
+   IF(MAP_DEVPTR)THEN
+     CALL DEV_MALLOC (SIZ, HST_DATA)
+#:if defined('WITH_HIC')
+$:offload_macros.map_device_addr(hst_ptr='HST_DATA', dev_ptr='DATA', siz='SIZ', offset='OFFSET', dev_id='DEV_ID', return_val='ERR', indent=5)
+#:endif
+     CALL C_F_POINTER(HST_DATA, PTR, SHAPE=ISHAPE)
+   ELSE
+     CALL C_F_POINTER(DATA, PTR, SHAPE=ISHAPE)
+   ENDIF
+
+   DEV(${', '.join(map(lambda r: 'ILBOUNDS('+str(r+1)+'):', range(0, ft.rank)))}$) => PTR
+ELSE
+   ALLOCATE(DEV(${ ', '.join (f'ILBOUNDS({i}):UBOUNDS({i})' for i in  range (1, ft.rank+1)) }$))
+$:offload_macros.create(symbols=['DEV',], indent=3)
+ENDIF
+
+IF (FIELD_STATISTICS_ENABLE) CALL FIELD_STATISTICS_DEVICE_ALLOCATE (SIZE (DEV, KIND=JPIB) * INT (KIND (DEV), KIND=JPIB))
+
+END SUBROUTINE ${ft.name}$_DEV_ALLOCATE_POOLED
 
 SUBROUTINE ${ft.name}$_DEV_DEALLOCATE (DEV, MAP_DEVPTR)
 
@@ -136,6 +250,56 @@ $:offload_macros.dev_free(ptr='PTR', return_val='ISTAT', indent=6)
 ENDIF
 
 END SUBROUTINE ${ft.name}$_DEV_DEALLOCATE
+
+SUBROUTINE ${ft.name}$_DEV_DEALLOCATE_POOLED (DEV, BLKID, MAP_DEVPTR)
+
+USE FIELD_STATISTICS_MODULE
+$:offload_macros.get_device_id_import()
+
+${ft.type}$, POINTER :: DEV(${ft.shape}$)
+INTEGER (KIND=JPIM) :: LBOUNDS (${ft.rank}$), UBOUNDS (${ft.rank}$)
+INTEGER(KIND=JPIM), INTENT(INOUT) :: BLKID
+LOGICAL, INTENT(IN) :: MAP_DEVPTR
+INTEGER (C_SIZE_T) :: SIZ
+TYPE (C_PTR) :: PTR
+INTEGER (KIND=C_INT) :: ERR, DEV_ID
+#:if defined('WITH_HIC')
+$:offload_macros.runtime_error_decl(symbols=['ISTAT',])
+#:endif
+
+LBOUNDS = LBOUND(DEV)
+UBOUNDS = UBOUND(DEV)
+DEV_ID = -1
+$:offload_macros.get_device_id(dev_id='DEV_ID')
+
+SIZ = KIND (DEV)
+#:for i in range (1, ft.rank+1, 1)
+SIZ = SIZ * (UBOUNDS(${i}$) - LBOUNDS(${i}$) + 1)
+#:endfor
+
+IF (ASSOCIATED (DEV)) THEN
+
+  IF (FIELD_STATISTICS_ENABLE) CALL FIELD_STATISTICS_DEVICE_DEALLOCATE (SIZE (DEV, KIND=JPIB) * INT (KIND (DEV), KIND=JPIB))
+
+  IF (SIZ > 0) THEN
+    IF (MAP_DEVPTR) THEN
+      PTR = C_LOC (DEV (${ ', '.join (map (lambda i: 'LBOUND (DEV, ' + str (i) + ')', range (1, ft.rank+1))) }$))
+#:if defined('WITH_HIC')
+$:offload_macros.unmap_device_addr(hst_ptr='PTR', dev_id='DEV_ID', return_val='ERR', indent=6)
+#:endif
+      CALL DEV_FREE(PTR)
+    ENDIF
+    CALL DEVICE_POOL%DEALLOC(BLKID)
+  ELSE
+$:offload_macros.delete(symbols=['DEV',], indent=4)
+    DEALLOCATE(DEV)
+  ENDIF
+
+  NULLIFY (DEV)
+
+ENDIF
+
+END SUBROUTINE ${ft.name}$_DEV_DEALLOCATE_POOLED
 
 #:endfor
 

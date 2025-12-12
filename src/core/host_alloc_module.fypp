@@ -259,8 +259,8 @@ SUBROUTINE ${ft.name}$_HOST_DEALLOC_POOLED(HST, BLKID)
    INTEGER :: UBOUNDS(${ft.rank}$)
    INTEGER :: LBOUNDS(${ft.rank}$)
 
-  UBOUNDS = UBOUND(HST)
-  LBOUNDS = LBOUND(HST)
+   UBOUNDS = UBOUND(HST)
+   LBOUNDS = LBOUND(HST)
 
    ARR_SIZE = KIND(HST)
 #:for r in range(ft.rank)

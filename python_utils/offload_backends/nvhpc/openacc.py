@@ -285,8 +285,8 @@ class NVHPCOpenACC():
         intf = """
   SUBROUTINE ACC_MAP_DATA (HST_PTR, DEV_PTR, SIZ) BIND (C, NAME='acc_map_data')
     IMPORT :: C_PTR, C_SIZE_T
-    TYPE (C_PTR), INTENT(IN) :: HST_PTR
-    TYPE (C_PTR), INTENT(IN) :: DEV_PTR
+    TYPE (C_PTR), VALUE, INTENT(IN) :: HST_PTR
+    TYPE (C_PTR), VALUE, INTENT(IN) :: DEV_PTR
     INTEGER (C_SIZE_T), VALUE, INTENT(IN) :: SIZ
   END SUBROUTINE ACC_MAP_DATA
   """
@@ -301,7 +301,7 @@ class NVHPCOpenACC():
         intf = """
   SUBROUTINE ACC_UNMAP_DATA (HST_PTR) BIND (C, NAME='acc_unmap_data')
     IMPORT :: C_PTR
-    TYPE (C_PTR), INTENT(IN) :: HST_PTR
+    TYPE (C_PTR), VALUE, INTENT(IN) :: HST_PTR
   END SUBROUTINE ACC_UNMAP_DATA
   """
         return intf.split('\n')
