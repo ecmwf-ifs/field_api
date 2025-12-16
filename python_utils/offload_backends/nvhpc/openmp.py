@@ -77,6 +77,14 @@ class NVHPCOpenMP():
         return f"{dev_id} = omp_get_default_device()"
 
     @classmethod
+    def get_device_id_import(cls):
+        """
+        Runtime API import for retrieving device ID.
+        """
+
+        return "USE OMP_LIB, ONLY: OMP_GET_DEFAULT_DEVICE"
+
+    @classmethod
     def get_host_id(cls, hst_id):
         """
         Get device number corresponding to CPU.
@@ -281,3 +289,52 @@ class NVHPCOpenMP():
         """
 
         return "CALL OMP_SET_DEFAULT_DEVICE(OMP_GET_DEFAULT_DEVICE())"
+
+    @classmethod
+    def map_device_addr_intf(cls):
+        """
+        The ISO_C interface for `omp_target_associate_ptr` that maps a given device address to a given host address.
+        """
+
+        intf = """
+  INTEGER(C_INT) FUNCTION OMP_TARGET_ASSOCIATE_PTR (HST_PTR, DEV_PTR, SIZ, OFFSET, DEV_ID) BIND (C, NAME='omp_target_associate_ptr')
+    IMPORT :: C_PTR, C_SIZE_T, C_INT
+    TYPE (C_PTR), VALUE, INTENT(IN) :: HST_PTR
+    TYPE (C_PTR), VALUE, INTENT(IN) :: DEV_PTR
+    INTEGER (C_SIZE_T), VALUE, INTENT(IN) :: SIZ
+    INTEGER (C_SIZE_T), VALUE, INTENT(IN) :: OFFSET
+    INTEGER (C_INT), VALUE, INTENT(IN) :: DEV_ID
+  END FUNCTION OMP_TARGET_ASSOCIATE_PTR
+  """
+        return intf.split('\n')
+
+    @classmethod
+    def unmap_device_addr_intf(cls):
+        """
+        The ISO_C interface for unmapping device memory associated to a given host address.
+        """
+
+        intf = """
+  INTEGER(C_INT) FUNCTION OMP_TARGET_DISASSOCIATE_PTR (HST_PTR, DEV_ID) BIND (C, NAME='omp_target_disassociate_ptr')
+    IMPORT :: C_PTR, C_INT
+    TYPE (C_PTR), VALUE, INTENT(IN) :: HST_PTR
+    INTEGER (C_INT), VALUE, INTENT(IN) :: DEV_ID
+  END FUNCTION OMP_TARGET_DISASSOCIATE_PTR
+  """
+        return intf.split('\n')
+
+    @classmethod
+    def map_device_addr(cls, hst_ptr, dev_ptr, siz, offset, dev_id, return_val):
+        """
+        Map device address to host address.
+        """
+
+        return f"{return_val} = OMP_TARGET_ASSOCIATE_PTR({hst_ptr}, {dev_ptr}, {siz}, {offset}, {dev_id})"
+
+    @classmethod
+    def unmap_device_addr(cls, hst_ptr, dev_id, return_val):
+        """
+        Unmap device memory associated to a given host address.
+        """
+
+        return f"{return_val} = OMP_TARGET_DISASSOCIATE_PTR({hst_ptr}, {dev_id})"

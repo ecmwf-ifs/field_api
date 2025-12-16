@@ -634,3 +634,13 @@ def unmap_device_addr(hst_ptr, dev_id, return_val="", indent=0):
     method = _get_method(backend, 'unmap_device_addr')
 
     return _format_lines(method(hst_ptr, dev_id, return_val=return_val), indent=indent)
+
+def get_device_id_import(indent=0):
+    """
+    Runtime API import for retrieving device ID.
+    """
+
+    backend = _get_offload_backend()
+    method = _get_method(backend, 'get_device_id_import')
+
+    return _format_lines(method(), indent=indent)
