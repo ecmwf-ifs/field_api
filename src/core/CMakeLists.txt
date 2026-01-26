@@ -7,9 +7,28 @@
 # granted to it by virtue of its status as an intergovernmental organisation
 # nor does it submit to any jurisdiction.
 
+## create object libraries for the precision dependent defaults module
+foreach(prec ${precisions})
+  field_api_add_object_library(
+      LIBNAME        field_api_defaults_${prec}
+      SRCS           field_defaults_module.F90
+      PREC           ${prec}
+  )
+
+  if(HAVE_GET_VIEW_ABORT)
+    target_compile_definitions( field_api_defaults_${prec} PRIVATE "-DGET_VIEW_ABORT_DEFAULT_VALUE=.TRUE.")
+  else()
+    target_compile_definitions( field_api_defaults_${prec} PRIVATE "-DGET_VIEW_ABORT_DEFAULT_VALUE=.FALSE.")
+  endif()
+  if(HAVE_DELAYED)
+    target_compile_definitions( field_api_defaults_${prec} PRIVATE "-DDELAYED_DEFAULT_VALUE_FROM_CMAKE=.TRUE.")
+  else()
+    target_compile_definitions( field_api_defaults_${prec} PRIVATE "-DDELAYED_DEFAULT_VALUE_FROM_CMAKE=.FALSE.")
+  endif()
+endforeach()
+
 list(APPEND srcs
      field_basic_module.F90
-     field_defaults_module.F90
      dev_alloc.c
      c_malloc.c
      field_constants_module.F90
@@ -49,19 +68,8 @@ field_api_expand_fypp(
 field_api_add_object_library(
     LIBNAME        field_api_core
     SRCS           ${srcs}
-    LIBRARIES      field_api_debug
+    LIBRARIES      field_api_debug field_api_defaults_${DEFAULT_PRECISION}
 )
-
-if(HAVE_GET_VIEW_ABORT)
-  target_compile_definitions( field_api_core PRIVATE "-DGET_VIEW_ABORT_DEFAULT_VALUE=.TRUE.")
-else()
-  target_compile_definitions( field_api_core PRIVATE "-DGET_VIEW_ABORT_DEFAULT_VALUE=.FALSE.")
-endif()
-if(HAVE_DELAYED)
-	target_compile_definitions( field_api_core PRIVATE "-DDELAYED_DEFAULT_VALUE_FROM_CMAKE=.TRUE.")
-else()
-	target_compile_definitions( field_api_core PRIVATE "-DDELAYED_DEFAULT_VALUE_FROM_CMAKE=.FALSE.")
-endif()
 
 
 set_source_files_properties( ${CMAKE_CURRENT_BINARY_DIR}/dev_alloc_module.F90 PROPERTIES COMPILE_OPTIONS $<${HAVE_CUDA}:-cuda>)
