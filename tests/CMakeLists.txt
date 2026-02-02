@@ -39,6 +39,7 @@ target_compile_definitions( main.x PRIVATE $<${HAVE_OMP_OFFLOAD}:OMPGPU> )
 
 ## Unit tests
 list(APPEND TEST_FILES
+        copy_struct.F90
         cpu_to_gpu.F90
         cpu_to_gpu_delayed_init_value.F90
         cpu_to_gpu_init_value.F90
