@@ -92,7 +92,6 @@ list(APPEND TEST_FILES
         reshuffle_lastdim.F90
         resize_owner.F90
         resize_owner2.F90
-        sync_device.F90
         sync_host.F90
         test_0_sized_transfer.F90
         test_0_sized_transfer_wrap.F90
@@ -129,7 +128,7 @@ set(FAILING_TEST_FILES
 	)
 
 #These tests will call abor1
-set(ABOR1_TEST_FILES
+list(APPEND ABOR1_TEST_FILES
 	resize_wrapper.F90
 	)
 
@@ -178,6 +177,12 @@ if(HAVE_DELAYED AND HAVE_GET_VIEW_ABORT)
 		get_view_get_device_data.F90
 		get_view_when_uninitialized.F90
 	)
+endif()
+
+if(HAVE_OMP_OFFLOAD AND CMAKE_Fortran_COMPILER_ID MATCHES "LLVMFlang")
+  list(APPEND ABOR1_TEST_FILES sync_device.F90)
+else()
+  list(APPEND TEST_FILES sync_device.F90)
 endif()
 
 #Set OMP_NUM_THREADS for tests
@@ -288,6 +293,7 @@ foreach(FAILING_TEST_FILE ${FAILING_TEST_FILES})
     endif()
     target_compile_definitions( ${FAILING_TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:_CUDA> )
     target_compile_definitions( ${FAILING_TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:_CUDA> $<${HAVE_HIPFORT}:_HIP> )
+    target_compile_definitions( ${FAILING_TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:_CUDA> $<${HAVE_HIPFORT}:_HIP> $<${HAVE_OMP_OFFLOAD}:OMPGPU> )
 endforeach()
 
 foreach(ABOR1_TEST_FILE ${ABOR1_TEST_FILES})
@@ -310,6 +316,7 @@ foreach(ABOR1_TEST_FILE ${ABOR1_TEST_FILES})
     endif()
     target_compile_definitions( ${ABOR1_TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:_CUDA> )
     target_compile_definitions( ${ABOR1_TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:_CUDA> $<${HAVE_HIPFORT}:_HIP> )
+    target_compile_definitions( ${ABOR1_TEST_NAME}.x PRIVATE $<${HAVE_CUDA}:_CUDA> $<${HAVE_HIPFORT}:_HIP> $<${HAVE_OMP_OFFLOAD}:OMPGPU> )
 endforeach()
 
 if(fiat_FOUND)
