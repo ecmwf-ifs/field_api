@@ -14,11 +14,9 @@ SUBMODULE(FIELD_${RANK}$${SUFF}$_FACTORY_MODULE) FIELD_${RANK}$${SUFF}$_FACTORY_
 USE FIELD_BASIC_MODULE
 #:for ft in fieldTypeList
 USE ${ft.name}$_MODULE
-#:if defined('HAVE_GANG')
 #:if ft.hasView
 USE FIELD_${ft.rank-1}$${SUFF}$_MODULE
 USE ${ft.name}$_STACK_MODULE
-#:endif
 #:endif
 #:endfor
 

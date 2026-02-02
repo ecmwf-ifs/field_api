@@ -28,7 +28,6 @@ class fieldType (object):
     self.viewShape = ','.join ([':'] * (self.rank-1))
     self.lbptr = ', '.join (list (map (lambda i: "LBOUNDS(" + str (i+1) + "):", range (0, self.rank))))
     self.hasView = self.rank > 1
-    self.ganged = self.rank > 2
 
     h5th = {'R': 'REAL', 'I': 'INTEGER', 'L': 'INTEGER'}
     self.h5type ='H5T_NATIVE_' + h5th[tt]
@@ -42,9 +41,6 @@ def getFieldTypeList (ranks=[1,2,3,4,5], kinds=kinds, hasView=None, ganged=None)
 
   if hasView != None:
     l = [ft for ft in l if ft.hasView == hasView]
-  
-  if ganged != None:
-    l = [ft for ft in l if ft.ganged == ganged]
   
   return l
 

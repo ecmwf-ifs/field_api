@@ -84,12 +84,6 @@ endif()
 ## find FIAT or at least its components 
 field_api_find_fiat_modules()
 
-## Field Gang
-ecbuild_add_option( FEATURE FIELD_GANG
-    DESCRIPTION "Enable packed storage of fields"
-    DEFAULT ON
-)
-
 ##Get_view abort
 ecbuild_add_option( FEATURE GET_VIEW_ABORT
 	DESCRIPTION "Enable this option to make get_view abort when data are not on CPU"
@@ -109,9 +103,6 @@ if(HAVE_CUDA)
 endif()
 if(fiat_FOUND)
   list( APPEND fypp_defines "-DWITH_FIAT")
-endif()
-if(HAVE_FIELD_GANG)
-  list( APPEND fypp_defines "-DHAVE_GANG")
 endif()
 
 ## build precision independent srcs
@@ -153,11 +144,8 @@ list(APPEND obj_libs
         field_api_factory
         field_api_util
         field_api_shuffle
+        field_api_buffer
 )
-
-if( HAVE_FIELD_GANG )
-   list(APPEND obj_libs field_api_buffer)
-endif()
 
 if( HAVE_IO )
    list(APPEND obj_libs field_api_io)

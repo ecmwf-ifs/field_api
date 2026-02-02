@@ -138,15 +138,12 @@ if(HAVE_IO)
        test_hdf5_rw_parallel_general.F90)
 endif()
 
-if(HAVE_FIELD_GANG)
-  list(APPEND TEST_FILES
-        test_gang.F90
-        test_field_stack_cpu.F90
-        test_field_stack_gpu.F90
-        test_field_stack_member_ranks.F90
-        test_field_stack_simple.F90
-      )
-endif()
+list(APPEND TEST_FILES
+      test_field_stack_cpu.F90
+      test_field_stack_gpu.F90
+      test_field_stack_member_ranks.F90
+      test_field_stack_simple.F90
+    )
 
 if(HAVE_GET_VIEW_ABORT)
 	list(REMOVE_ITEM TEST_FILES
@@ -201,8 +198,6 @@ foreach(TEST_FILE ${HDF5_TEST_FILES})
            $<${HAVE_MPI}:MPI::MPI_Fortran>
            $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
            $<$<BOOL:${HAVE_IO}>:HDF5::HDF5>
-        DEFINITIONS
-           $<${HAVE_FIELD_GANG}:HAVE_FIELD_GANG>
         LINKER_LANGUAGE Fortran
         MPI ${H5MPI_PROCS} 
         OMP ${omp_num_threads}
@@ -243,8 +238,6 @@ foreach(TEST_FILE ${TEST_FILES})
            OpenMP::OpenMP_Fortran
            $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
            $<$<BOOL:${HAVE_IO}>:HDF5::HDF5>
-        DEFINITIONS
-           $<${HAVE_FIELD_GANG}:HAVE_FIELD_GANG>
         LINKER_LANGUAGE Fortran
         OMP ${omp_num_threads}
         ENVIRONMENT "DEV_ALLOC_SIZE=${dev_alloc_size}"

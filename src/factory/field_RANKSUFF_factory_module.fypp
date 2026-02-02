@@ -14,10 +14,8 @@ MODULE FIELD_${RANK}$${SUFF}$_FACTORY_MODULE
 USE FIELD_BASIC_MODULE
 #:for ft in fieldTypeList
 USE ${ft.name}$_MODULE
-#:if defined('HAVE_GANG')
 #:if ft.hasView
 USE FIELD_${ft.rank-1}$${SUFF}$_MODULE
-#:endif
 #:endif
 #:endfor
 
@@ -31,55 +29,16 @@ INTERFACE FIELD_NEW
 #:for ft in fieldTypeList
   MODULE PROCEDURE ${ft.name}$_NEW_OWNER
   MODULE PROCEDURE ${ft.name}$_NEW_WRAPPER
-#:if defined('HAVE_GANG')
-#:if ft.ganged
-  MODULE PROCEDURE ${ft.name}$_NEW_GANG_WRAPPER
-  MODULE PROCEDURE ${ft.name}$_NEW_GANG_OWNER
-#:endif
 #:if ft.hasView
   MODULE PROCEDURE ${ft.name}$_NEW_STACK_WRAPPER
   MODULE PROCEDURE ${ft.name}$_NEW_STACK_OWNER
-#:endif
 #:endif
 #:endfor
 END INTERFACE
 
 INTERFACE
 
-#:if defined('HAVE_GANG')
 #:for ft in fieldTypeList
-#:if ft.ganged
-MODULE SUBROUTINE ${ft.name}$_NEW_GANG_WRAPPER (FIELD_PTR, CHILDREN, LBOUNDS, PERSISTENT, DATA, SYNC_ON_FINAL, INITIALIZED)
-
-#:set fieldTypeList1 = fieldType.getFieldTypeList (ranks=[ft.rank-1], kinds=[ft.kind])
-#:set ft1 = fieldTypeList1[0]
-
-CLASS(${ft.name}$), POINTER :: FIELD_PTR
-TYPE(${ft1.name}$_PTR), ALLOCATABLE :: CHILDREN (:)
-${ft.type}$, TARGET, INTENT (IN) :: DATA (${ft.shape}$)
-INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN) :: LBOUNDS (${ft.rank}$)
-LOGICAL, OPTIONAL, INTENT(IN) :: PERSISTENT
-LOGICAL, OPTIONAL,  INTENT(IN) :: SYNC_ON_FINAL
-LOGICAL, OPTIONAL,  INTENT(IN) :: INITIALIZED
-
-END SUBROUTINE
-
-MODULE SUBROUTINE ${ft.name}$_NEW_GANG_OWNER (FIELD_PTR, CHILDREN, UBOUNDS, LBOUNDS, PERSISTENT, DELAYED, INIT_VALUE)
-
-#:set fieldTypeList1 = fieldType.getFieldTypeList (ranks=[ft.rank-1], kinds=[ft.kind])
-#:set ft1 = fieldTypeList1[0]
-
-CLASS(${ft.name}$), POINTER :: FIELD_PTR
-TYPE(${ft1.name}$_PTR), ALLOCATABLE :: CHILDREN (:)
-INTEGER(KIND=JPIM), INTENT(IN) :: UBOUNDS (${ft.rank}$)
-INTEGER(KIND=JPIM), OPTIONAL, INTENT(IN) :: LBOUNDS (${ft.rank}$)
-LOGICAL, OPTIONAL, INTENT(IN) :: PERSISTENT
-LOGICAL, OPTIONAL,  INTENT(IN) :: DELAYED
-${ft.type}$, OPTIONAL, INTENT(IN) :: INIT_VALUE
-
-END SUBROUTINE
-#:endif
-
 #:if ft.hasView
 MODULE SUBROUTINE ${ft.name}$_NEW_STACK_WRAPPER (FIELD_PTR, LSTACK, DATA, LBOUNDS, PERSISTENT, SYNC_ON_FINAL, INITIALIZED, &
 &                                                MEMBER_LBOUNDS, MEMBER_MAP, MEMBER_RANKS)
@@ -131,7 +90,6 @@ END SUBROUTINE ${ft.name}$_GET_STACK_MEMBER_1
 
 #:endif
 #:endfor
-#:endif
 
 #:for ft in fieldTypeList
 MODULE SUBROUTINE ${ft.name}$_RESIZE (FIELD_PTR, UBOUNDS, LBOUNDS, PERSISTENT)
@@ -146,7 +104,6 @@ END SUBROUTINE
 
 END INTERFACE
 
-#:if defined('HAVE_GANG')
 #:for ft in fieldTypeList
 #:if ft.hasView
 INTERFACE GET_STACK_MEMBER
@@ -157,7 +114,6 @@ END INTERFACE GET_STACK_MEMBER
 PUBLIC :: GET_STACK_MEMBER
 #:endif
 #:endfor
-#:endif
 
 PUBLIC :: FIELD_NEW
 

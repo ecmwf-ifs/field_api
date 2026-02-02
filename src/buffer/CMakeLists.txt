@@ -8,7 +8,7 @@
 # nor does it submit to any jurisdiction.
 
 
-list( APPEND ranksuff_srcs _gang _factory_gang _stack _stack_member _factory_stack)
+list( APPEND ranksuff_srcs _stack _stack_member _factory_stack)
 
 ## expand ranksuff sources
 field_api_expand_fypp_ranksuff(
