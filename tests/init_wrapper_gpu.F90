@@ -23,7 +23,7 @@ PROGRAM INIT_WRAPPER_GPU
         ALLOCATE(D(10,10))
         D=7
 
-#ifdef _CUDA
+#if (defined(_CUDA) || defined(_HIP))
         CALL FIELD_NEW(W, DATA=D, MAP_DEVPTR=.FALSE.)
 #else
         CALL FIELD_NEW(W, DATA=D)
@@ -32,6 +32,8 @@ PROGRAM INIT_WRAPPER_GPU
 #ifdef OMPGPU
 #ifdef _CUDA
         !$OMP TARGET IS_DEVICE_PTR(D_GPU) MAP(TOFROM:RES)
+#elif defined(_HIP)
+        !$OMP TARGET HAS_DEVICE_ADDR(D_GPU) MAP(TOFROM:RES)
 #else
         !$OMP TARGET MAP(TO:D_GPU) MAP(TOFROM:RES)
 #endif
