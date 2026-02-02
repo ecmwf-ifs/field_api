@@ -48,7 +48,6 @@ Features of FIELD_API can be toggled by passing the following argument to the CM
 | SINGLE_PRECISION | ON | Enable the compilation of field_api in single precision |
 | DOUBLE_PRECISION | ON | Enable the compilation of field_api in double precision |
 | CUDA | OFF | Enable the use of CUDA for GPU offload. Enables optional removal of the shadow host allocation for `FIELD%DEVPTR` and the optional allocation of owned fields (see below) in pinned (page-locked) host memory.|
-| FIELD_GANG | ON | Enable packed storage of groups of fields. This feature is not supported for the Cray compiler as it cannot resolve the underlying polymorphism.|
 | GET_VIEW_ABORT | ON | If activated, get_view will abort when the data are not present on CPU. |
 | DELAYED | OFF | If activated, field owners will be delayed by default. |
 | IO_SERIAL | OFF | Use serial HDF5 to read and write FieldAPI variables.  |
@@ -306,28 +305,11 @@ null and no cloning is done.
 
 # Groups of Fields
 
-FIELD_API provides two abstractions to represent packed (i.e. interleaved) storage of fields:
-1. `FIELD_GANG`: packed storage of fields where the consituent fields are of the same shape and size.
-2. `FIELD_STACK`: packed storage of fields where each the consituent fields are of arbitrary size
+The `FIELD_STACK` is an abstraction to represent packed (i.e. interleaved) storage of fields,
+where each of the consituent fields are of arbitrary size
 and have a shape of either `${RANK}$` or `${RANK-1}$`. It should be noted that the limitation
 on shape here is purely due to the memory blocking in the IFS around which FIELD_API has been designed,
 combined with the fact that discontiguous memory sections cannot be reshaped freely.
-
-## `FIELD_GANG`
-
-A `FIELD_GANG` can be created via a call to the `FIELD_NEW` constructor, just like any other wrapped or
-owned field. The only extra argument required is an allocatable vector of type `FIELD_${RANK-1}${SUFF}$_PTR`,
-which will contain pointers to the members, or children, of the `GANG`, e.g.:
-```fortran
-CLASS(FIELD_3RB), POINTER :: F_GANG
-TYPE(FIELD_2RB_PTR), ALLOCATABLE :: GANG_CHLDREN(:)
-
-CALL FIELD_NEW(F_GANG, CHILDREN=GANG_CHILDREN, ...)
-```
-
-Host/device pointers, as well as per-block view pointers on host, can be obtained for both the `GANG` and its
-children via the usual API. It should be noted that to ensure data coherence, the whole `GANG` will move
-together between host and device. An example of how the `FIELD_GANG` can be used is found in `tests/test_gang.F90`.
 
 ## `FIELD_STACK`
 
@@ -348,7 +330,7 @@ CLASS(FIELD_2RB), POINTER :: F_1
 CLASS(FIELD_3RB), POINTER :: F_2, F_3
 INTEGER(KIND=JPIM) :: MEMBER_MAP(3) = (/1,1,2,4,5,8/)
 
-CALL FIELD_NEW(F_STACK, LSTACK=.TRUE, MEMBER_MAP=MEMBER_MAP, ...)
+CALL FIELD_NEW(F_STACK, LSTACK=.TRUE., MEMBER_MAP=MEMBER_MAP, ...)
 ! The remaining arguments are what one would expect for an owned or wrapped field
 
 CALL GET_STACK_MEMBER(F_STACK, 1, F_1) ! 2D field representing one element of the 2nd dim of F_STACK
