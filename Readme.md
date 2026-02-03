@@ -44,10 +44,11 @@ Features of FIELD_API can be toggled by passing the following argument to the CM
 | TESTS | ON | Build the testing suite. |
 | MPI | OFF | Support for MPI distributed parallelism (currently used in parallel IO feature) |
 | ACC | ON | Enable the use of OpenACC for GPU offload. Currently only supported on NVHPC. |
-| OMP_OFFLOAD | OFF | Enable the use of OpenMP for GPU offload. Currently only supported on NVHPC. |
+| OMP_OFFLOAD | OFF | Enable the use of OpenMP for GPU offload. |
 | SINGLE_PRECISION | ON | Enable the compilation of field_api in single precision |
 | DOUBLE_PRECISION | ON | Enable the compilation of field_api in double precision |
-| CUDA | OFF | Enable the use of CUDA for GPU offload. Enables optional removal of the shadow host allocation for `FIELD%DEVPTR` and the optional allocation of owned fields (see below) in pinned (page-locked) host memory.|
+| CUDA | OFF | Enable the use of advanced functionality via the cuda runtime API e.g. host memory pinning, fast strided copies, asynchronous data transfers, etc.|
+| HIPFORT | OFF | Enable the use of advanced functionality via the hipfort runtime API e.g. host memory pinning, fast strided copies, asynchronous data transfers, etc.|
 | GET_VIEW_ABORT | ON | If activated, get_view will abort when the data are not present on CPU. |
 | DELAYED | OFF | If activated, field owners will be delayed by default. |
 | IO_SERIAL | OFF | Use serial HDF5 to read and write FieldAPI variables.  |
@@ -56,8 +57,8 @@ Features of FIELD_API can be toggled by passing the following argument to the CM
 ## Supported compilers
 The library has been tested with the nvhpc toolkit from Nvidia, version 23.9/24.5
 and is continually tested with newer releases. Please note that GPU offload is currently
-only supported for Nvidia compilers. It has also been tested on CPU (-DENABLE_ACC=OFF)
-with GCC 12/14, Intel 2021 and CCE17.
+only supported for the NVHPC and ROCm-AFAR (release 22.2 onwards) toolchains . It has also been tested on CPU (-DENABLE_ACC=OFF)
+with GCC, Intel (classic and LLVM), CCE and LLVM-flang.
 
 # Field API types
 
