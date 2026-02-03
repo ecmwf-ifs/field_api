@@ -13,6 +13,7 @@ foreach(prec ${precisions})
       LIBNAME        field_api_defaults_${prec}
       SRCS           field_defaults_module.F90
       PREC           ${prec}
+      LIBRARIES      field_api_debug
   )
 
   if(HAVE_GET_VIEW_ABORT)
