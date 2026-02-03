@@ -37,7 +37,8 @@ jobs:
           - linux nvhpc-25.9
           - linux intel-classic
           - linux intel-modern
-          - macos
+          - macos gnu
+          - macos flang
         get_view_abort: [ON,OFF]
         delayed: [ON,OFF]
 
@@ -90,7 +91,7 @@ jobs:
             python-version: '3.11'
             caching: true
 
-          - name: macos
+          - name: macos gnu
             # Xcode compiler requires empty environment variables, so we pass null (~) here
             os: macos-15
             compiler: clang-17
@@ -99,6 +100,17 @@ jobs:
             compiler_fc: gfortran-15
             python-version: '3.11'
             caching: true
+
+          - name: macos flang
+            # Xcode compiler requires empty environment variables, so we pass null (~) here
+            os: macos-15
+            compiler: clang-17
+            compiler_cc: ~
+            compiler_cxx: ~
+            compiler_fc: flang-21
+            python-version: '3.11'
+            caching: true
+            cmake_options: "-DBUILD_SHARED_LIBS=OFF -DENABLE_DOUBLE_PRECISION=OFF -DENABLE_MPI=OFF -DENABLE_IO_PARALLEL=OFF"
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -130,6 +142,15 @@ jobs:
           brew install open-mpi
           brew install coreutils
           brew install hdf5
+          if [[ "${{ matrix.name }}" =~ flang ]]; then
+            brew install llvm
+            brew install libomp
+            brew install flang
+            export LIBRARY_PATH="/opt/homebrew/opt/libomp/lib:$LIBRARY_PATH"
+            export LIBRARY_PATH="/opt/homebrew/opt/libomp/include:$LIBRARY_PATH"
+            echo "LIBRARY_PATH=/opt/homebrew/opt/libomp/lib:$LIBRARY_PATH" >> $GITHUB_ENV
+            echo "LIBRARY_PATH=/opt/homebrew/opt/libomp/include:$LIBRARY_PATH" >> $GITHUB_ENV
+          fi
         else
           sudo apt-get update
           if [[ "${{ matrix.compiler }}" =~ gnu ]]; then
@@ -234,6 +255,6 @@ jobs:
           ecmwf-ifs/fiat
         dependency_branch: develop
         dependency_cmake_options: |
-          ecmwf-ifs/fiat: "-DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DENABLE_TESTS=OFF"
-        cmake_options: "-DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ${{ matrix.cmake_options }} -DENABLE_ACC=OFF -DENABLE_MPI=ON -DENABLE_IO_PARALLEL=ON -DENABLE_GET_VIEW_ABORT=${{ matrix.get_view_abort }} -DENABLE_DELAYED=${{ matrix.delayed }}"
+          ecmwf-ifs/fiat: "-DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DENABLE_TESTS=OFF ${{ matrix.cmake_options}}"
+        cmake_options: "-DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ${{ matrix.cmake_options }} -DENABLE_ACC=OFF -DENABLE_MPI=ON -DENABLE_IO_PARALLEL=ON -DENABLE_GET_VIEW_ABORT=${{ matrix.get_view_abort }} -DENABLE_DELAYED=${{ matrix.delayed }} ${{matrix.cmake_options}}"
         ctest_options: "${{ matrix.ctest_options }}"
