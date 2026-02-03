@@ -21,6 +21,7 @@
 
 macro( field_api_find_fiat_modules )
 
+   unset(fiat_srcs)
    if( NOT UTIL_MODULE_PATH )
      ecbuild_find_package(NAME fiat COMPONENTS ${fiat_components} )
      if (NOT fiat_FOUND)
