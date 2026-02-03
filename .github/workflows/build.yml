@@ -110,7 +110,7 @@ jobs:
             compiler_fc: flang-21
             python-version: '3.11'
             caching: true
-            cmake_options: "-DBUILD_SHARED_LIBS=OFF -DENABLE_DOUBLE_PRECISION=OFF -DENABLE_MPI=OFF -DENABLE_IO_PARALLEL=OFF"
+            cmake_options: "-DBUILD_SHARED_LIBS=OFF -DENABLE_DOUBLE_PRECISION=OFF -DENABLE_IO_PARALLEL=OFF"
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -255,6 +255,6 @@ jobs:
           ecmwf-ifs/fiat
         dependency_branch: develop
         dependency_cmake_options: |
-          ecmwf-ifs/fiat: "-DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DENABLE_TESTS=OFF ${{ matrix.cmake_options}}"
-        cmake_options: "-DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ${{ matrix.cmake_options }} -DENABLE_ACC=OFF -DENABLE_MPI=ON -DENABLE_IO_PARALLEL=ON -DENABLE_GET_VIEW_ABORT=${{ matrix.get_view_abort }} -DENABLE_DELAYED=${{ matrix.delayed }} ${{matrix.cmake_options}}"
+          ecmwf-ifs/fiat: "-DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -G Ninja -DENABLE_TESTS=OFF ${{ matrix.cmake_options}}"
+        cmake_options: "-DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ${{ matrix.cmake_options }} -G Ninja -DENABLE_ACC=OFF -DENABLE_MPI=ON -DENABLE_IO_PARALLEL=ON -DENABLE_GET_VIEW_ABORT=${{ matrix.get_view_abort }} -DENABLE_DELAYED=${{ matrix.delayed }} ${{matrix.cmake_options}}"
         ctest_options: "${{ matrix.ctest_options }}"
