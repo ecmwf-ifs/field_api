@@ -32,5 +32,5 @@ field_api_expand_fypp(
 field_api_add_object_library(
     LIBNAME        field_api_shuffle
     SRCS           ${srcs}
-    LIBRARIES      field_api_core field_api_debug field_api_util field_api_factory
+    LIBRARIES      field_api_core field_api_debug field_api_util field_api_factory field_api_defaults_${DEFAULT_PRECISION}
 )
