@@ -17,6 +17,7 @@ USE, INTRINSIC :: ISO_FORTRAN_ENV, ONLY : INT64
 USE FIELD_DEFAULTS_MODULE
 USE FIELD_STATISTICS_MODULE
 USE FIELD_ABORT_MODULE
+$:offload_macros.runtime_api_import()
 
 IMPLICIT NONE
 
@@ -268,7 +269,7 @@ $:offload_macros.runtime_error_decl(symbols=['ISTAT',], indent=3)
 
 $:offload_macros.register_host_decl_flags(flag_var='FLAGS', indent=3)
 
-$:offload_macros.register_host_set_flags(flag_var='FLAGS', val='2', indent=3)
+$:offload_macros.register_host_set_flags(flag_var='FLAGS', indent=3)
 $:offload_macros.register_host(ptr='DATA', size='ARR_SIZE', flags='FLAGS', return_val='ISTAT')
 
    IF (ISTAT /= 0) THEN

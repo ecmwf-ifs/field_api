@@ -66,6 +66,7 @@ macro(field_api_add_object_library)
            $<${fiat_FOUND}:fiat>
            $<${fiat_FOUND}:parkind_${_PAR_PREC}>
            $<${HAVE_MPI}:MPI::MPI_Fortran>
+           $<${HAVE_HIPFORT}:hipfort::hip>
            OpenMP::OpenMP_Fortran
            $<$<BOOL:${HAVE_IO}>:HDF5::HDF5>
         )

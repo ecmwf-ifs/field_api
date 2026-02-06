@@ -33,7 +33,7 @@ PRIVATE
 #:set ftn = ft.name
 TYPE, ABSTRACT, EXTENDS (FIELD_BASIC) :: ${ftn}$
   ${ft.type}$, POINTER :: PTR(${ft.shape}$) => NULL()
-#ifdef _CRAYFTN
+#if (defined(_CRAYFTN) || defined(IS_LLVM_FLANG))
   ${ft.type}$, POINTER :: DEVPTR(${ft.shape}$) => NULL()
 #else
   ${ft.type}$, POINTER, CONTIGUOUS :: DEVPTR(${ft.shape}$) => NULL()
@@ -415,7 +415,9 @@ $:offload_macros.reinit_gpu_context(indent=6)
     SELF%LOBJECT_COPIED = .TRUE.
 #ifdef WITH_GPU_OFFLOAD
     IF (ASSOCIATED (SELF%DEVPTR)) THEN
-$:offload_macros.attach(ptr=['SELF%DEVPTR'], indent=6)
+      ASSOCIATE(DEVPTR => SELF%DEVPTR)
+$:offload_macros.attach(ptr=['DEVPTR'], indent=8)
+      END ASSOCIATE
     ENDIF
 #endif
   ENDIF
@@ -439,7 +441,9 @@ $:offload_macros.attach(ptr=['SELF%DEVPTR'], indent=6)
     SELF%LOBJECT_COPIED = .FALSE.
 #ifdef WITH_GPU_OFFLOAD
     IF (ASSOCIATED (SELF%DEVPTR)) THEN
-$:offload_macros.detach(ptr=['SELF%DEVPTR'], indent=6)
+      ASSOCIATE(DEVPTR => SELF%DEVPTR)
+$:offload_macros.detach(ptr=['DEVPTR'], indent=8)
+      END ASSOCIATE
     ENDIF
 #endif
   ENDIF
@@ -651,15 +655,17 @@ ${indent}$ ENDDO
       CALL SELF%CREATE_DEVICE_DATA
     ENDIF
     IF (SELF%IS_STATUS(UNINITIALIZED) .AND. SELF%HAS_INIT_VALUE) THEN
-$:offload_macros.parallel_gang_vector_loop(present=['SELF%DEVPTR'], copyin=['SELF'], collapse=RANK)
+      ASSOCIATE(DEVPTR => SELF%DEVPTR, LBOUNDS => SELF%LBOUNDS, UBOUNDS => SELF%UBOUNDS, INIT_VALUE => SELF%INIT_VALUE)
+$:offload_macros.parallel_gang_vector_loop(present=['DEVPTR'], copyin=['LBOUNDS', 'UBOUNDS', 'INIT_VALUE'], collapse=RANK)
 #:for i in range(1, RANK+1)
-      DO I${i}$=SELF%LBOUNDS(${i}$), SELF%UBOUNDS(${i}$)
+      DO I${i}$=LBOUNDS(${i}$), UBOUNDS(${i}$)
 #:endfor
 #:set array_indexes = ",".join("I" + str(i) for i in range(1, RANK+1))
-      SELF%DEVPTR(${array_indexes}$)=SELF%INIT_VALUE
+      DEVPTR(${array_indexes}$)=INIT_VALUE
 #:for i in range(1, RANK+1)
       ENDDO
 #:endfor
+      END ASSOCIATE
       CALL SELF%ADD_STATUS(NDEVFRESH)
       CALL SELF%REMOVE_STATUS(UNINITIALIZED_GPU)
     ENDIF

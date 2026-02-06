@@ -21,7 +21,7 @@ if( DEFINED ENV{ECBUILD_TOOLCHAIN} AND NOT CMAKE_TOOLCHAIN_FILE)
 endif()
 
 ## define project and field_api target name
-project(field_api VERSION 0.3.8 LANGUAGES Fortran)
+project(field_api VERSION 0.3.8 LANGUAGES Fortran CXX)
 set(LIBNAME field_api)
 
 ## load cmake macros
@@ -98,7 +98,7 @@ ecbuild_add_option( FEATURE DELAYED
 
 
 ## fypp preprocessor flags
-if(HAVE_CUDA)
+if(HAVE_CUDA OR HAVE_HIPFORT)
   list( APPEND fypp_defines "-DWITH_HIC")
 endif()
 if(fiat_FOUND)
@@ -162,6 +162,7 @@ foreach(prec ${precisions})
       PRIVATE_LIBS
          $<${fiat_FOUND}:fiat>
          $<${fiat_FOUND}:parkind_${prec}>
+         $<${HAVE_HIPFORT}:hipfort::hip>
          OpenMP::OpenMP_Fortran
          $<$<BOOL:${HAVE_IO}>:HDF5::HDF5>
          $<${HAVE_IO_PARALLEL}:MPI::MPI_Fortran>

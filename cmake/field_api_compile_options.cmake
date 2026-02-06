@@ -36,4 +36,12 @@ macro( field_api_compile_options )
     ecbuild_add_fortran_flags("-check nocontiguous" BUILD DEBUG)
   endif()
 
+  unset( FIELD_API_COMPILE_DEFINITIONS )
+  # We define a custom preprocessor macro using execute_process to allow the use of compiler wrappers
+  # which may not necessarily define the same macros as the underlying compiler
+  execute_process(COMMAND ${CMAKE_Fortran_COMPILER} --version OUTPUT_VARIABLE FC_version)
+  if (FC_version MATCHES "flang")
+    list(APPEND FIELD_API_COMPILE_DEFINITIONS IS_LLVM_FLANG)
+  endif()
+
 endmacro()
