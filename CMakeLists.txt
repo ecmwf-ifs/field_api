@@ -108,23 +108,8 @@ endif()
 ## build precision independent srcs
 add_subdirectory(src)
 
-## determine lib type
-set( SHARED_LIBS_FOR_OFFLOAD_DEFAULT OFF )
-if( CMAKE_Fortran_COMPILER_ID MATCHES "PGI|NVHPC" AND
-    CMAKE_Fortran_COMPILER_VERSION VERSION_GREATER_EQUAL 25.7.0 )
-    if( DEFINED BUILD_SHARED_LIBS )
-      set( SHARED_LIBS_FOR_OFFLOAD_DEFAULT ${BUILD_SHARED_LIBS} )
-    elseif( DEFINED FIELD_API_BUILD_SHARED_LIBS )
-      set( SHARED_LIBS_FOR_OFFLOAD_DEFAULT ${FIELD_API_BUILD_SHARED_LIBS} )
-    else()
-      set( SHARED_LIBS_FOR_OFFLOAD_DEFAULT ON )
-    endif()
-endif()
-cmake_dependent_option(BUILD_SHARED_LIBS "Dynamically link field_api" ON "NOT (HAVE_ACC OR HAVE_OMP_OFFLOAD)" ${SHARED_LIBS_FOR_OFFLOAD_DEFAULT})
-
-if( (HAVE_ACC OR HAVE_OMP_OFFLOAD) AND NOT ${SHARED_LIBS_FOR_OFFLOAD_DEFAULT} )
-  ecbuild_warn("Enabling GPU offload forces static linking.")
-endif()
+## determine lib type i.e. STATIC/SHARED
+field_api_get_lib_type()
 
 ## specify precision dependent sources that must be compiled twice
 list(APPEND prec_srcs
@@ -155,6 +140,7 @@ endif()
 foreach(prec ${precisions})
   ecbuild_add_library(
       TARGET ${LIBNAME}_${prec}
+      TYPE   ${field_api_lib_type}
       SOURCES ${prec_srcs}
       OBJECTS
          ${obj_libs}
