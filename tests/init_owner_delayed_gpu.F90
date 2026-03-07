@@ -27,7 +27,11 @@ PROGRAM INIT_OWNER_DELAYED_GPU
 #else
         !$ACC KERNELS PRESENT(PTR)
 #endif
-        PTR(:,:)=42
+        DO J = 1, UBOUND(PTR, 2)
+          DO I = 10, 21
+            PTR(I,J)=42
+          ENDDO
+        ENDDO
 #ifdef OMPGPU
         !$OMP END TARGET
 #else
@@ -40,9 +44,13 @@ PROGRAM INIT_OWNER_DELAYED_GPU
 #else
         !$ACC SERIAL PRESENT(PTR) COPY(OKAY)
 #endif
-        IF(.NOT. ALL(PTR == 42))THEN
-                OKAY=.FALSE.
-        ENDIF
+        DO J = 1, UBOUND(PTR, 2)
+          DO I = 10, 21
+            IF (PTR(I,J) /= 42) THEN
+               OKAY = .FALSE.
+            ENDIF
+          ENDDO
+        ENDDO
 #ifdef OMPGPU
         !$OMP END TARGET
 #else

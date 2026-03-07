@@ -19,6 +19,7 @@ PROGRAM INIT_OWNER_INIT_DEBUG_VALUE_GPU
         CLASS(FIELD_2IM), POINTER :: O => NULL()
         INTEGER(KIND=JPIM), POINTER :: PTR(:,:)
         LOGICAL :: OKAY
+        INTEGER :: I,J
 
         USE_INIT_DEBUG_VALUE = .TRUE.
         INIT_DEBUG_VALUE_JPIM=-123456789
@@ -32,9 +33,13 @@ PROGRAM INIT_OWNER_INIT_DEBUG_VALUE_GPU
 #else
         !$ACC SERIAL PRESENT(PTR) COPY(OKAY)
 #endif
-        IF(.NOT. ALL(PTR == -123456789))THEN
-                OKAY=.FALSE.
-        ENDIF
+        DO J=1,UBOUND(PTR,2)
+          DO I=1,10
+            IF (PTR(I,J) /= -123456789) THEN
+              OKAY = .FALSE.
+            ENDIF
+          ENDDO
+        ENDDO
 #ifdef OMPGPU
         !$OMP END TARGET
 #else

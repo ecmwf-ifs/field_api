@@ -26,6 +26,7 @@ PROGRAM INIT_WRAPPER_NON_CONTIGUOUS_MULTI
   CLASS(FIELD_5RB), POINTER :: W5 => NULL()
   REAL(KIND=JPRB), POINTER :: W5PTR(:,:,:,:,:)
   integer(kind=8) :: ptr
+INTEGER :: I, J, K, L, M
 
   ALLOCATE(D1(7, 9, 11, 13, 15))
   ALLOCATE(D2(7, 9, 11, 13, 15))
@@ -42,7 +43,15 @@ PROGRAM INIT_WRAPPER_NON_CONTIGUOUS_MULTI
 #else
   !$ACC KERNELS DEFAULT(PRESENT)
 #endif
-  W4PTR(:,:,:,:)=92
+  DO M = 1, SIZE(W4PTR, 4)
+    DO L = 1, SIZE(W4PTR, 3)
+      DO K = 1, SIZE(W4PTR, 2)
+        DO J = 1, SIZE(W4PTR, 1)
+          W4PTR(J, K, L, M) = 92
+        ENDDO
+      ENDDO
+    ENDDO
+  ENDDO
 #ifdef OMPGPU
   !$OMP END TARGET
 #else
@@ -68,7 +77,13 @@ PROGRAM INIT_WRAPPER_NON_CONTIGUOUS_MULTI
 #else
   !$ACC KERNELS DEFAULT(PRESENT)
 #endif
-  W3PTR(:,:,:)=61
+  DO K = 1, SIZE(W3PTR, 3)
+    DO J = 1, SIZE(W3PTR, 2)
+      DO I = 1, SIZE(W3PTR, 1)
+        W3PTR(I, J, K) = 61
+      ENDDO
+    ENDDO
+  ENDDO
 #ifdef OMPGPU
   !$OMP END TARGET
 #else
@@ -90,7 +105,15 @@ PROGRAM INIT_WRAPPER_NON_CONTIGUOUS_MULTI
 #else
   !$ACC KERNELS DEFAULT(PRESENT)
 #endif
-  W4PTR(:,:,:,:)=31
+  DO M = 1, SIZE(W4PTR, 4)
+    DO L = 1, SIZE(W4PTR, 3)
+      DO K = 1, SIZE(W4PTR, 2)
+        DO J = 1, SIZE(W4PTR, 1)
+          W4PTR(J, K, L, M) = 31
+        ENDDO
+      ENDDO
+    ENDDO
+  ENDDO
 #ifdef OMPGPU
   !$OMP END TARGET
 #else
@@ -112,7 +135,13 @@ PROGRAM INIT_WRAPPER_NON_CONTIGUOUS_MULTI
 #else
   !$ACC KERNELS DEFAULT(PRESENT)
 #endif
-  W3PTR(:,:,:)=91
+  DO K = 1, SIZE(W3PTR, 3)
+    DO J = 1, SIZE(W3PTR, 2)
+      DO I = 1, SIZE(W3PTR, 1)
+        W3PTR(I, J, K) = 91
+      ENDDO
+    ENDDO
+  ENDDO
 #ifdef OMPGPU
   !$OMP END TARGET
 #else
@@ -134,7 +163,11 @@ PROGRAM INIT_WRAPPER_NON_CONTIGUOUS_MULTI
 #else
   !$ACC KERNELS DEFAULT(PRESENT)
 #endif
-  W2PTR(:,:)=12.1
+  DO J = 1, SIZE(W2PTR, 2)
+    DO I = 1, SIZE(W2PTR, 1)
+      W2PTR(I, J) = 12.1
+    ENDDO
+  ENDDO
 #ifdef OMPGPU
   !$OMP END TARGET
 #else
@@ -156,7 +189,15 @@ PROGRAM INIT_WRAPPER_NON_CONTIGUOUS_MULTI
 #else
   !$ACC KERNELS DEFAULT(PRESENT)
 #endif
-  W4PTR(:,:,:,:)=22.1
+  DO M = 1, SIZE(W4PTR, 4)
+    DO L = 1, SIZE(W4PTR, 3)
+      DO K = 1, SIZE(W4PTR, 2)
+        DO J = 1, SIZE(W4PTR, 1)
+          W4PTR(J, K, L, M) = 22.1
+        ENDDO
+      ENDDO
+    ENDDO
+  ENDDO
 #ifdef OMPGPU
   !$OMP END TARGET
 #else
@@ -179,7 +220,17 @@ PROGRAM INIT_WRAPPER_NON_CONTIGUOUS_MULTI
 #else
   !$ACC KERNELS DEFAULT(PRESENT)
 #endif
-  W5PTR(:,:,:,:,:)=1.1
+  DO M = 1, SIZE(W5PTR, 5)
+    DO L = 1, SIZE(W5PTR, 4)
+      DO K = 1, SIZE(W5PTR, 3)
+        DO J = 1, SIZE(W5PTR, 2)
+          DO I = 1, SIZE(W5PTR, 1)
+            W5PTR(I, J, K, L, M) = 1.1
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDDO
+  ENDDO
 #ifdef OMPGPU
   !$OMP END TARGET
 #else
@@ -201,7 +252,17 @@ PROGRAM INIT_WRAPPER_NON_CONTIGUOUS_MULTI
 #else
   !$ACC KERNELS DEFAULT(PRESENT)
 #endif
-  W5PTR(:,:,:,:,:)=1.2
+  DO M = 1, SIZE(W5PTR, 5)
+    DO L = 1, SIZE(W5PTR, 4)
+      DO K = 1, SIZE(W5PTR, 3)
+        DO J = 1, SIZE(W5PTR, 2)
+          DO I = 1, SIZE(W5PTR, 1)
+            W5PTR(I, J, K, L, M) = 1.2
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDDO
+  ENDDO
 #ifdef OMPGPU
   !$OMP END TARGET
 #else
@@ -223,7 +284,17 @@ PROGRAM INIT_WRAPPER_NON_CONTIGUOUS_MULTI
 #else
   !$ACC KERNELS DEFAULT(PRESENT)
 #endif
-  W5PTR(:,:,:,:,:)=2.5
+  DO M = 1, SIZE(W5PTR, 5)
+    DO L = 1, SIZE(W5PTR, 4)
+      DO K = 1, SIZE(W5PTR, 3)
+        DO J = 1, SIZE(W5PTR, 2)
+          DO I = 1, SIZE(W5PTR, 1)
+            W5PTR(I, J, K, L, M) = 2.5
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDDO
+  ENDDO
 #ifdef OMPGPU
   !$OMP END TARGET
 #else
@@ -245,7 +316,17 @@ PROGRAM INIT_WRAPPER_NON_CONTIGUOUS_MULTI
 #else
   !$ACC KERNELS DEFAULT(PRESENT)
 #endif
-  W5PTR(:,:,:,:,:)=9.1
+  DO M = 1, SIZE(W5PTR, 5)
+    DO L = 1, SIZE(W5PTR, 4)
+      DO K = 1, SIZE(W5PTR, 3)
+        DO J = 1, SIZE(W5PTR, 2)
+          DO I = 1, SIZE(W5PTR, 1)
+            W5PTR(I, J, K, L, M) = 9.1
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDDO
+  ENDDO
 #ifdef OMPGPU
   !$OMP END TARGET
 #else
@@ -267,7 +348,17 @@ PROGRAM INIT_WRAPPER_NON_CONTIGUOUS_MULTI
 #else
   !$ACC KERNELS DEFAULT(PRESENT)
 #endif
-  W5PTR(:,:,:,:,:)=8.1
+  DO M = 1, SIZE(W5PTR, 5)
+    DO L = 1, SIZE(W5PTR, 4)
+      DO K = 1, SIZE(W5PTR, 3)
+        DO J = 1, SIZE(W5PTR, 2)
+          DO I = 1, SIZE(W5PTR, 1)
+            W5PTR(I, J, K, L, M) = 8.1
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDDO
+  ENDDO
 #ifdef OMPGPU
   !$OMP END TARGET
 #else
@@ -289,7 +380,17 @@ PROGRAM INIT_WRAPPER_NON_CONTIGUOUS_MULTI
 #else
   !$ACC KERNELS DEFAULT(PRESENT)
 #endif
-  W5PTR(:,:,:,:,:)=8.4
+  DO M = 1, SIZE(W5PTR, 5)
+    DO L = 1, SIZE(W5PTR, 4)
+      DO K = 1, SIZE(W5PTR, 3)
+        DO J = 1, SIZE(W5PTR, 2)
+          DO I = 1, SIZE(W5PTR, 1)
+            W5PTR(I, J, K, L, M) = 8.4
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDDO
+  ENDDO
 #ifdef OMPGPU
   !$OMP END TARGET
 #else
@@ -311,7 +412,17 @@ PROGRAM INIT_WRAPPER_NON_CONTIGUOUS_MULTI
 #else
   !$ACC KERNELS DEFAULT(PRESENT)
 #endif
-  W5PTR(:,:,:,:,:)=12
+  DO M = 1, SIZE(W5PTR, 5)
+    DO L = 1, SIZE(W5PTR, 4)
+      DO K = 1, SIZE(W5PTR, 3)
+        DO J = 1, SIZE(W5PTR, 2)
+          DO I = 1, SIZE(W5PTR, 1)
+            W5PTR(I, J, K, L, M) = 12
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDDO
+  ENDDO
 #ifdef OMPGPU
   !$OMP END TARGET
 #else
@@ -333,7 +444,17 @@ PROGRAM INIT_WRAPPER_NON_CONTIGUOUS_MULTI
 #else
   !$ACC KERNELS DEFAULT(PRESENT)
 #endif
-  W5PTR(:,:,:,:,:)=18
+  DO M = 1, SIZE(W5PTR, 5)
+    DO L = 1, SIZE(W5PTR, 4)
+      DO K = 1, SIZE(W5PTR, 3)
+        DO J = 1, SIZE(W5PTR, 2)
+          DO I = 1, SIZE(W5PTR, 1)
+            W5PTR(I, J, K, L, M) = 18
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDDO
+  ENDDO
 #ifdef OMPGPU
   !$OMP END TARGET
 #else
@@ -355,7 +476,17 @@ PROGRAM INIT_WRAPPER_NON_CONTIGUOUS_MULTI
 #else
   !$ACC KERNELS DEFAULT(PRESENT)
 #endif
-  W5PTR(:,:,:,:,:)=19
+  DO M = 1, SIZE(W5PTR, 5)
+    DO L = 1, SIZE(W5PTR, 4)
+      DO K = 1, SIZE(W5PTR, 3)
+        DO J = 1, SIZE(W5PTR, 2)
+          DO I = 1, SIZE(W5PTR, 1)
+            W5PTR(I, J, K, L, M) = 19
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDDO
+  ENDDO
 #ifdef OMPGPU
   !$OMP END TARGET
 #else
@@ -392,7 +523,17 @@ PROGRAM INIT_WRAPPER_NON_CONTIGUOUS_MULTI
   !$ACC KERNELS PRESENT(W5PTR)
 #endif
 #endif
-  W5PTR(:,:,:,:,:)=19
+  DO M = 1, SIZE(W5PTR, 5)
+    DO L = 1, SIZE(W5PTR, 4)
+      DO K = 1, SIZE(W5PTR, 3)
+        DO J = 1, SIZE(W5PTR, 2)
+          DO I = 1, SIZE(W5PTR, 1)
+            W5PTR(I, J, K, L, M) = 19
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDDO
+  ENDDO
 #ifdef OMPGPU
   !$OMP END TARGET
 #else

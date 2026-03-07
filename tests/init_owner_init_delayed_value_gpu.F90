@@ -18,6 +18,7 @@ PROGRAM INIT_OWNER_INIT_DELAYED_VALUE_GPU
         CLASS(FIELD_2IM), POINTER :: O => NULL()
         INTEGER(KIND=JPIM), POINTER :: PTR(:,:)
         LOGICAL :: OKAY
+        INTEGER :: I,J
 
         CALL FIELD_NEW(O, LBOUNDS=[1,1], UBOUNDS=[10,10], INIT_VALUE=7, DELAYED=.TRUE.)
         CALL O%GET_DEVICE_DATA_RDONLY(PTR)
@@ -28,9 +29,13 @@ PROGRAM INIT_OWNER_INIT_DELAYED_VALUE_GPU
 #else
         !$ACC SERIAL PRESENT(PTR) COPY(OKAY)
 #endif
-        IF(.NOT. ALL(PTR == 7))THEN
-                OKAY=.FALSE.
-        ENDIF
+        DO J=1,UBOUND(PTR,2)
+          DO I=1,10
+            IF (PTR(I,J) /= 7) THEN
+              OKAY = .FALSE.
+            ENDIF
+          ENDDO
+        ENDDO
 #ifdef OMPGPU
         !$OMP END TARGET
 #else

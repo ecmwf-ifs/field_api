@@ -118,7 +118,13 @@ CALL YLF4%GET_DEVICE_DATA_RDWR (Z4)
 #endif
 PRINT *, Z4 (1, 0, 1, 1)
 PRINT *, Z4 (2, 1, 1, 1)
-Z4 (:,2,:,:) = 0.
+DO JBLK = 1, 5
+  DO JLEV = 1, 3
+    DO JLON = 1, 10
+      Z4 (JLON,2,JLEV,JBLK) = 0.
+    ENDDO
+  ENDDO
+ENDDO
 #ifdef OMPGPU
 !$omp end target
 #else
