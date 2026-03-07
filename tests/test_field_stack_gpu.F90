@@ -88,7 +88,9 @@ PROGRAM TEST_FIELD_STACK_GPU
 #else
     !$acc serial present(DEV_PTR_1D)
 #endif
-    DEV_PTR_1D = 1._JPRB
+    DO I = 1, SIZE(DEV_PTR_1D)
+      DEV_PTR_1D(I) = 1._JPRB
+    ENDDO
 #ifdef OMPGPU
     !$omp end target
 #else

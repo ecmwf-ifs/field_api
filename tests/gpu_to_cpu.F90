@@ -29,7 +29,7 @@ PROGRAM GPU_TO_CPU
 #endif
         DO I=1,11
           DO J=1,11
-            PTR_DEV=7
+            PTR_DEV(I,J)=7
           ENDDO
         ENDDO
 #ifdef OMPGPU

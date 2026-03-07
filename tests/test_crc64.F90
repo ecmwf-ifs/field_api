@@ -52,7 +52,11 @@ PROGRAM TEST_CRC64
 !$acc kernels present (D)
 #endif
 
-        D(:,:) = 2.78
+        DO IBLK = 1, NBLOCKS
+          DO JLON = 1, NPROMA
+            D(JLON, IBLK) = 2.78
+          ENDDO
+        ENDDO
 
 #ifdef OMPGPU
 !$omp end target

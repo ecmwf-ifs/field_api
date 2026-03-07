@@ -44,9 +44,13 @@ PROGRAM GET_VIEW_GET_DEVICE_DATA
 #else
         !$ACC SERIAL PRESENT(PTR) COPY(OKAY)
 #endif
-        IF(.NOT. ALL(PTR == 7))THEN
-                OKAY=.FALSE.
-        ENDIF
+        DO IBLK = 1, 1
+          DO JLON = 1, NPROMA
+            IF (PTR(JLON, IBLK) /= 7) THEN
+               OKAY = .FALSE.
+            ENDIF
+          ENDDO
+        ENDDO
 #ifdef OMPGPU
         !$OMP END TARGET
 #else

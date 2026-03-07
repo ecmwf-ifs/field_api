@@ -21,6 +21,7 @@ PROGRAM TEST_FIELD1D
         CLASS(FIELD_1RB), POINTER :: W => NULL()
         REAL(KIND=JPRB), ALLOCATABLE :: D(:)
         REAL(KIND=JPRB), POINTER :: DD(:)
+        INTEGER(KIND=JPIM) :: I
 
         ALLOCATE(D(10))
         D=7
@@ -40,7 +41,9 @@ PROGRAM TEST_FIELD1D
 #else
 !$acc serial present (DD)
 #endif
-        DD(:) = 22
+        DO I = 1, SIZE(DD)
+          DD(I) = 22
+        ENDDO
 #ifdef OMPGPU
 !$omp end target
 #else

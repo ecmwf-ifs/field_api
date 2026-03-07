@@ -44,7 +44,7 @@ REAL(KIND=JPRB), POINTER :: DD(:,:), DH (:,:)
 
 
 REAL(KIND=JPRB) :: ZVAL1, ZVAL2
-INTEGER(KIND=JPIM) :: IDIM1, IDIM2
+INTEGER(KIND=JPIM) :: IDIM1, IDIM2, I, J
 
 IF (LLINITIALIZED (JSOC)) THEN
   ZVAL1 =  7
@@ -83,7 +83,11 @@ ENDIF
 #else
 !$acc serial present (DD) copyout (ZH)
 #endif
-ZH(:,:) = DD(:,:)
+DO J = 1, IDIM2
+  DO I = 1, IDIM1
+    ZH(I,J) = DD(I,J)
+  ENDDO
+ENDDO
 #ifdef OMPGPU
 !$omp end target
 #else
@@ -107,7 +111,11 @@ ENDIF
 #else
 !$acc serial present (DD)
 #endif
-DD(:,:) = ZVAL2
+DO J = 1, IDIM2
+  DO I = 1, IDIM1
+    DD(I,J) = ZVAL2
+  ENDDO
+ENDDO
 #ifdef OMPGPU
 !$omp end target
 #else
@@ -145,7 +153,7 @@ REAL (KIND=JPRD), ALLOCATABLE :: ZDATA4 (:,:,:,:), ZH (:,:,:,:)
 REAL (KIND=JPRD), POINTER :: ZD4 (:,:,:,:), ZD3 (:,:,:), ZH4 (:,:,:,:), ZH3 (:,:,:)
 
 REAL (KIND=JPRD) :: ZVAL1, ZVAL2, ZVAL3
-INTEGER (KIND=JPIM) :: IDIM1, IDIM2, IDIM3, IDIM4
+INTEGER (KIND=JPIM) :: IDIM1, IDIM2, IDIM3, IDIM4, I, J, K, L
 LOGICAL :: LLERROR
 
 IF (LLINITIALIZED (JSOC)) THEN
@@ -191,7 +199,15 @@ ENDIF
 #else
 !$acc serial present (ZD4) copyout (ZH)
 #endif
-ZH(:,:,:,:) = ZD4(:,:,:,:)
+DO L = 1, IDIM4
+  DO K = 1, IDIM3
+    DO J = 1, IDIM2
+      DO I = 1, IDIM1
+        ZH(I,J,K,L) = ZD4(I,J,K,L)
+      ENDDO
+    ENDDO
+  ENDDO
+ENDDO
 #ifdef OMPGPU
 !$omp end target
 #else
@@ -215,7 +231,15 @@ ENDIF
 #else
 !$acc serial present (ZD4)
 #endif
-ZD4(:,:,:,:) = ZVAL2
+DO L = 1, IDIM4
+  DO K = 1, IDIM3
+    DO J = 1, IDIM2
+      DO I = 1, IDIM1
+        ZD4(I,J,K,L) = ZVAL2
+      ENDDO
+    ENDDO
+  ENDDO
+ENDDO
 #ifdef OMPGPU
 !$omp end target
 #else
@@ -230,7 +254,13 @@ ZD3 => GET_DEVICE_DATA_RDWR (YLF3)
 #else
 !$acc serial present (ZD3)
 #endif
-ZD3(:,:,:) = ZVAL3
+DO K = 1, SIZE(ZD3, 3)
+  DO J = 1, SIZE(ZD3, 2)
+    DO I = 1, SIZE(ZD3, 1)
+      ZD3(I,J,K) = ZVAL3
+    ENDDO
+  ENDDO
+ENDDO
 #ifdef OMPGPU
 !$omp end target
 #else

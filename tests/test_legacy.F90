@@ -53,7 +53,13 @@ T => GET_DEVICE_DATA_RDONLY (FT)
 #else
 !$acc kernels present (U)
 #endif
-U(:,:,:) = 1._JPRB
+DO JBLK = 1, NGPBLKS
+  DO JLEV = 1, NFLEVG
+    DO JLON = 1, NPROMA
+      U (JLON, JLEV, JBLK) = 1._JPRB
+    ENDDO
+  ENDDO
+ENDDO
 #ifdef OMPGPU
 !$omp end target
 #else
