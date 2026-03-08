@@ -38,7 +38,7 @@ jobs:
           - linux intel-classic
           - linux intel-modern
           - macos gnu
-          - macos flang
+          - macos flang-22
         get_view_abort: [ON,OFF]
         delayed: [ON,OFF]
 
@@ -101,13 +101,13 @@ jobs:
             python-version: '3.11'
             caching: true
 
-          - name: macos flang
+          - name: macos flang-22
             # Xcode compiler requires empty environment variables, so we pass null (~) here
             os: macos-15
             compiler: clang-17
             compiler_cc: ~
             compiler_cxx: ~
-            compiler_fc: flang-21
+            compiler_fc: flang-22
             python-version: '3.11'
             caching: true
             cmake_options: "-DBUILD_SHARED_LIBS=OFF -DENABLE_DOUBLE_PRECISION=OFF -DENABLE_IO_PARALLEL=OFF"
@@ -143,7 +143,7 @@ jobs:
           brew install coreutils
           brew install hdf5
           if [[ "${{ matrix.name }}" =~ flang ]]; then
-            brew install llvm
+            brew install llvm@22
             brew install libomp
             brew install flang
             export LIBRARY_PATH="/opt/homebrew/opt/libomp/lib:$LIBRARY_PATH"
