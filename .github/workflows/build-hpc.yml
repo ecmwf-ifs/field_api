@@ -27,7 +27,6 @@ jobs:
       fail-fast: false    # false: try to complete all jobs
       matrix:
         build_type: [RelWithDebInfo]
-        site: [ac-batch]
         name: 
           - "ac-cpu intel"
           - "ac-cpu gnu"
@@ -42,6 +41,7 @@ jobs:
           # CPU builds
           # ------------------
           - name: "ac-cpu intel"
+            site: ac-batch
             compiler: intel-classic
             cuda: false
             openmp: false
@@ -56,6 +56,7 @@ jobs:
             envfile: arch/ecmwf/hpc2020/intel/2021.4.0/env.sh
 
           - name: "ac-cpu gnu"
+            site: ac-batch
             compiler: gnu-14
             cuda: false
             openmp: false
@@ -67,6 +68,7 @@ jobs:
           # GPU builds (nvhpc)
           # ------------------
           - name: "ac-gpu nvhpc OpenACC + CUDA"
+            site: ac-batch
             compiler: nvhpc
             cuda: true
             openmp: false
@@ -83,6 +85,7 @@ jobs:
             envfile: &nvhpc_envfile arch/ecmwf/hpc2020/nvhpc/24.5/env.sh
 
           - name: "ac-gpu nvhpc OMP offload"
+            site: ac-batch
             compiler: nvhpc
             cuda: false
             openmp: true
@@ -91,6 +94,7 @@ jobs:
             envfile: *nvhpc_envfile
 
           - name: "ac-gpu nvhpc OMP offload + CUDA"
+            site: ac-batch
             compiler: nvhpc
             cuda: true
             openmp: true
@@ -99,6 +103,7 @@ jobs:
             envfile: *nvhpc_envfile
 
           - name: "ac-gpu nvhpc OpenACC"
+            site: ac-batch
             compiler: nvhpc
             cuda: false
             openmp: false
