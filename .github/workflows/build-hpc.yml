@@ -43,6 +43,7 @@ jobs:
           - name: "ac-cpu intel"
             site: ac-batch
             compiler: intel-classic
+            cmake_options: -DENABLE_OMP_OFFLOAD=OFF -DENABLE_CUDA=OFF -DENABLE_MPI=ON -DENABLE_IO_PARALLEL=ON
             # Define CPU sbatch once, reuse via *sbatch_cpu
             sbatch_options: &sbatch_cpu |
               #SBATCH --time=00:20:00
@@ -56,6 +57,7 @@ jobs:
           - name: "ac-cpu gnu"
             site: ac-batch
             compiler: gnu-14
+            cmake_options: -DENABLE_OMP_OFFLOAD=OFF -DENABLE_CUDA=OFF -DENABLE_MPI=ON -DENABLE_IO_PARALLEL=ON
             sbatch_options: *sbatch_cpu
             envfile: arch/ecmwf/hpc2020/gnu/14.2.0/env.sh
 
@@ -66,7 +68,7 @@ jobs:
           - name: "ac-gpu nvhpc OpenACC + CUDA"
             site: ac-batch
             compiler: nvhpc
-            cmake_options: -DENABLE_CUDA=ON
+            cmake_options: -DENABLE_OMP_OFFLOAD=OFF -DENABLE_CUDA=ON -DENABLE_MPI=ON -DENABLE_IO_PARALLEL=ON
             # Define GPU sbatch once, reuse in the next GPU entries
             sbatch_options: &sbatch_gpu |
               #SBATCH --time=00:20:00
@@ -82,7 +84,7 @@ jobs:
           - name: "ac-gpu nvhpc OMP offload"
             site: ac-batch
             compiler: nvhpc
-            cmake_options: -DENABLE_OMP_OFFLOAD=ON -DENABLE_CUDA=OFF
+            cmake_options: -DENABLE_OMP_OFFLOAD=ON -DENABLE_CUDA=OFF -DENABLE_MPI=ON -DENABLE_IO_PARALLEL=ON
             sbatch_options: *sbatch_gpu
             cmake_toolchain: *nvhpc_toolchain 
             envfile: *nvhpc_envfile
@@ -90,7 +92,7 @@ jobs:
           - name: "ac-gpu nvhpc OMP offload + CUDA"
             site: ac-batch
             compiler: nvhpc
-            cmake_options: -DENABLE_OMP_OFFLOAD=ON -DENABLE_CUDA=ON
+            cmake_options: -DENABLE_OMP_OFFLOAD=ON -DENABLE_CUDA=ON -DENABLE_MPI=ON -DENABLE_IO_PARALLEL=ON
             sbatch_options: *sbatch_gpu
             cmake_toolchain: *nvhpc_toolchain
             envfile: *nvhpc_envfile
@@ -98,7 +100,7 @@ jobs:
           - name: "ac-gpu nvhpc OpenACC"
             site: ac-batch
             compiler: nvhpc
-            cmake_options: -DENABLE_CUDA=OFF
+            cmake_options: -DENABLE_OMP_OFFLOAD=OFF -DENABLE_CUDA=OFF -DENABLE_MPI=ON -DENABLE_IO_PARALLEL=ON
             sbatch_options: *sbatch_gpu
             cmake_toolchain: *nvhpc_toolchain
             envfile: *nvhpc_envfile
@@ -117,8 +119,6 @@ jobs:
           template_data: |
             cmake_options:
               - ${{ matrix.cmake_options }}
-              - -DENABLE_IO_PARALLEL=ON
-              - -DENABLE_MPI=ON
               - -DENABLE_SINGLE_PRECISION=ON
               - -DENABLE_DOUBLE_PRECISION=ON
               - -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}${{ matrix.cmake_toolchain || '' }}
