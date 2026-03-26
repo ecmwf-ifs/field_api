@@ -43,8 +43,6 @@ jobs:
           - name: "ac-cpu intel"
             site: ac-batch
             compiler: intel-classic
-            cuda: false
-            openmp: false
             # Define CPU sbatch once, reuse via *sbatch_cpu
             sbatch_options: &sbatch_cpu |
               #SBATCH --time=00:20:00
@@ -58,8 +56,6 @@ jobs:
           - name: "ac-cpu gnu"
             site: ac-batch
             compiler: gnu-14
-            cuda: false
-            openmp: false
             sbatch_options: *sbatch_cpu
             envfile: arch/ecmwf/hpc2020/gnu/14.2.0/env.sh
 
@@ -70,8 +66,7 @@ jobs:
           - name: "ac-gpu nvhpc OpenACC + CUDA"
             site: ac-batch
             compiler: nvhpc
-            cuda: true
-            openmp: false
+            cmake_options: -DENABLE_CUDA=ON
             # Define GPU sbatch once, reuse in the next GPU entries
             sbatch_options: &sbatch_gpu |
               #SBATCH --time=00:20:00
@@ -87,8 +82,7 @@ jobs:
           - name: "ac-gpu nvhpc OMP offload"
             site: ac-batch
             compiler: nvhpc
-            cuda: false
-            openmp: true
+            cmake_options: -DENABLE_OMP_OFFLOAD=ON -DENABLE_CUDA=OFF
             sbatch_options: *sbatch_gpu
             cmake_toolchain: *nvhpc_toolchain 
             envfile: *nvhpc_envfile
@@ -96,8 +90,7 @@ jobs:
           - name: "ac-gpu nvhpc OMP offload + CUDA"
             site: ac-batch
             compiler: nvhpc
-            cuda: true
-            openmp: true
+            cmake_options: -DENABLE_OMP_OFFLOAD=ON -DENABLE_CUDA=ON
             sbatch_options: *sbatch_gpu
             cmake_toolchain: *nvhpc_toolchain
             envfile: *nvhpc_envfile
@@ -105,8 +98,7 @@ jobs:
           - name: "ac-gpu nvhpc OpenACC"
             site: ac-batch
             compiler: nvhpc
-            cuda: false
-            openmp: false
+            cmake_options: -DENABLE_CUDA=OFF
             sbatch_options: *sbatch_gpu
             cmake_toolchain: *nvhpc_toolchain
             envfile: *nvhpc_envfile
@@ -124,8 +116,7 @@ jobs:
           sbatch_options: ${{ matrix.sbatch_options }}
           template_data: |
             cmake_options:
-              - -DENABLE_OMP_OFFLOAD=${{ matrix.openmp }}
-              - -DENABLE_CUDA=${{ matrix.cuda }}
+              - ${{ matrix.cmake_options }}
               - -DENABLE_IO_PARALLEL=ON
               - -DENABLE_MPI=ON
               - -DENABLE_SINGLE_PRECISION=ON
