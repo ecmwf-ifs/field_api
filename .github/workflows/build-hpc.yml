@@ -137,7 +137,6 @@ jobs:
                   - -DENABLE_TESTS=OFF
                   - -DENABLE_SINGLE_PRECISION=ON
                   - -DENABLE_DOUBLE_PRECISION=ON
-                  - -DENABLE_MPI=ON
                   - -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} 
           template: |
             REPO=${{ github.event.pull_request.head.repo.full_name || github.repository }}
