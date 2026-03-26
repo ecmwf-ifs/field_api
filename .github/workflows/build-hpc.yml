@@ -30,11 +30,14 @@ jobs:
         name: 
           - "ac-cpu intel"
           - "ac-cpu gnu"
+          - "lumi-c cce"
           - "ac-gpu nvhpc OpenACC + CUDA"
           - "ac-gpu nvhpc OMP offload"
           - "ac-gpu nvhpc OpenACC"
           - "ac-gpu nvhpc OMP offload + CUDA"
-    
+          - "lumi-g rocm-afar OMP offload"
+          - "lumi-g rocm-afar OMP offload + HIPFORT"
+
         include:
 
           # ------------------
@@ -42,6 +45,7 @@ jobs:
           # ------------------
           - name: "ac-cpu intel"
             site: ac-batch
+            troika_user_secret: HPC_CI_SSH_USER
             compiler: intel-classic
             cmake_options: -DENABLE_OMP_OFFLOAD=OFF -DENABLE_CUDA=OFF -DENABLE_MPI=ON -DENABLE_IO_PARALLEL=ON
             # Define CPU sbatch once, reuse via *sbatch_cpu
@@ -56,17 +60,36 @@ jobs:
 
           - name: "ac-cpu gnu"
             site: ac-batch
+            troika_user_secret: HPC_CI_SSH_USER
             compiler: gnu-14
             cmake_options: -DENABLE_OMP_OFFLOAD=OFF -DENABLE_CUDA=OFF -DENABLE_MPI=ON -DENABLE_IO_PARALLEL=ON
             sbatch_options: *sbatch_cpu
             envfile: arch/ecmwf/hpc2020/gnu/14.2.0/env.sh
 
+          - name: "lumi-c cce"
+            site: lumi
+            troika_user_secret: LUMI_CI_SSH_USER
+            account_secret: LUMI_CI_PROJECT
+            compiler: cce
+            sbatch_options: |
+              #SBATCH --time=00:30:00
+              #SBATCH --nodes=1
+              #SBATCH --ntasks=1
+              #SBATCH --ntasks-per-node=1
+              #SBATCH --cpus-per-task=8
+              #SBATCH --partition=dev-g
+              #SBATCH --account={0}
+            output_dir: /scratch/{0}/github-actions/field_api/lumi-c/${{ github.run_id }}/${{ github.run_attempt }}
+            workdir: /scratch/{0}/github-actions/field_api/lumi-c/${{ github.run_id }}/${{ github.run_attempt }}
+            cmake_toolchain: -DCMAKE_TOOLCHAIN_FILE=arch/eurohpc/lumi/cray-cpu/20.0.0/toolchain.cmake
+            envfile: arch/eurohpc/lumi/cray-cpu/20.0.0/env.sh
 
           # ------------------
           # GPU builds (nvhpc)
           # ------------------
           - name: "ac-gpu nvhpc OpenACC + CUDA"
             site: ac-batch
+            troika_user_secret: HPC_CI_SSH_USER
             compiler: nvhpc
             cmake_options: -DENABLE_OMP_OFFLOAD=OFF -DENABLE_CUDA=ON -DENABLE_MPI=ON -DENABLE_IO_PARALLEL=ON
             # Define GPU sbatch once, reuse in the next GPU entries
@@ -83,6 +106,7 @@ jobs:
 
           - name: "ac-gpu nvhpc OMP offload"
             site: ac-batch
+            troika_user_secret: HPC_CI_SSH_USER
             compiler: nvhpc
             cmake_options: -DENABLE_OMP_OFFLOAD=ON -DENABLE_CUDA=OFF -DENABLE_MPI=ON -DENABLE_IO_PARALLEL=ON
             sbatch_options: *sbatch_gpu
@@ -91,6 +115,7 @@ jobs:
 
           - name: "ac-gpu nvhpc OMP offload + CUDA"
             site: ac-batch
+            troika_user_secret: HPC_CI_SSH_USER
             compiler: nvhpc
             cmake_options: -DENABLE_OMP_OFFLOAD=ON -DENABLE_CUDA=ON -DENABLE_MPI=ON -DENABLE_IO_PARALLEL=ON
             sbatch_options: *sbatch_gpu
@@ -99,11 +124,46 @@ jobs:
 
           - name: "ac-gpu nvhpc OpenACC"
             site: ac-batch
+            troika_user_secret: HPC_CI_SSH_USER
             compiler: nvhpc
             cmake_options: -DENABLE_OMP_OFFLOAD=OFF -DENABLE_CUDA=OFF -DENABLE_MPI=ON -DENABLE_IO_PARALLEL=ON
             sbatch_options: *sbatch_gpu
             cmake_toolchain: *nvhpc_toolchain
             envfile: *nvhpc_envfile
+
+          # ------------------
+          # GPU builds (rocm-afar)
+          # ------------------
+          - name: "lumi-g rocm-afar OMP offload"
+            site: lumi
+            troika_user_secret: LUMI_CI_SSH_USER
+            account_secret: LUMI_CI_PROJECT
+            compiler: rocm-afar
+            cmake_options: -DENABLE_OMP_OFFLOAD=ON -DENABLE_DOUBLE_PRECISION=OFF
+            sbatch_options: &sbatch_lumi_gpu |
+              #SBATCH --time=00:30:00
+              #SBATCH --nodes=1
+              #SBATCH --ntasks-per-node=1
+              #SBATCH --cpus-per-task=7
+              #SBATCH --gpus-per-task=1
+              #SBATCH --partition=dev-g
+              #SBATCH --account={0}
+            output_dir: /scratch/{0}/github-actions/field_api/${{ github.run_id }}/${{ github.run_attempt }}
+            workdir: /scratch/{0}/github-actions/field_api/${{ github.run_id }}/${{ github.run_attempt }}
+            cmake_toolchain: &rocm_afar_toolchain -DCMAKE_TOOLCHAIN_FILE=arch/eurohpc/lumi/rocm-afar/22.2/toolchain.cmake
+            envfile: &rocm_afar_envfile arch/eurohpc/lumi/rocm-afar/22.2/env.sh
+
+          - name: "lumi-g rocm-afar OMP offload + HIPFORT"
+            site: lumi
+            troika_user_secret: LUMI_CI_SSH_USER
+            account_secret: LUMI_CI_PROJECT
+            compiler: rocm-afar
+            cmake_options: -DENABLE_OMP_OFFLOAD=ON -DENABLE_HIPFORT=ON -DENABLE_DOUBLE_PRECISION=OFF
+            sbatch_options: *sbatch_lumi_gpu
+            output_dir: /scratch/{0}/github-actions/field_api/${{ github.run_id }}/${{ github.run_attempt }}
+            workdir: /scratch/{0}/github-actions/field_api/${{ github.run_id }}/${{ github.run_attempt }}
+            cmake_toolchain: *rocm_afar_toolchain
+            envfile: *rocm_afar_envfile
 
     runs-on: [self-hosted, linux, hpc]
 
@@ -114,13 +174,13 @@ jobs:
       - uses: ecmwf-actions/reusable-workflows/ci-hpc-generic@v2
         with:
           site: ${{ matrix.site }}
-          troika_user: ${{ secrets.HPC_CI_SSH_USER }}
-          sbatch_options: ${{ matrix.sbatch_options }}
+          troika_user: ${{ secrets[matrix.troika_user_secret] }}
+          sbatch_options: ${{ format(matrix.sbatch_options, secrets[matrix.account_secret]) }}
+          output_dir: ${{ format(matrix.output_dir, secrets[matrix.account_secret]) || '' }}
+          workdir: ${{ format(matrix.workdir, secrets[matrix.account_secret]) || '' }}
           template_data: |
             cmake_options:
               - ${{ matrix.cmake_options }}
-              - -DENABLE_SINGLE_PRECISION=ON
-              - -DENABLE_DOUBLE_PRECISION=ON
               - -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}${{ matrix.cmake_toolchain || '' }}
             dependencies:
               ecmwf/ecbuild:
@@ -174,5 +234,5 @@ jobs:
                 -D{{proj}}_ROOT=$BASEDIR/{{name}}/installation \
               {% endfor %}
               {{ cmake_options|join(' ') }}
-            cmake --build build
+            cmake --build build -- -j 8
             ctest -VV --test-dir build --output-on-failure
