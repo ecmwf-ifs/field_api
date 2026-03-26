@@ -123,6 +123,8 @@ jobs:
               - -DENABLE_DOUBLE_PRECISION=ON
               - -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}${{ matrix.cmake_toolchain || '' }}
             dependencies:
+              ecmwf/ecbuild:
+                version: 3.13.1
               ecmwf/fckit:
                 version: 0.14.0
                 cmake_options:
