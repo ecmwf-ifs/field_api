@@ -192,7 +192,7 @@ jobs:
                   - -DENABLE_FCKIT_VENV=ON
                   - -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
               ecmwf-ifs/fiat:
-                version: 1.6.1
+                version: develop
                 cmake_options:
                   - -DENABLE_TESTS=OFF
                   - -DENABLE_SINGLE_PRECISION=ON
