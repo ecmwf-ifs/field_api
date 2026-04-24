@@ -20,4 +20,8 @@ endif ()
 
 if(CMAKE_Fortran_COMPILER_ID MATCHES Intel)
   ecbuild_add_fortran_flags("-check nocontiguous" BUILD DEBUG)
+      if (CMAKE_Fortran_COMPILER_VERSION VERSION_LESS "20.0")
+        message(STATUS "Adding -recursive for Intel Fortran < 20")
+        add_compile_options($<$<COMPILE_LANGUAGE:Fortran>:-recursive>)
+    endif()
 endif()
