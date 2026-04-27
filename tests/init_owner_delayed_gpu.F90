@@ -22,16 +22,40 @@ PROGRAM INIT_OWNER_DELAYED_GPU
 
         CALL FIELD_NEW(O, LBOUNDS=[10,1], UBOUNDS=[21,11], DELAYED=.TRUE.)
         CALL O%GET_DEVICE_DATA_RDWR(PTR)
+#ifdef OMPGPU
+        !$OMP TARGET MAP(TO:PTR)
+#else
         !$ACC KERNELS PRESENT(PTR)
-        PTR=42
+#endif
+        DO J = 1, UBOUND(PTR, 2)
+          DO I = 10, 21
+            PTR(I,J)=42
+          ENDDO
+        ENDDO
+#ifdef OMPGPU
+        !$OMP END TARGET
+#else
         !$ACC END KERNELS
+#endif
 
         OKAY=.TRUE.
+#ifdef OMPGPU
+        !$OMP TARGET MAP(TO:PTR) MAP(TOFROM:OKAY)
+#else
         !$ACC SERIAL PRESENT(PTR) COPY(OKAY)
-        IF(.NOT. ALL(PTR == 42))THEN
-                OKAY=.FALSE.
-        ENDIF
+#endif
+        DO J = 1, UBOUND(PTR, 2)
+          DO I = 10, 21
+            IF (PTR(I,J) /= 42) THEN
+               OKAY = .FALSE.
+            ENDIF
+          ENDDO
+        ENDDO
+#ifdef OMPGPU
+        !$OMP END TARGET
+#else
         !$ACC END SERIAL
+#endif
 
         IF(OKAY .EQV. .FALSE.)THEN
                 CALL FIELD_ABORT ("ERROR")

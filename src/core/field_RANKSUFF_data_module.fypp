@@ -1,0 +1,328 @@
+#! (C) Copyright 2022- ECMWF.
+#! (C) Copyright 2022- Meteo-France.
+#! (C) Copyright 2023- NVIDIA
+#!
+#! This software is licensed under the terms of the Apache Licence Version 2.0
+#! which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
+#! In applying this licence, ECMWF does not waive the privileges and immunities
+#! granted to it by virtue of its status as an intergovernmental organisation
+#! nor does it submit to any jurisdiction.
+
+MODULE FIELD_${RANK}$${SUFF}$_DATA_MODULE
+
+#:set fieldTypeList = fieldType.getFieldTypeList (ranks=[RANK], kinds=['JP' + str (SUFF)])
+
+USE FIELD_CONSTANTS_MODULE
+USE FIELD_ABORT_MODULE
+USE, INTRINSIC :: ISO_C_BINDING
+${fieldType.useParkind1 ()}$
+$:offload_macros.runtime_api_import()
+
+IMPLICIT NONE
+
+PRIVATE
+
+#:for ft in fieldTypeList
+#:set ftn = ft.name
+
+PUBLIC :: ${ftn}$_COPY
+PUBLIC :: ${ftn}$_COPY_FUNC
+PUBLIC :: ${ftn}$_COPY_INTF
+
+ABSTRACT INTERFACE
+  SUBROUTINE ${ftn}$_COPY_INTF (HST, DEV, MAP_DEVPTR, KDIR, QUEUE)
+#:if 'IM' in ftn
+    IMPORT :: ${ft.kind}$
+#:else
+    IMPORT :: JPIM, ${ft.kind}$
+#:endif
+    ${ft.type}$, POINTER :: HST (${ft.shape}$), DEV (${ft.shape}$)
+    LOGICAL,                       INTENT (IN) :: MAP_DEVPTR
+    INTEGER (KIND=JPIM),           INTENT (IN) :: KDIR
+    INTEGER (KIND=JPIM), OPTIONAL, INTENT (IN) :: QUEUE
+  END SUBROUTINE
+END INTERFACE
+#:endfor
+
+#:if defined('WITH_HIC')
+INTERFACE
+$:offload_macros.memcpy_async_intf()
+$:offload_macros.memcpy_2D_intf()
+END INTERFACE
+#:endif
+
+CONTAINS
+
+#:for ft in fieldTypeList
+#:set ftn = ft.name
+
+  FUNCTION ${ftn}$_COPY_FUNC (HST, DEV) RESULT (FUNC)
+
+    USE FIELD_ABORT_MODULE
+
+    PROCEDURE (${ftn}$_COPY_INTF), POINTER :: FUNC 
+
+    ${ft.type}$, POINTER, OPTIONAL :: HST (${ft.shape}$), DEV (${ft.shape}$)
+
+    INTEGER :: LAST_CONTIG_DIM
+    INTEGER :: NEXT_CONTIG_DIM
+
+    IF (PRESENT (HST)) THEN
+      LAST_CONTIG_DIM = ${ftn}$_GET_LAST_CONTIGUOUS_DIMENSION (HST, 0)
+      NEXT_CONTIG_DIM = ${ftn}$_GET_LAST_CONTIGUOUS_DIMENSION (HST, LAST_CONTIG_DIM+1)
+    ELSE
+      LAST_CONTIG_DIM = ${ft.rank}$
+      NEXT_CONTIG_DIM = ${ft.rank}$
+    ENDIF
+
+    SELECT CASE (LAST_CONTIG_DIM)
+#:if defined('WITH_HIC')
+      CASE (${ft.rank}$)
+        FUNC => ${ftn}$_COPY_DIM${ft.rank}$_CONTIGUOUS 
+#:for d1 in range (ft.rank)
+      CASE (${d1}$)
+        SELECT CASE (NEXT_CONTIG_DIM)
+          #:for d2 in range (d1+1, ft.rank+1)
+          CASE (${d2}$)
+            FUNC => ${ftn}$_COPY_2D_DIM${d1}$_${d2}$_CONTIGUOUS 
+          #:endfor
+          CASE DEFAULT
+            CALL FIELD_ABORT ('INTERNAL ERROR: UNEXPECTED NEXT_CONTIG_DIM')
+        END SELECT
+#:endfor
+#:else
+#:for d in range (ft.rank + 1)
+      CASE (${d}$)
+        FUNC => ${ftn}$_COPY_DIM${d}$_CONTIGUOUS 
+#:endfor
+#:endif
+      CASE DEFAULT
+        CALL FIELD_ABORT ('INTERNAL ERROR: UNEXPECTED LAST_CONTIG_DIM')
+    END SELECT
+
+  END FUNCTION
+
+  SUBROUTINE ${ftn}$_COPY (HST, DEV, MAP_DEVPTR, KDIR, QUEUE)
+
+    USE FIELD_ABORT_MODULE
+
+    ${ft.type}$, POINTER :: HST (${ft.shape}$), DEV (${ft.shape}$)
+    LOGICAL,                       INTENT (IN) :: MAP_DEVPTR
+    INTEGER (KIND=JPIM),           INTENT (IN) :: KDIR
+    INTEGER (KIND=JPIM), OPTIONAL, INTENT (IN) :: QUEUE
+
+    PROCEDURE (${ftn}$_COPY_INTF), POINTER :: FUNC 
+
+    FUNC => ${ftn}$_COPY_FUNC (HST, DEV) 
+
+    CALL FUNC (HST, DEV, MAP_DEVPTR, KDIR, QUEUE)
+
+  END SUBROUTINE
+
+#:for d in range (0, ft.rank+1)
+  SUBROUTINE ${ftn}$_COPY_DIM${d}$_CONTIGUOUS (HST, DEV, MAP_DEVPTR, KDIR, QUEUE)
+  USE FIELD_ASYNC_MODULE, ONLY : STREAMS
+  USE, INTRINSIC :: ISO_FORTRAN_ENV, ONLY : INT64
+    ${ft.type}$, POINTER :: HST (${ft.shape}$), DEV (${ft.shape}$)
+    LOGICAL,                       INTENT (IN) :: MAP_DEVPTR
+    INTEGER (KIND=JPIM),           INTENT (IN) :: KDIR
+    INTEGER (KIND=JPIM), OPTIONAL, INTENT (IN) :: QUEUE
+    INTEGER (KIND=INT64)                       :: ISIZE
+    INTEGER (KIND=C_INT)                       :: ERR, HST_ID, DEV_ID
+    INTEGER (KIND=C_SIZE_T)                    :: OFFSET
+    INTEGER :: ${', '.join (['J'] + list (map (lambda i: 'J' + str (i+1), range (d, ft.rank))))}$
+$:offload_macros.c_devptr_decl(symbols=['DEVPTR'], indent=4)
+
+
+    OFFSET = 0
+$:offload_macros.get_device_id(dev_id='DEV_ID', indent=4)
+$:offload_macros.get_host_id(hst_id='HST_ID', indent=4)
+
+  #:for e in range (ft.rank, d, -1)
+    ${'  ' * (ft.rank - e)}$DO J${e}$ = LBOUND (HST, ${e}$), UBOUND (HST, ${e}$)
+  #:endfor
+  #:set ar = ', '.join ([':'] * d  + list (map (lambda i: 'J' + str (i+1), range (d, ft.rank))))
+  #:set lbdiff = lambda i: f'LBOUND(DEV,{i}) - LBOUND (HST,{i})'
+  #:set ard = ', '.join ([':'] * d  + ['J' + str(i+1) + ' + ' + lbdiff(i+1) for i in range (d, ft.rank)])
+  #:set indent = '  ' * (ft.rank - e)
+#ifdef WITH_GPU_OFFLOAD
+    ${indent}$  IF(MAP_DEVPTR)THEN
+$:offload_macros.host_data(use_device=['DEV'], indent=ft.rank - e)
+    ${indent}$    DEVPTR = ${offload_macros.devptr_cloc(f'DEV ({ard})')}$
+$:offload_macros.end_host_data(indent=ft.rank - e)
+    ${indent}$  ELSE
+$:offload_macros.data_deviceptr(symbols=['DEVPTR', 'DEV'], indent=ft.rank - e)
+    ${indent}$    DEVPTR = ${offload_macros.devptr_cloc(f'DEV ({ard})')}$
+$:offload_macros.end_data_deviceptr(indent=ft.rank - e)
+    ${indent}$  ENDIF
+#endif
+    #:if d == 0
+    ${indent}$  ISIZE = KIND (HST)
+    #:else
+    ${indent}$  ISIZE = SIZEOF ( HST(${ar}$) )
+    #:endif
+    ${indent}$  IF (KDIR == NH2D) THEN
+#ifdef WITH_GPU_OFFLOAD
+    ${indent}$    IF(PRESENT(QUEUE))THEN
+$:offload_macros.memcpy_to_device_async(dev='DEVPTR', host=f'HST ({ar})', size='ISIZE', queue='QUEUE', offset='OFFSET', &
+&                                       dev_id='DEV_ID', hst_id='HST_ID', return_val='ERR', stream='STREAMS(QUEUE)%STREAM', &
+&                                       indent=ft.rank - e + 10)
+    ${indent}$    ELSE
+$:offload_macros.memcpy_to_device(dev='DEVPTR', host=f'HST ({ar})', size='ISIZE', offset='OFFSET', &
+&                                 dev_id='DEV_ID', hst_id='HST_ID', return_val='ERR', indent=ft.rank - e + 10)
+    ${indent}$    ENDIF
+#else
+    ${indent}$    DEV (${ard}$) = HST (${ar}$)
+#endif
+    ${indent}$  ELSEIF (KDIR == ND2H) THEN
+#ifdef WITH_GPU_OFFLOAD
+    ${indent}$    IF(PRESENT(QUEUE))THEN
+$:offload_macros.memcpy_from_device_async(dev='DEVPTR', host=f'HST ({ar})', size='ISIZE', queue='QUEUE', offset='OFFSET', &
+&                                         dev_id='DEV_ID', hst_id='HST_ID', return_val='ERR', stream='STREAMS(QUEUE)%STREAM', &
+&                                         indent=ft.rank - e + 10)
+    ${indent}$    ELSE
+$:offload_macros.memcpy_from_device(dev='DEVPTR', host=f'HST ({ar})', size='ISIZE', offset='OFFSET', &
+&                                   dev_id='DEV_ID', hst_id='HST_ID', return_val='ERR', indent=ft.rank - e + 10)
+    ${indent}$    ENDIF
+#else
+    ${indent}$    HST (${ar}$) = DEV (${ard}$)
+#endif
+    ${indent}$  ENDIF
+  #:for e in range (d, ft.rank)
+    ${'  ' * (ft.rank - e - 1)}$ENDDO
+  #:endfor
+    END SUBROUTINE
+
+#:endfor
+
+#:if defined('WITH_HIC')
+#:for d1 in range (0, ft.rank)
+#:for d2 in range (d1+1, ft.rank+1)
+    SUBROUTINE ${ftn}$_COPY_2D_DIM${d1}$_${d2}$_CONTIGUOUS (HST, DEV, MAP_DEVPTR, KDIR, QUEUE)
+    USE FIELD_ASYNC_MODULE, ONLY : STREAMS
+
+    ${ft.type}$, POINTER :: HST (${ft.shape}$), DEV (${ft.shape}$)
+    INTEGER (KIND=JPIM),           INTENT (IN) :: KDIR
+    LOGICAL,                       INTENT (IN) :: MAP_DEVPTR
+    INTEGER (KIND=JPIM), OPTIONAL, INTENT (IN) :: QUEUE
+    INTEGER (C_SIZE_T) :: IHST_PITCH, IDEV_PITCH, IWIDTH, IHEIGHT
+    INTEGER (KIND=JPIM) :: ISHP(${ft.rank+1}$)
+  #:if d2 < ft.rank
+    INTEGER :: ${', '.join (list (map (lambda i: 'J' + str (i+1), range (d2, ft.rank))))}$
+  #:endif
+    TYPE(C_PTR) :: HSTPTR
+$:offload_macros.c_devptr_decl(symbols=['DEVPTR'], indent=4)
+$:offload_macros.runtime_error_decl(symbols=['IRET',], indent=4)
+
+    ISHP(1) = 1
+    ISHP(2:) = SHAPE(HST)
+    IWIDTH = PRODUCT(ISHP(1:${d1+1}$)) * KIND(HST)
+    IHEIGHT = PRODUCT(ISHP(${d1+2}$:${d2+1}$))
+
+#:set lb = lambda arr, i: f'LBOUND({arr}, {i+1})'
+#:set lbnds = lambda arr, start, end: [lb(arr, i) for i in range(start, end)]
+#:set this_slice = lambda arr: ', '.join(lbnds(arr, 0, ft.rank))
+#:set next_slice = lambda arr: ', '.join(lbnds(arr, 0, d1) + [lb(arr, d1)+'+1'] + lbnds(arr, d1+1, ft.rank))
+    IHST_PITCH = LOC (HST(${next_slice('HST')}$)) - LOC (HST (${this_slice('HST')}$))
+    IDEV_PITCH = LOC (DEV(${next_slice('DEV')}$)) - LOC (DEV (${this_slice('DEV')}$))
+
+  #:for e in range (ft.rank, d2, -1)
+    ${'  ' * (ft.rank - e)}$DO J${e}$ = LBOUND (HST, ${e}$), UBOUND (HST, ${e}$)
+  #:endfor
+  #:set indent = '  ' * (ft.rank - d2 - 1)
+  #:set ar = lambda arr: ', '.join(lbnds(arr, 0, d2) + [f'J{i+1}' for i in range(d2, ft.rank)])
+    ${indent}$  HSTPTR = C_LOC(HST (${ar('HST')}$))
+    ${indent}$  IF (MAP_DEVPTR) THEN
+$:offload_macros.host_data(use_device=['DEV',], indent=ft.rank - d2 - 1)
+    ${indent}$     DEVPTR = ${offload_macros.devptr_cloc(symbol=f"DEV({ar('DEV')})")}$
+$:offload_macros.end_host_data(indent=ft.rank - d2 - 1)
+    ${indent}$  ELSE
+$:offload_macros.data_deviceptr(symbols=['DEVPTR', 'DEV'], indent=ft.rank - d2 - 1)
+    ${indent}$     DEVPTR = ${offload_macros.devptr_cloc(symbol=f"DEV({ar('DEV')})")}$
+$:offload_macros.end_data_deviceptr(indent=ft.rank - d2 - 1)
+    ${indent}$  ENDIF
+    ${indent}$  IF (KDIR == NH2D) THEN
+    ${indent}$    IF(PRESENT(QUEUE)) THEN
+$:offload_macros.memcpy_2D_async(dst='DEVPTR', dst_pitch='IDEV_PITCH', src='HSTPTR', src_pitch='IHST_PITCH', &
+&                                width='IWIDTH', height='IHEIGHT', stream='STREAMS(QUEUE)%STREAM', kdir='H2D', &
+&                                return_val='IRET', indent=ft.rank - d2 + 9)
+    ${indent}$    ELSE
+$:offload_macros.memcpy_2D(dst='DEVPTR', dst_pitch='IDEV_PITCH', src='HSTPTR', src_pitch='IHST_PITCH', &
+&                          width='IWIDTH', height='IHEIGHT', kdir='H2D', return_val='IRET', indent=ft.rank - d2 + 9)
+    ${indent}$    ENDIF
+    ${indent}$    IF (IRET /= 0) THEN
+    ${indent}$       CALL FIELD_ABORT ("${ftn}$_COPY_2D_DIM${d1}$_${d2}$_CONTIGUOUS: HOST-TO-DEVICE TRANSFER FAILED")
+    ${indent}$    ENDIF
+    ${indent}$  ELSEIF (KDIR == ND2H) THEN
+    ${indent}$    IF(PRESENT(QUEUE)) THEN
+$:offload_macros.memcpy_2D_async(dst='HSTPTR', dst_pitch='IHST_PITCH', src='DEVPTR', src_pitch='IDEV_PITCH', &
+&                                width='IWIDTH', height='IHEIGHT', stream='STREAMS(QUEUE)%STREAM', kdir='D2H', &
+&                                return_val='IRET', indent=ft.rank - d2 + 9)
+    ${indent}$    ELSE
+$:offload_macros.memcpy_2D(dst='HSTPTR', dst_pitch='IHST_PITCH', src='DEVPTR', src_pitch='IDEV_PITCH', &
+&                          width='IWIDTH', height='IHEIGHT', kdir='D2H', return_val='IRET', indent=ft.rank - d2 + 9)
+    ${indent}$    ENDIF
+    ${indent}$    IF (IRET /= 0) THEN
+    ${indent}$       CALL FIELD_ABORT ("${ftn}$_COPY_2D_DIM${d1}$_${d2}$_CONTIGUOUS: DEVICE-TO-HOST TRANSFER FAILED")
+    ${indent}$    ENDIF
+    ${indent}$  ENDIF
+  #:for e in range (d2, ft.rank)
+    ${'  ' * (ft.rank - e - 1)}$ENDDO
+  #:endfor
+    END SUBROUTINE
+#:endfor
+#:endfor
+#:endif
+
+#:endfor
+
+#:for ft in fieldTypeList
+#:set ftn = ft.name
+
+  INTEGER (KIND=JPIM) FUNCTION ${ftn}$_GET_LAST_CONTIGUOUS_DIMENSION (PTR, AFTER) RESULT (JDIM)
+  ${ft.type}$, POINTER :: PTR (${ft.shape}$)
+  INTEGER (KIND=JPIM) :: AFTER
+  INTEGER*8 :: IPREVIOUS_STRIDE, ITHIS_STRIDE, ISIZE
+  INTEGER (KIND=JPIM) :: J, LB(${ft.rank}$)
+
+  ! assume that dimension all dimensions before AFTER are contiguous...
+  LB = LBOUND(PTR)
+  IF (AFTER == 0) THEN
+    IPREVIOUS_STRIDE = KIND (PTR)
+  ENDIF
+
+#:for d in range (1, ft.rank+1)
+  #:set ind0 = ""
+  #:set ind1 = ""
+  #:for i in range(1,ft.rank+1)
+    #:set ind0 = ind0 + "LB({}), ".format(i)
+    #:set ind1 = ind1 + "LB({}){}, ".format(i,"+1"*(i==d))
+  #:endfor
+  #:set ind0 = ind0[:-2]
+  #:set ind1 = ind1[:-2]
+  IF (AFTER < ${d}$) THEN
+   #:if d == 1
+    ISIZE = 1
+   #:else
+    ISIZE = SIZE(PTR, ${d-1}$)
+   #:endif
+    IF (SIZE(PTR, ${d}$) /= 1) THEN
+      ITHIS_STRIDE = LOC (PTR (${ind1}$)) - LOC (PTR (${ind0}$))
+      IF (IPREVIOUS_STRIDE * ISIZE /= ITHIS_STRIDE) THEN
+        JDIM = ${d-1}$
+        RETURN
+      ENDIF
+    ENDIF
+    IPREVIOUS_STRIDE = IPREVIOUS_STRIDE * ISIZE
+  ELSE IF (AFTER == ${d}$) THEN
+    ITHIS_STRIDE = LOC (PTR (${ind1}$)) - LOC (PTR (${ind0}$))
+    IPREVIOUS_STRIDE = ITHIS_STRIDE
+  ENDIF
+
+#:endfor
+  JDIM = ${ft.rank}$
+  END FUNCTION ${ftn}$_GET_LAST_CONTIGUOUS_DIMENSION
+
+#:endfor
+
+END MODULE FIELD_${RANK}$${SUFF}$_DATA_MODULE

@@ -33,6 +33,7 @@ module_load prgenv/nvidia
 module_load nvidia/22.11
 module_load python3/3.10.10-01
 module_load cmake/3.25.2
+module_load ecbuild/3.8.5
 
 # Increase stack size to maximum
 ulimit -S -s unlimited

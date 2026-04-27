@@ -39,11 +39,23 @@ PROGRAM GET_VIEW_GET_DEVICE_DATA
 
         CALL O%GET_DEVICE_DATA_RDWR(PTR)
         OKAY=.TRUE.
+#ifdef OMPGPU
+        !$OMP TARGET MAP(TO:PTR) MAP(TOFROM:OKAY)
+#else
         !$ACC SERIAL PRESENT(PTR) COPY(OKAY)
-        IF(.NOT. ALL(PTR == 7))THEN
-                OKAY=.FALSE.
-        ENDIF
+#endif
+        DO IBLK = 1, 1
+          DO JLON = 1, NPROMA
+            IF (PTR(JLON, IBLK) /= 7) THEN
+               OKAY = .FALSE.
+            ENDIF
+          ENDDO
+        ENDDO
+#ifdef OMPGPU
+        !$OMP END TARGET
+#else
         !$ACC END SERIAL
+#endif
 
         IF(OKAY .EQV. .FALSE.)THEN
                 CALL FIELD_ABORT ("ERROR")

@@ -13,14 +13,13 @@ you should not worry about it.
 Building FIELD_API requires:
 - A Fortran 2008 compliant compiler with support for:
   - OpenMP for CPU multi-threading
-  - OpenACC/CUDA for GPU offload (optional)
+  - OpenACC/OpenMP/CUDA for GPU offload (optional)
 - CMake (>= 3.24)
 - [ecbuild](https://github.com/ecmwf/ecbuild) (cloned if not found)
 - [fypp](https://github.com/aradi/fypp) (cloned if not found)
-- [fiat](https://github.com/ecmwf-ifs/fiat/) (optional)
+- [fiat](https://github.com/ecmwf-ifs/fiat/) (required, may optionally be replaced with a set of prepared FIAT components.)
 
-To build FIELD_API without fiat, the path to the directory containing the utility modules `oml_mod.F90`, `abor1.F90` and `parkind1.F90` must be specified using the CMake variable `UTIL_MODULE_PATH`.
-
+To build FIELD_API without FIAT, the path to the directory containing the utility modules `oml_mod.F90`, `abor1.F90` and `parkind1.F90` must be specified using the CMake variable `UTIL_MODULE_PATH`. The files must not carry further dependencies, refer for a sample implementation of such modules in [CLOUDSC dwarf](https://github.com/ecmwf-ifs/dwarf-p-cloudsc/blob/main/src/common/module).
 ## Build and test
 ```
 mkdir build
@@ -43,16 +42,23 @@ Features of FIELD_API can be toggled by passing the following argument to the CM
 | Feature | Default | Description |
 |:--- |:--- |:--- |
 | TESTS | ON | Build the testing suite. |
-| BUDDY_MALLOC | ON | Enable the use of a binary buddy memory allocator for the shadow host allocation for `FIELD%DEVPTR`. This option is switched off if CUDA is enabled.|
-| ACC | ON | Enable the use of OpenACC for GPU offload. |
+| MPI | OFF | Support for MPI distributed parallelism (currently used in parallel IO feature) |
+| ACC | ON | Enable the use of OpenACC for GPU offload. Currently only supported on NVHPC. |
+| OMP_OFFLOAD | OFF | Enable the use of OpenMP for GPU offload. |
 | SINGLE_PRECISION | ON | Enable the compilation of field_api in single precision |
 | DOUBLE_PRECISION | ON | Enable the compilation of field_api in double precision |
-| CUDA | OFF | Enable the use of CUDA for GPU offload. Disables the use of the buddy memory allocator, removes the shadow host allocation for `FIELD%DEVPTR` and allocates owned fields (see below) in pinned (page-locked) host memory.|
+| CUDA | OFF | Enable the use of advanced functionality via the cuda runtime API e.g. host memory pinning, fast strided copies, asynchronous data transfers, etc.|
+| HIPFORT | OFF | Enable the use of advanced functionality via the hipfort runtime API e.g. host memory pinning, fast strided copies, asynchronous data transfers, etc.|
+| GET_VIEW_ABORT | ON | If activated, get_view will abort when the data are not present on CPU. |
+| DELAYED | OFF | If activated, field owners will be delayed by default. |
+| IO_SERIAL | OFF | Use serial HDF5 to read and write FieldAPI variables.  |
+| IO_PARALLEL | OFF | Use  HDF5 (rank defined by MPI) to read and write FieldAPI variables.  |
 
 ## Supported compilers
-The library has been tested with the nvhpc toolkit from Nvidia, version 23.9
-and is continually tested with newer releases. It has also been tested on CPU
-(-DENABLE_ACC=OFF) with GCC 12 and Intel 2021. The CI testing (CPU-only for now) uses GNU 11.4.
+The library has been tested with the nvhpc toolkit from Nvidia, version 23.9/24.5
+and is continually tested with newer releases. Please note that GPU offload is currently
+only supported for the NVHPC and ROCm-AFAR (release 22.2 onwards) toolchains . It has also been tested on CPU (-DENABLE_ACC=OFF)
+with GCC, Intel (classic and LLVM), CCE and LLVM-flang.
 
 # Field API types
 
@@ -154,6 +160,10 @@ might be only conditionally used. But please keep in mind, that allocating data
 can be slow and will slow down the program if done during a computation heavy
 part of the code.
 
+The default value for the delayed option is false, but it can be switched by
+setting delayed\_default\_value to true, or by setting the ENABLE\_DELAYED
+cmake option to ON at compile time.
+
 ```
 SUBROUTINE SUB(MYTEST)
 LOGICAL, INTENT(IN) :: MYTEST
@@ -197,6 +207,27 @@ init_debug_value_jpim* to a custom value.
    CALL FIELD_NEW(O, LBOUNDS=[1,1], UBOUNDS=[10,10])
 ```
 
+## Data Transfers
+A field has ten type bound procedures that can be used to transfer data between the device and host.  Five `SYNC` methods that just copy the data using
+the specified access mode, and five `GET` methods that also additionally return a pointer to access the data:
+* ``SUBROUTINE SYNC_DEVICE_DATA_RDONLY (SELF)``
+* ``SUBROUTINE SYNC_DEVICE_DATA_WRONLY (SELF)``
+* ``SUBROUTINE SYNC_DEVICE_DATA_RDWR (SELF)``
+* ``SUBROUTINE SYNC_HOST_DATA_RDONLY (SELF)``
+* ``SUBROUTINE SYNC_HOST_DATA_RDWR (SELF)``
+
+* ``SUBROUTINE GET_DEVICE_DATA_RDONLY (SELF, PPTR)``
+* ``SUBROUTINE GET_DEVICE_DATA_WRONLY (SELF, PPTR)``
+* ``SUBROUTINE GET_DEVICE_DATA_RDWR (SELF, PPTR)``
+* ``SUBROUTINE GET_HOST_DATA_RDONLY (SELF, PPTR)``
+* ``SUBROUTINE GET_HOST_DATA_RDWR (SELF, PPTR)``
+
+Where``DEVICE/HOST`` indicates the transfer direction and ``RDONLY/RDWR/WRONLY`` indicates the access specifier, e.g. data copied to device using a `RDONLY`
+access specifier will **not** be copied back to host if a subsequent ``RDWR`` host access is issued. The difference between the ``GET`` and ``SYNC`` method
+is just their interface. The ``GET`` methods are called with a pointer argument, which must have the same rank as the field, that will be associated with
+the transferred data at its destination. The ``SYNC`` method is called without any arguments and will only perform the data transfers and update the field's
+inner pointers.
+
 ## Asynchronism
 
 This functionnality is still being tested.
@@ -205,12 +236,12 @@ By default all data transfers are synchronous. So every call to the subroutines
 GET\_HOST\_DATA, GET\_DEVICE\_DATA, SYNC\_HOST, SYNC\_DEVICE will stop the
 program until the data are actually transfered. But sometimes it is possible to
 interleave the data transfer with the computations. To do so you can add the
-QUEUE parameter when calling the aforementioned subroutines. With this QUEUE
-parameter the user will specify on which queue he wants the data transfer to
-happen, and the subroutines will return without waiting for the data transfer
-to finish. It is up to the user to be sure the data transfer has been done when
-he actually wants to use the data. This can be checked by using the
-WAIT\_FOR\_ASYNC\_QUEUE subroutine.
+QUEUE parameter, which must have a value greater than or equal to 1, when calling
+the aforementioned subroutines. With this QUEUE parameter the user will specify on
+which queue he wants the data transfer to happen, and the subroutines will return
+without waiting for the data transfer to finish. It is up to the user to be sure
+the data transfer has been done when he actually wants to use the data. This can
+be checked by using the WAIT\_FOR\_ASYNC\_QUEUE subroutine.
 
 ```
 SUBROUTINE SUB(MYTEST)
@@ -237,6 +268,9 @@ CALL WAIT_FOR_ASYNC_QUEUE(QUEUE=2)
 
 ```
 
+NB: Asynchronous offload requires the CUDA backend, which can be
+enabled by passing `-DENABLE_CUDA=ON` at build time.
+
 ## Statistics
 
 Each field API variable maintains statistics about the time it spend on data
@@ -253,13 +287,87 @@ write(*,*)"Total/Avg Time spend on transfer CPU->GPU", NUM_CPU_GPU_TR, "/" AVG,
 ...
 ```
 
-## Note on GET\_VIEW
+## Cloning fields with FIELD\_CLONE\_ON_
 
-GET\_VIEW must only be called in sections of code running on the host. The
-field's data must be present on the host. It will not work if the data are on
-the device or if the field has not been allocated yet (when using the DELAY
-option).
+The subroutines FIELD_CLONE_ON_HOST and FIELD_CLONE_ON_DEVICE let a field be
+cloned into a newly created FIELD_OWNER. The subroutines takes two arguments YL
+and YR. YL is the field that will receive the copy and YR is the field to be
+copied. YR is optional and can also be null, if any of those cases YL is set to
+null and no cloning is done.
 
+```
+...
+  USE FIELD_CLONE_MODULE, ONLY: FIELD_CLONE_ON_HOST
+  CLASS(FIELD_1RB), POINTER :: MYCLONE => NULL()
+...
+  CALL FIELD_CLONE_ON_HOST(MYCLONE, FIELD_TO_BE_CLONED)
+...
+```
+
+# Groups of Fields
+
+The `FIELD_STACK` is an abstraction to represent packed (i.e. interleaved) storage of fields,
+where each of the consituent fields are of arbitrary size
+and have a shape of either `${RANK}$` or `${RANK-1}$`. It should be noted that the limitation
+on shape here is purely due to the memory blocking in the IFS around which FIELD_API has been designed,
+combined with the fact that discontiguous memory sections cannot be reshaped freely.
+
+## `FIELD_STACK`
+
+A `FIELD_STACK` is again created via the `FIELD_NEW` constructor by passing the `LSTACK=.TRUE.` argument.
+Furthermore, the flexibility of the `FIELD_STACK` abstraction is exposed to the user via three further 
+optional arguments:
+1. `MEMBER_MAP`: a list of tuples representing the range of each member (i.e. child). This list
+must therefore be of length `2*NMEMBERS`, where `NMEMBERS` is the number of members.
+2. `MEMBER_LBOUNDS`: a list of length `NMEMBERS` containing lower bound overrides for the members.
+3. `MEMBER_RANKS`: by default, a member defined such that `MEMBER_MAP(I) == MEMBER_MAP(I+1)` is
+assumed to be of `${RANK-1}$`. This can be overriden by the user by explicitly providing the rank
+for each member.
+
+The constructor arguments for the `FIELD_STACK` are best illustrated with an example:
+```fortran
+CLASS(FIELD_3RB), POINTER :: F_STACK
+CLASS(FIELD_2RB), POINTER :: F_1
+CLASS(FIELD_3RB), POINTER :: F_2, F_3
+INTEGER(KIND=JPIM) :: MEMBER_MAP(3) = (/1,1,2,4,5,8/)
+
+CALL FIELD_NEW(F_STACK, LSTACK=.TRUE., MEMBER_MAP=MEMBER_MAP, ...)
+! The remaining arguments are what one would expect for an owned or wrapped field
+
+CALL GET_STACK_MEMBER(F_STACK, 1, F_1) ! 2D field representing one element of the 2nd dim of F_STACK
+CALL GET_STACK_MEMBER(F_STACK, 2, F_2) ! 3D field representing three elements of the 2nd dim of F_STACK
+CALL GET_STACK_MEMBER(F_STACK, 3, F_3) ! 3D field representing four elements of the 2nd dim of F_STACK
+```
+
+In the example above, all three member fields could have been forced to be 3D by passing the argument
+`MEMBER_RANKS=[3,3,3]`. The keen reader may have also observed that members of the `FIELD_STACK` are
+accessed via the `GET_STACK_MEMBER` method, availabe via the `FIELD_FACTORY` module. This is to shield
+users from the nightmarish derived-type casting syntax in Fortran. Finally, just like the `FIELD_GANG`,
+data movement between host and device on the `FIELD_STACK` always happens as a group. Further examples
+of the `FIELD_STACK` can be found in `tests/test_field_stack_*.F90`.
+
+## HDF5 I/O 
+
+Optional HDF5 module provides two routines to write and read FieldAPI data. The call requires: 
+* ``Field object``,
+* ``CPU or GPU data pointer``,
+* ``name of the HDF5 file to read from/write to ``,
+* ``variable name``.
+
+Optional arguments:
+* `` lsync``
+
+ parameter is enforcing  data sync when the GPU data pointer is provided.
+* `` hdfexists``
+
+ parameter disables creation of the HDF5 context 
+(e.g. when the HDF5 functionality is used in a pre-existing HDF5 context of the CLOUDSC dwarf).
+
+Example HDF5 output and input calls:
+```
+CALL WRITE_HDF5_PERRANK_DATA(FIELD_DATA_1RB, h5filename, "DATA_GPU_1RB", LSYNC=.TRUE.)
+CALL  READ_HDF5_PERRANK_DATA(FIELD_DATA_1RB, h5filename, "DATA_CPU_1RB") 
+```
 # Public API
 
 For field api type:
@@ -271,12 +379,14 @@ SUBROUTINE DELETE_DEVICE
 FUNCTION GET_VIEW(SELF, BLOCK_INDEX, ZERO) RESULT(VIEW_PTR)
 SUBROUTINE GET_DEVICE_DATA_RDONLY (SELF, PPTR, QUEUE)
 SUBROUTINE GET_DEVICE_DATA_RDWR (SELF, PPTR, QUEUE)
+SUBROUTINE GET_DEVICE_DATA_WRONLY (SELF, PPTR, QUEUE)
 SUBROUTINE GET_HOST_DATA_RDONLY (SELF, PPTR, QUEUE)
 SUBROUTINE GET_HOST_DATA_RDWR (SELF, PPTR, QUEUE)
 SUBROUTINE SYNC_HOST_RDWR (SELF, QUEUE)
 SUBROUTINE SYNC_HOST_RDONLY (SELF, QUEUE)
 SUBROUTINE SYNC_DEVICE_RDWR (SELF, QUEUE)
 SUBROUTINE SYNC_DEVICE_RDONLY (SELF, QUEUE)
+SUBROUTINE SYNC_DEVICE_WRONLY (SELF, QUEUE)
 SUBROUTINE COPY_OBJECT (SELF, LDCREATED)
 SUBROUTINE WIPE_OBJECT (SELF, LDDELETED)
 SUBROUTINE GET_DIMS (SELF, LBOUNDS, UBOUNDS)
@@ -287,6 +397,8 @@ Utils:
 ```
 SUBROUTINE WAIT_FOR_ASYNC_QUEUE(QUEUE)
 TYPE FIELD_*D_PTR
+SUBROUTINE FIELD_CLONE_ON_HOST(YL, YR)
+SUBROUTINE FIELD_CLONE_ON_DEVICE(YL, YR)
 ```
 
 Stats:
@@ -297,9 +409,24 @@ REAL :: TOTAL_TIME_TRANSFER_CPU_TO_GPU
 REAL :: TOTAL_TIME_TRANSFER_GPU_TO_CPU
 ```
 
+## Host memory pool
+
+FIELD_API also offers the possibility to use a memory pool for host allocations. This is implemented
+as a linked-list of blocks, with a base block size of 3GB. This can be configured via the environment
+variable `FIELD_API_HOST_POOL_BLOCK_SIZE`, or via the module variable `POOL_BLOCK_SIZE` in 
+`FIELD_DEFAULTS_MODULE`. The use of the memory pool can be requested by adding `LPOOLED=.TRUE.` to 
+the `FIELD_NEW` constructor, or the via the `POOL_OWNED_FIELDS` module variable, also in 
+`FIELD_DEFAULTS_MODULE`. To free the memory pool at the end of the run, the subroutine
+`FIELD_HOST_POOL_DELETE` in the `FIELD_FACTORY_MODULE` should be called.
+
 # License
 
 The field API library is licenced under the Apache licence, version 2.0.
 
 [buddy_alloc](https://github.com/spaskalev/buddy_alloc) is property of Stanislav Paskalev and licensed under the BSD Zero Clause License
 
+# Contributing
+
+Contributions to field API are welcome. 
+In order to do so, please open an issue where a feature request or bug can be discussed. 
+Then create a pull request with your contribution and sign the [contributors license agreement (CLA)](https://bol-claassistant.ecmwf.int/ecmwf-ifs/field_api).

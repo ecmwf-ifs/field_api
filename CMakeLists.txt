@@ -10,7 +10,7 @@
 cmake_minimum_required (VERSION 3.24)
 
 ## find ecbuild
-find_package( ecbuild 3.7 QUIET HINTS ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../ecbuild )
+find_package( ecbuild 3.12 QUIET HINTS ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../ecbuild )
 if( NOT ecbuild_FOUND )
   include(cmake/field_api_fetchcontent_ecbuild.cmake)
 endif()
@@ -21,42 +21,23 @@ if( DEFINED ENV{ECBUILD_TOOLCHAIN} AND NOT CMAKE_TOOLCHAIN_FILE)
 endif()
 
 ## define project and field_api target name
-project(field_api VERSION 0.3.2 LANGUAGES Fortran)
+project(field_api VERSION 0.3.9 LANGUAGES Fortran CXX)
 set(LIBNAME field_api)
+
+## load cmake macros
+include( field_api_macros )
 
 ## find required packages
 ecbuild_find_package(OpenMP COMPONENTS Fortran REQUIRED)
 
 ## find fypp
-ecbuild_find_package( fckit )
-find_program( FYPP fypp )
+field_api_find_fypp()
 
-if( fckit_FOUND AND fckit_HAVE_FCKIT_VENV )
-  set( FYPP ${FCKIT_VENV_EXE} -m fypp )
-elseif( fckit_FOUND )
-  # This is only needed for building in environments with python3 older than 3.8
-  list( APPEND _fckit_fypp_path "${FYPP}" )
-  list( LENGTH _fckit_fypp_path _list_length )
-  MATH( EXPR _last_entry "${_list_length} - 1" )
-  list( GET _fckit_fypp_path ${_last_entry} FYPP )
-elseif( FYPP MATCHES FYPP-NOTFOUND )
-  include(cmake/field_api_fetchcontent_fypp.cmake)
-  set(FYPP ${fypp_SOURCE_DIR}/bin/fypp)
-  ecbuild_info("fypp downloaded to: ${FYPP}")
-endif()
-
-## find OpenACC
-### Workaround for CMake bug (fixed in CMake 3.25)
-find_package(OpenACC COMPONENTS Fortran)
-if( OpenACC_Fortran_FOUND )
-   set( OpenACC_FOUND ON )
-endif()
-ecbuild_add_option( FEATURE ACC
-    DESCRIPTION "OpenACC" DEFAULT ON
-    CONDITION OpenACC_FOUND )
+## determine GPU offload model
+field_api_get_offload_model()
 
 ## set general compiler flags
-include(cmake/field_api_compile_options.cmake)
+field_api_compile_options()
 
 ## choose to build dp or sp or both
 ecbuild_add_option( FEATURE SINGLE_PRECISION
@@ -75,145 +56,127 @@ if(HAVE_DOUBLE_PRECISION)
     list(APPEND fiat_components double)
 endif()
 
-## find fiat
-ecbuild_find_package(NAME fiat COMPONENTS ${fiat_components})
-if( NOT fiat_FOUND )
-  if(NOT UTIL_MODULE_PATH)
-    ecbuild_critical("If not building with fiat, then the path for utility modules must be specified")
-  endif()
+ecbuild_add_option( FEATURE MPI
+                    DEFAULT OFF
+                    DESCRIPTION "Support for MPI distributed parallelism"
+                    REQUIRED_PACKAGES "MPI COMPONENTS Fortran" )
 
-  ecbuild_info( "Checking for FIAT components in ${UTIL_MODULE_PATH}" )
-
-  find_file( ABOR1_PATH abor1.F90 REQUIRED
-      HINTS ${UTIL_MODULE_PATH} ${UTIL_MODULE_PATH}/src/fiat/util
-  )
-  ecbuild_info( "Found ABOR1: ${ABOR1_PATH}" )
-
-  find_file( OML_PATH oml_mod.F90 REQUIRED
-      HINTS ${UTIL_MODULE_PATH} ${UTIL_MODULE_PATH}/src/fiat/oml
-  )
-  ecbuild_info( "Found OML: ${OML_PATH}" )
-
-  find_file( PARKIND1_PATH parkind1.F90 REQUIRED
-      HINTS ${UTIL_MODULE_PATH} ${UTIL_MODULE_PATH}/src/parkind
-  )
-  ecbuild_info( "Found PARKIND1: ${PARKIND1_PATH}" )
-  list(APPEND srcs ${ABOR1_PATH} ${OML_PATH} ${PARKIND1_PATH})
-endif()
-
-list(APPEND srcs field_async_module.F90 field_basic_module.F90 field_defaults_module.F90 dev_alloc.c c_malloc.c field_constants_module.F90 field_abort_module.F90 field_statistics_module.F90 field_backtrace.c)
-
-## check for CUDA
-include(CheckLanguage)
-check_language(CUDA)
-ecbuild_add_option( FEATURE CUDA
-    DESCRIPTION "CUDA" DEFAULT ON
-    CONDITION CMAKE_CUDA_COMPILER AND HAVE_ACC )
-
-## buddy allocator option
-ecbuild_add_option( FEATURE BUDDY_MALLOC
-    DESCRIPTION "Use buddy allocator for shadow host allocation"
-    DEFAULT ON
+## IO using HDF5
+ecbuild_add_option( FEATURE IO_SERIAL
+    DESCRIPTION "Use serial HDF5 to read and write FieldAPI variables"
+    REQUIRED_PACKAGES "HDF5 COMPONENTS Fortran"
+    DEFAULT OFF
 )
 
-check_symbol_exists(backtrace execinfo.h HAVE_BACKTRACE)
+ecbuild_add_option( FEATURE IO_PARALLEL
+    DESCRIPTION "Use HDF5 (rank defined by MPI) to read and write FieldAPI variables"
+    REQUIRED_PACKAGES "HDF5 COMPONENTS Fortran"
+    CONDITION HAVE_MPI 
+    DEFAULT OFF
+)
+
+if( HAVE_IO_SERIAL OR HAVE_IO_PARALLEL )
+    option( HAVE_IO "HAVE_IO" TRUE)
+else()
+    option( HAVE_IO "HAVE_IO" FALSE)
+endif()
+
+## find FIAT or at least its components 
+field_api_find_fiat_modules()
+
+##Get_view abort
+ecbuild_add_option( FEATURE GET_VIEW_ABORT
+	DESCRIPTION "Enable this option to make get_view abort when data are not on CPU"
+	DEFAULT ON
+)
+
+##Delayed
+ecbuild_add_option( FEATURE DELAYED
+	DESCRIPTION "Enable this option to delayed by default the allocation of field owner"
+	DEFAULT OFF
+)
+
 
 ## fypp preprocessor flags
-if(HAVE_BUDDY_MALLOC)
-  list( APPEND fypp_defines "-DUSE_BUDDY_MALLOC")
-endif()
-if(HAVE_CUDA)
-  list( APPEND fypp_defines "-DCUDA")
+if(HAVE_CUDA OR HAVE_HIPFORT)
+  list( APPEND fypp_defines "-DWITH_HIC")
 endif()
 if(fiat_FOUND)
   list( APPEND fypp_defines "-DWITH_FIAT")
 endif()
 
-## preprocess fypp files
-foreach (SUFF IN ITEMS IM RM RD LM)
-  string (TOLOWER ${SUFF} suff)
-  foreach (RANK RANGE 1 5)
-    foreach (FUNC IN ITEMS "" _shuffle _access _util _array _array_util _gang _factory _gather _data)
-      add_custom_command (OUTPUT field_${RANK}${suff}${FUNC}_module.F90
-	      COMMAND ${FYPP} -DRANK=${RANK} -DSUFF='${SUFF}' ${fypp_defines} -m os -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType 
-        ${CMAKE_CURRENT_SOURCE_DIR}/field_RANKSUFF${FUNC}_module.fypp > field_${RANK}${suff}${FUNC}_module.F90
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/field_RANKSUFF${FUNC}_module.fypp
-        VERBATIM)
-      list(APPEND srcs "field_${RANK}${suff}${FUNC}_module.F90")
-      set_source_files_properties( "field_${RANK}${suff}${FUNC}_module.F90" PROPERTIES COMPILE_OPTIONS $<${HAVE_CUDA}:-cuda>)
-    endforeach ()
-  endforeach ()
-endforeach ()
+## build precision independent srcs
+add_subdirectory(src)
 
-foreach (SRC IN ITEMS dev_alloc_module field_factory_module field_access_module field_gang_module field_array_module field_module 
-                      field_shuffle_module field_util_module field_array_util_module field_shuffle_type_module host_alloc_module
-                      field_gathscat_module field_gathscat_type_module)
-  add_custom_command (OUTPUT ${SRC}.F90
-	  COMMAND ${FYPP} -m os ${fypp_defines} -M ${CMAKE_CURRENT_SOURCE_DIR} -m fieldType ${CMAKE_CURRENT_SOURCE_DIR}/${SRC}.fypp > ${SRC}.F90
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${SRC}.fypp
-    VERBATIM)
-  list(APPEND srcs "${SRC}.F90")
-endforeach ()
-set_source_files_properties("dev_alloc_module.F90" PROPERTIES COMPILE_OPTIONS $<${HAVE_CUDA}:-cuda>)
-set_source_files_properties("host_alloc_module.F90" PROPERTIES COMPILE_OPTIONS $<${HAVE_CUDA}:-cuda>)
+## determine lib type i.e. STATIC/SHARED
+field_api_get_lib_type()
 
-## determine lib type
-cmake_dependent_option(BUILD_SHARED_LIBS "Dynamically link field_api" ON "NOT HAVE_ACC" OFF)
-if( HAVE_ACC )
-  ecbuild_warn("OpenACC builds force static linking.")
+## specify precision dependent sources that must be compiled twice
+list(APPEND prec_srcs
+    ${CMAKE_CURRENT_BINARY_DIR}/src/core/field_module.F90
+    ${CMAKE_CURRENT_BINARY_DIR}/src/util/field_array_module.F90
+    ${CMAKE_CURRENT_BINARY_DIR}/src/util/field_array_util_module.F90
+    ${CMAKE_CURRENT_BINARY_DIR}/src/util/field_util_module.F90)
+
+if( HAVE_IO )
+  list(APPEND prec_srcs
+      ${CMAKE_CURRENT_BINARY_DIR}/src/io/field_hdf5_module.F90)
 endif()
 
-list(APPEND prec_srcs field_module.F90 field_array_module.F90 field_array_util_module.F90 field_util_module.F90)
-list(REMOVE_ITEM srcs ${prec_srcs})
+list(APPEND obj_libs
+        field_api_core
+        field_api_debug
+        field_api_factory
+        field_api_util
+        field_api_shuffle
+        field_api_buffer
+)
 
-## build precision independent source files
-ecbuild_add_library(
-    TARGET ${LIBNAME}
-    TYPE OBJECT
-    SOURCES ${srcs}
-    DEFINITIONS $<$<NOT:${fiat_FOUND}>:${FIELD_API_DEFINITIONS}>
-    PRIVATE_LIBS
-       $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
-       $<${fiat_FOUND}:fiat>
-       $<${fiat_FOUND}:parkind_${DEFAULT_PRECISION}>
-       OpenMP::OpenMP_Fortran
-    )
-target_include_directories( ${LIBNAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-set_property(TARGET ${LIBNAME} PROPERTY C_STANDARD 99)
-set_target_properties( ${LIBNAME} PROPERTIES Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/include/${LIBNAME} )
-target_link_options( ${LIBNAME} PRIVATE $<${HAVE_CUDA}:-cuda> )
-if( HAVE_BACKTRACE )
-    target_compile_definitions( ${LIBNAME} PRIVATE HAVE_BACKTRACE )
+if( HAVE_IO )
+   list(APPEND obj_libs field_api_io)
 endif()
 
-# set install location for .mod files
-install(DIRECTORY ${CMAKE_BINARY_DIR}/include/${LIBNAME} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-
+## add field_api targets
 foreach(prec ${precisions})
-  ## add field_api target
   ecbuild_add_library(
       TARGET ${LIBNAME}_${prec}
-      SOURCES ${prec_srcs} $<TARGET_OBJECTS:${LIBNAME}>
-      DEFINITIONS $<$<NOT:${fiat_FOUND}>:${FIELD_API_DEFINITIONS}>
-      INTERFACE_LIBS
-         $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
+      TYPE   ${field_api_lib_type}
+      SOURCES ${prec_srcs}
+      OBJECTS
+         ${obj_libs}
+         field_api_defaults_${prec}
       PRIVATE_LIBS
          $<${fiat_FOUND}:fiat>
          $<${fiat_FOUND}:parkind_${prec}>
+         $<${HAVE_HIPFORT}:hipfort::hip>
          OpenMP::OpenMP_Fortran
+         $<$<BOOL:${HAVE_IO}>:HDF5::HDF5>
+         $<${HAVE_IO_PARALLEL}:MPI::MPI_Fortran>
       )
-  target_include_directories( ${LIBNAME}_${prec} PRIVATE ${CMAKE_BINARY_DIR}/include/${LIBNAME})
+
   set_property(TARGET ${LIBNAME}_${prec} PROPERTY C_STANDARD 99)
   set_target_properties( ${LIBNAME}_${prec} PROPERTIES Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/include/${LIBNAME}_${prec} )
   target_link_options( ${LIBNAME}_${prec} PUBLIC $<${HAVE_CUDA}:-cuda> )
+
+  if( HAVE_ACC AND CMAKE_Fortran_COMPILER_ID MATCHES "PGI|NVHPC")
+     target_link_options( ${LIBNAME}_${prec} INTERFACE SHELL:${OpenACC_Fortran_FLAGS} )
+  endif()
+
+  if( HAVE_OMP_OFFLOAD )
+     target_link_options( ${LIBNAME}_${prec} INTERFACE SHELL:${OpenMP_Fortran_FLAGS} )
+  endif()
 
   # export target usage interface
   target_include_directories( ${LIBNAME}_${prec}
                               INTERFACE $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include/${LIBNAME}_${prec}> 
                               INTERFACE $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${LIBNAME}_${prec}> 
-                              INTERFACE $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include/${LIBNAME}>
-                              INTERFACE $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${LIBNAME}>
                             )
+
+  # add sub-component module directories to target
+  field_api_target_add_module_dirs(
+    TARGET     ${LIBNAME}_${prec}
+    LIBS       ${obj_libs} field_api_defaults_${prec}
+  )
 
   if( prec MATCHES sp )
       target_compile_definitions( ${LIBNAME}_${prec} PRIVATE PARKIND1_SINGLE )
@@ -228,8 +191,8 @@ ecbuild_add_option(
     FEATURE TESTS
     DEFAULT ON
     DESCRIPTION "Enable field_api testing"
-    CONDITION fiat_FOUND
 )
+
 if( HAVE_TESTS )
   include(CTest)
   add_subdirectory(tests)

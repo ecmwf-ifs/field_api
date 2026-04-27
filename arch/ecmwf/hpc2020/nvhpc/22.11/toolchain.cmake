@@ -8,7 +8,7 @@
 # nor does it submit to any jurisdiction.
 
 ####################################################################
-# OpenAcc FLAGS
+# OpenACC FLAGS
 ####################################################################
 
 set( OpenACC_Fortran_FLAGS "-acc=gpu -gpu=cc80" CACHE STRING "" )

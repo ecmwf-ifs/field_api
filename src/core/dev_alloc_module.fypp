@@ -1,0 +1,143 @@
+#! (C) Copyright 2022- ECMWF.
+#! (C) Copyright 2022- Meteo-France.
+#!
+#! This software is licensed under the terms of the Apache Licence Version 2.0
+#! which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
+#! In applying this licence, ECMWF does not waive the privileges and immunities
+#! granted to it by virtue of its status as an intergovernmental organisation
+#! nor does it submit to any jurisdiction.
+
+MODULE DEV_ALLOC_MODULE
+
+#:set fieldTypeList = fieldType.getFieldTypeList ()
+
+${fieldType.useParkind1 ()}$
+$:offload_macros.runtime_api_import()
+
+USE, INTRINSIC :: ISO_C_BINDING
+
+IMPLICIT NONE
+
+INTERFACE DEV_ALLOCATE_DIM
+#:for ft in fieldTypeList
+  MODULE PROCEDURE ${ft.name}$_DEV_ALLOCATE_DIM
+#:endfor
+END INTERFACE
+
+INTERFACE DEV_DEALLOCATE
+#:for ft in fieldTypeList
+  MODULE PROCEDURE ${ft.name}$_DEV_DEALLOCATE
+#:endfor
+END INTERFACE
+
+INTERFACE
+  SUBROUTINE DEV_MALLOC (SIZ, PTR) BIND (C, NAME='dev_malloc')
+    IMPORT :: C_PTR, C_SIZE_T
+    INTEGER (C_SIZE_T), VALUE, INTENT(IN) :: SIZ
+    TYPE (C_PTR), INTENT(OUT) :: PTR
+  END SUBROUTINE
+  SUBROUTINE DEV_FREE (PTR) BIND (C, NAME='dev_free')
+    IMPORT :: C_PTR
+    TYPE (C_PTR), VALUE, INTENT(IN) :: PTR
+  END SUBROUTINE
+END INTERFACE
+
+#:if defined('WITH_HIC')
+INTERFACE
+$:offload_macros.dev_malloc_intf(indent=2)
+$:offload_macros.dev_free_intf(indent=2)
+END INTERFACE
+#:endif
+
+CONTAINS
+
+
+#:for ft in fieldTypeList
+
+SUBROUTINE ${ft.name}$_DEV_ALLOCATE_DIM (DEV, UBOUNDS, LBOUNDS, MAP_DEVPTR)
+
+USE FIELD_STATISTICS_MODULE
+
+${ft.type}$, POINTER :: DEV(${ft.shape}$)
+INTEGER (KIND=JPIM), INTENT (IN) :: UBOUNDS (${ft.rank}$)
+INTEGER (KIND=JPIM), INTENT (IN), OPTIONAL :: LBOUNDS (${ft.rank}$)
+INTEGER (KIND=JPIM) :: ILBOUNDS (${ft.rank}$)
+${ft.type}$, POINTER :: TMP(${ft.shape}$)
+LOGICAL, INTENT(IN) :: MAP_DEVPTR
+
+TYPE (C_PTR) :: PTR
+INTEGER (C_SIZE_T) :: SIZ
+#:if defined('WITH_HIC')
+$:offload_macros.runtime_error_decl(symbols=['ISTAT',])
+#:endif
+
+ILBOUNDS = 1
+IF (PRESENT (LBOUNDS)) ILBOUNDS = LBOUNDS
+
+SIZ = KIND (DEV)
+#:for i in range (1, ft.rank+1, 1)
+SIZ = SIZ * INT (UBOUNDS(${i}$)-ILBOUNDS(${i}$)+1, C_SIZE_T)
+#:endfor
+
+IF(SIZ > 0)THEN
+   IF(MAP_DEVPTR)THEN
+     CALL DEV_MALLOC (SIZ, PTR)
+   ELSE
+#:if defined('WITH_HIC')
+$:offload_macros.dev_malloc(ptr='PTR', size='SIZ', return_val='ISTAT', indent=5)
+#:endif
+   ENDIF
+   
+   CALL C_F_POINTER (PTR, TMP, UBOUNDS-ILBOUNDS+1)
+   DEV (${ ', '.join (map (lambda i: 'ILBOUNDS (' + str (i) + '):', range (1, ft.rank+1))) }$) => TMP
+ELSE
+   ALLOCATE(DEV(${ ', '.join (f'ILBOUNDS({i}):UBOUNDS({i})' for i in  range (1, ft.rank+1)) }$))
+ENDIF
+
+IF(MAP_DEVPTR)THEN
+$:offload_macros.create(symbols=['DEV',])
+ENDIF
+
+IF (FIELD_STATISTICS_ENABLE) CALL FIELD_STATISTICS_DEVICE_ALLOCATE (SIZE (DEV, KIND=JPIB) * INT (KIND (DEV), KIND=JPIB))
+
+END SUBROUTINE ${ft.name}$_DEV_ALLOCATE_DIM
+
+SUBROUTINE ${ft.name}$_DEV_DEALLOCATE (DEV, MAP_DEVPTR)
+
+USE FIELD_STATISTICS_MODULE
+
+${ft.type}$, POINTER :: DEV(${ft.shape}$)
+LOGICAL, INTENT(IN) :: MAP_DEVPTR
+TYPE (C_PTR) :: PTR
+#:if defined('WITH_HIC')
+$:offload_macros.runtime_error_decl(symbols=['ISTAT',])
+#:endif
+
+IF (ASSOCIATED (DEV)) THEN
+
+  IF (FIELD_STATISTICS_ENABLE) CALL FIELD_STATISTICS_DEVICE_DEALLOCATE (SIZE (DEV, KIND=JPIB) * INT (KIND (DEV), KIND=JPIB))
+
+  IF(SIZE(DEV) > 0)THEN
+    PTR = C_LOC (DEV (${ ', '.join (map (lambda i: 'LBOUND (DEV, ' + str (i) + ')', range (1, ft.rank+1))) }$))
+    
+    IF(MAP_DEVPTR)THEN
+      CALL DEV_FREE (PTR)
+$:offload_macros.delete(symbols=['DEV',], indent=4)
+    ELSE
+#:if defined('WITH_HIC')
+$:offload_macros.dev_free(ptr='PTR', return_val='ISTAT', indent=6)
+#:endif
+    ENDIF
+  ELSE
+    DEALLOCATE(DEV)
+  ENDIF
+
+  NULLIFY (DEV)
+
+ENDIF
+
+END SUBROUTINE ${ft.name}$_DEV_DEALLOCATE
+
+#:endfor
+
+END MODULE DEV_ALLOC_MODULE

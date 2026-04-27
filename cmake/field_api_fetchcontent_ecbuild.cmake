@@ -7,12 +7,14 @@
 # granted to it by virtue of its status as an intergovernmental organisation
 # nor does it submit to any jurisdiction.
 
+# Download ecbuild if not found.
+
 include(FetchContent)
 FetchContent_Populate(
     ecbuild
-    URL            https://github.com/ecmwf/ecbuild/archive/refs/tags/3.7.0.tar.gz
+    URL            https://github.com/ecmwf/ecbuild/archive/refs/tags/3.12.0.tar.gz
     SOURCE_DIR     ${CMAKE_BINARY_DIR}/ecbuild
     BINARY_DIR     ${CMAKE_BINARY_DIR}/_deps/ecbuild-build
     SUBBUILD_DIR   ${CMAKE_BINARY_DIR}/_deps/ecbuild-subbuild
   )
-find_package( ecbuild 3.7 REQUIRED HINTS ${CMAKE_BINARY_DIR} )
+find_package( ecbuild 3.12 REQUIRED HINTS ${CMAKE_BINARY_DIR} )

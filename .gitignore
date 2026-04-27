@@ -5,3 +5,4 @@
 field_module.F90
 *.swp
 build
+**__pycache__

@@ -21,6 +21,7 @@ PROGRAM TEST_FIELD1D
         CLASS(FIELD_1RB), POINTER :: W => NULL()
         REAL(KIND=JPRB), ALLOCATABLE :: D(:)
         REAL(KIND=JPRB), POINTER :: DD(:)
+        INTEGER(KIND=JPIM) :: I
 
         ALLOCATE(D(10))
         D=7
@@ -35,9 +36,19 @@ PROGRAM TEST_FIELD1D
 
         DD => GET_DEVICE_DATA_RDWR (W)
 
+#ifdef OMPGPU
+!$omp target map(to:DD)
+#else
 !$acc serial present (DD)
-        DD = 22
+#endif
+        DO I = 1, SIZE(DD)
+          DD(I) = 22
+        ENDDO
+#ifdef OMPGPU
+!$omp end target
+#else
 !$acc end serial
+#endif
 
         DD => GET_HOST_DATA_RDONLY (W)
 

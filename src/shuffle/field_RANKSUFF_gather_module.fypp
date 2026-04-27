@@ -1,0 +1,77 @@
+#! (C) Copyright 2022- ECMWF.
+#! (C) Copyright 2022- Meteo-France.
+#!
+#! This software is licensed under the terms of the Apache Licence Version 2.0
+#! which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
+#! In applying this licence, ECMWF does not waive the privileges and immunities
+#! granted to it by virtue of its status as an intergovernmental organisation
+#! nor does it submit to any jurisdiction.
+
+MODULE FIELD_${RANK}$${SUFF}$_GATHER_MODULE
+
+#:set fieldTypeList = fieldType.getFieldTypeList (ranks=[RANK], kinds=['JP' + str (SUFF)], hasView=True)
+
+USE FIELD_${RANK}$${SUFF}$_MODULE
+USE FIELD_${RANK}$${SUFF}$_ACCESS_MODULE
+USE FIELD_${RANK}$${SUFF}$_FACTORY_MODULE
+USE FIELD_SHUFFLE_TYPE_MODULE
+${fieldType.useParkind1 ()}$
+
+#:for ft in fieldTypeList
+USE ${ft.name}$_SHUFFLE_MODULE
+#:endfor
+
+
+IMPLICIT NONE
+
+PRIVATE
+
+PUBLIC :: FIELD_SHUFFLE
+
+#:for what in ['DEVICE', 'HOST']
+#:for mode in ['RDONLY', 'RDWR']
+
+#:for ft in fieldTypeList
+PUBLIC :: ${ft.name}$_GATHER_${what}$_DATA_${mode}$
+#:endfor
+
+#:for ft in fieldTypeList
+PUBLIC :: S${ft.name}$_GATHER_${what}$_DATA_${mode}$
+#:endfor
+
+#:endfor
+#:endfor
+
+CONTAINS
+
+#:for what in ['DEVICE', 'HOST']
+#:for mode in ['RDONLY', 'RDWR']
+#:for ft in fieldTypeList
+FUNCTION ${ft.name}$_GATHER_${what}$_DATA_${mode}$ (SELF, YLF) RESULT (PTR)
+
+CLASS (FIELD_SHUFFLE)                      :: SELF
+CLASS (${ft.name}$),   POINTER, INTENT (IN) :: YLF
+
+${ft.type}$, POINTER :: PTR(${ft.shape}$)
+
+CALL S${ft.name}$_GATHER_${what}$_DATA_${mode}$ (SELF, PTR, YLF)
+
+END FUNCTION ${ft.name}$_GATHER_${what}$_DATA_${mode}$
+
+SUBROUTINE S${ft.name}$_GATHER_${what}$_DATA_${mode}$ (SELF, PTR, YLF) 
+
+CLASS (FIELD_SHUFFLE)                      :: SELF
+${ft.type}$,           POINTER             :: PTR(${ft.shape}$)
+CLASS (${ft.name}$),   POINTER, OPTIONAL   :: YLF
+
+
+CALL PAIR_GATHER_${what}$_DATA_${mode}$ (SELF%${ft.name}$_LIST, SELF%LNULL, SELF%LFULL, &
+& SELF%KLON_G, SELF%KGPBLKS_G, SELF%YLFINDS, PTR, YLF, SELF%KBLKMIN, SELF%KBLKMAX)
+
+END SUBROUTINE S${ft.name}$_GATHER_${what}$_DATA_${mode}$
+
+#:endfor
+#:endfor
+#:endfor
+
+END MODULE FIELD_${RANK}$${SUFF}$_GATHER_MODULE

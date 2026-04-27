@@ -1,0 +1,270 @@
+#! (C) Copyright 2022- ECMWF.
+#! (C) Copyright 2022- Meteo-France.
+#!
+#! This software is licensed under the terms of the Apache Licence Version 2.0
+#! which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
+#! In applying this licence, ECMWF does not waive the privileges and immunities
+#! granted to it by virtue of its status as an intergovernmental organisation
+#! nor does it submit to any jurisdiction.
+
+MODULE FIELD_${RANK}$${SUFF}$_UTIL_MODULE
+
+#:set fieldTypeList = fieldType.getFieldTypeList (ranks=[RANK], kinds=['JP' + SUFF])
+
+USE FIELD_${RANK}$${SUFF}$_MODULE
+USE FIELD_${RANK}$${SUFF}$_ACCESS_MODULE
+
+${fieldType.useParkind1 ()}$
+
+IMPLICIT NONE
+
+#:if defined('WITH_FIAT')
+#:set method_list = ['LOAD', 'SAVE', 'DIFF', 'COPY', 'WIPE', 'HOST', 'LEGACY', 'CRC64']
+#:else
+#:set method_list = ['LOAD', 'SAVE', 'DIFF', 'COPY', 'WIPE', 'HOST', 'LEGACY']
+#:endif
+
+#:for method in method_list
+INTERFACE ${method}$
+#:for ft in fieldTypeList
+  MODULE PROCEDURE ${method}$_${ft.name}$
+#:if method not in ['DIFF', 'CRC64', 'LEGACY']
+  MODULE PROCEDURE ${method}$_${ft.name}$_PTR
+#:if ft.hasView
+  MODULE PROCEDURE ${method}$_${ft.name}$_VIEW
+#:endif
+#:endif
+#:endfor
+END INTERFACE
+
+#:endfor
+
+CONTAINS
+
+#:for ft in fieldTypeList
+#:if defined('WITH_FIAT')
+INTEGER*8 FUNCTION CRC64_${ft.name}$ (YD)
+CLASS (${ft.name}$), POINTER :: YD
+INTEGER*8 :: ICRC
+
+ICRC = 0
+
+IF (ASSOCIATED (YD)) THEN
+  ICRC = YD%CRC64 ()
+ENDIF
+
+CRC64_${ft.name}$ = ICRC
+
+END FUNCTION
+#:endif
+
+SUBROUTINE LOAD_${ft.name}$ (KLUN, YD)
+
+USE FIELD_ABORT_MODULE
+USE PARKIND1, ONLY : JPIM
+
+INTEGER (KIND=JPIM), INTENT (IN) :: KLUN
+CLASS (${ft.name}$), POINTER :: YD
+
+CALL FIELD_ABORT ('NOT IMPLEMENTED')
+END SUBROUTINE
+
+SUBROUTINE SAVE_${ft.name}$ (KLUN, YD)
+
+USE FIELD_ABORT_MODULE
+USE PARKIND1, ONLY : JPIM
+
+INTEGER (KIND=JPIM), INTENT (IN) :: KLUN
+CLASS (${ft.name}$), POINTER :: YD
+
+CALL FIELD_ABORT ('NOT IMPLEMENTED')
+END SUBROUTINE
+
+SUBROUTINE DIFF_${ft.name}$ (CDMESS, YD, YO)
+
+USE FIELD_ABORT_MODULE
+
+CHARACTER (LEN=*), INTENT(IN) :: CDMESS
+CLASS (${ft.name}$), POINTER :: YD, YO
+
+CALL FIELD_ABORT ('NOT IMPLEMENTED')
+END SUBROUTINE
+
+SUBROUTINE COPY_${ft.name}$ (SELF, LDCREATED)
+
+USE FIELD_ABORT_MODULE
+
+CLASS (${ft.name}$), POINTER :: SELF
+LOGICAL, INTENT (IN), OPTIONAL :: LDCREATED
+
+CALL FIELD_ABORT ('NOT IMPLEMENTED')
+END SUBROUTINE 
+
+SUBROUTINE WIPE_${ft.name}$ (SELF, LDDELETED)
+
+USE FIELD_ABORT_MODULE
+
+CLASS (${ft.name}$) :: SELF
+LOGICAL, INTENT (IN), OPTIONAL :: LDDELETED
+
+CALL FIELD_ABORT ('NOT IMPLEMENTED')
+END SUBROUTINE 
+
+SUBROUTINE HOST_${ft.name}$ (SELF)
+CLASS (${ft.name}$), POINTER :: SELF
+
+CALL SELF%SYNC_HOST_RDWR ()
+
+END SUBROUTINE 
+
+SUBROUTINE LEGACY_${ft.name}$ (SELF, KADDRL, KADDRU, KDIR)
+
+USE ${ft.name}$_ACCESS_MODULE
+USE FIELD_CONSTANTS_MODULE
+
+CLASS (${ft.name}$), POINTER :: SELF
+INTEGER*8, INTENT (IN) :: KADDRL
+INTEGER*8, INTENT (IN) :: KADDRU
+INTEGER,   INTENT (IN) :: KDIR
+
+${ft.type}$, POINTER :: PTR (${ft.shape}$), DEVPTR (${ft.shape}$)
+INTEGER*8 :: IADDRL
+INTEGER*8 :: IADDRU
+INTEGER (KIND=JPIM) :: ILBOUNDS (${ft.rank}$)
+INTEGER (KIND=JPIM) :: IUBOUNDS (${ft.rank}$)
+
+IF (ASSOCIATED (SELF)) THEN
+
+  CALL SELF%GET_DIMS (LBOUNDS=ILBOUNDS, UBOUNDS=IUBOUNDS)
+
+  PTR => SELF%PTR
+
+  IADDRL = LOC (PTR (${",".join (map (lambda i: "ILBOUNDS(" + str (i) + ")", range (1, ft.rank+1)))}$))
+  IADDRU = LOC (PTR (${",".join (map (lambda i: "IUBOUNDS(" + str (i) + ")", range (1, ft.rank+1)))}$))
+
+  IF ((KADDRL <= IADDRL) .AND. (IADDRU <= KADDRU)) THEN
+
+    IF (KDIR == NF2L) THEN
+      DEVPTR => GET_DEVICE_DATA_RDONLY (SELF)
+      CALL LEGACY_${ft.name}$_ASSIGN (PTR, DEVPTR)
+    ELSEIF (KDIR == NL2F) THEN
+      DEVPTR => GET_DEVICE_DATA_RDWR (SELF)
+      CALL LEGACY_${ft.name}$_ASSIGN (DEVPTR, PTR)
+    ENDIF
+
+  ENDIF
+
+ENDIF
+
+CONTAINS
+
+SUBROUTINE LEGACY_${ft.name}$_ASSIGN (PTR_RHS, PTR_LHS)
+
+${ft.type}$ :: PTR_RHS (${ft.shape}$), PTR_LHS (${ft.shape}$)
+INTEGER(KIND=JPIM) :: ${','.join([f'J{i}'.upper() for i in range(1, ft.rank+1)])}$
+
+$:offload_macros.parallel_gang_vector_loop(present=['PTR_RHS', 'PTR_LHS'], collapse=ft.rank)
+#:for i in range(ft.rank, 0, -1)
+#:set indent = ' ' * (ft.rank-i)
+${indent}$ DO ${f'J{i}'.upper()}$ = LBOUND(PTR_RHS,${i}$), UBOUND(PTR_RHS,${i}$)
+#:endfor
+${' ' * ft.rank * 2}$ PTR_RHS(${','.join([f'J{i}'.upper() for i in range(1, ft.rank+1)])}$) = PTR_LHS(${','.join([f'J{i}'.upper() for i in range(1, ft.rank+1)])}$)
+#:for i in range(1, ft.rank + 1)
+#:set indent = ' ' * (ft.rank-i)
+${indent}$ ENDDO
+#:endfor
+$:offload_macros.end_parallel_loop()
+
+END SUBROUTINE
+
+END SUBROUTINE 
+
+#:if ft.hasView
+
+SUBROUTINE LOAD_${ft.name}$_VIEW (KLUN, YD)
+USE PARKIND1, ONLY : JPIM
+INTEGER (KIND=JPIM), INTENT (IN) :: KLUN
+CLASS (${ft.name}$_VIEW) :: YD
+! Do nothing
+END SUBROUTINE
+
+SUBROUTINE SAVE_${ft.name}$_VIEW (KLUN, YD)
+USE PARKIND1, ONLY : JPIM
+INTEGER (KIND=JPIM), INTENT (IN) :: KLUN
+CLASS (${ft.name}$_VIEW) :: YD
+! Do nothing
+END SUBROUTINE
+
+SUBROUTINE COPY_${ft.name}$_VIEW (SELF, LDCREATED)
+CLASS (${ft.name}$_VIEW) :: SELF
+LOGICAL, INTENT (IN), OPTIONAL :: LDCREATED
+! Do nothing
+END SUBROUTINE 
+
+SUBROUTINE WIPE_${ft.name}$_VIEW (SELF, LDDELETED)
+CLASS (${ft.name}$_VIEW) :: SELF
+LOGICAL, INTENT (IN), OPTIONAL :: LDDELETED
+! Do nothing
+END SUBROUTINE 
+
+SUBROUTINE HOST_${ft.name}$_VIEW (SELF)
+CLASS (${ft.name}$_VIEW) :: SELF
+! Do nothing
+END SUBROUTINE 
+
+#:endif
+
+SUBROUTINE LOAD_${ft.name}$_PTR (KLUN, YD)
+
+USE FIELD_ABORT_MODULE
+USE PARKIND1, ONLY : JPIM
+
+INTEGER (KIND=JPIM), INTENT (IN) :: KLUN
+CLASS (${ft.name}$_PTR) :: YD
+
+CALL FIELD_ABORT ('NOT IMPLEMENTED')
+END SUBROUTINE
+
+SUBROUTINE SAVE_${ft.name}$_PTR (KLUN, YD)
+
+USE FIELD_ABORT_MODULE
+USE PARKIND1, ONLY : JPIM
+
+INTEGER (KIND=JPIM), INTENT (IN) :: KLUN
+CLASS (${ft.name}$_PTR) :: YD
+
+CALL FIELD_ABORT ('NOT IMPLEMENTED')
+END SUBROUTINE
+
+SUBROUTINE COPY_${ft.name}$_PTR (SELF, LDCREATED)
+
+USE FIELD_ABORT_MODULE
+
+CLASS (${ft.name}$_PTR) :: SELF
+LOGICAL, INTENT (IN), OPTIONAL :: LDCREATED
+
+CALL FIELD_ABORT ('NOT IMPLEMENTED')
+END SUBROUTINE 
+
+SUBROUTINE WIPE_${ft.name}$_PTR (SELF, LDDELETED)
+
+USE FIELD_ABORT_MODULE
+
+CLASS (${ft.name}$_PTR) :: SELF
+LOGICAL, INTENT (IN), OPTIONAL :: LDDELETED
+
+CALL FIELD_ABORT ('NOT IMPLEMENTED')
+END SUBROUTINE 
+
+SUBROUTINE HOST_${ft.name}$_PTR (SELF)
+CLASS (${ft.name}$_PTR) :: SELF
+
+IF (ASSOCIATED (SELF%PTR)) THEN
+  CALL HOST (SELF%PTR)
+ENDIF
+
+END SUBROUTINE 
+
+#:endfor
+
+END MODULE

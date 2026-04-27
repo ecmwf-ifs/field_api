@@ -26,6 +26,7 @@ PROGRAM INIT_WRAPPER_NON_CONTIGUOUS_MULTI
   CLASS(FIELD_5RB), POINTER :: W5 => NULL()
   REAL(KIND=JPRB), POINTER :: W5PTR(:,:,:,:,:)
   integer(kind=8) :: ptr
+INTEGER :: I, J, K, L, M
 
   ALLOCATE(D1(7, 9, 11, 13, 15))
   ALLOCATE(D2(7, 9, 11, 13, 15))
@@ -37,9 +38,25 @@ PROGRAM INIT_WRAPPER_NON_CONTIGUOUS_MULTI
   CALL W4%GET_HOST_DATA_RDWR(W4PTR)
   W4PTR=42
   CALL W4%GET_DEVICE_DATA_RDWR(W4PTR)
+#ifdef OMPGPU
+  !$OMP TARGET MAP(TO:W4PTR)
+#else
   !$ACC KERNELS DEFAULT(PRESENT)
-  W4PTR=92
+#endif
+  DO M = 1, SIZE(W4PTR, 4)
+    DO L = 1, SIZE(W4PTR, 3)
+      DO K = 1, SIZE(W4PTR, 2)
+        DO J = 1, SIZE(W4PTR, 1)
+          W4PTR(J, K, L, M) = 92
+        ENDDO
+      ENDDO
+    ENDDO
+  ENDDO
+#ifdef OMPGPU
+  !$OMP END TARGET
+#else
   !$ACC END KERNELS
+#endif
   D1 = -1
   D2 = -1
   D2(1:1,:,:,:,3)=92
@@ -55,9 +72,23 @@ PROGRAM INIT_WRAPPER_NON_CONTIGUOUS_MULTI
   CALL W3%GET_HOST_DATA_RDWR(W3PTR)
   W3PTR=51
   CALL W3%GET_DEVICE_DATA_RDWR(W3PTR)
+#ifdef OMPGPU
+  !$OMP TARGET MAP(TO:W3PTR)
+#else
   !$ACC KERNELS DEFAULT(PRESENT)
-  W3PTR=61
+#endif
+  DO K = 1, SIZE(W3PTR, 3)
+    DO J = 1, SIZE(W3PTR, 2)
+      DO I = 1, SIZE(W3PTR, 1)
+        W3PTR(I, J, K) = 61
+      ENDDO
+    ENDDO
+  ENDDO
+#ifdef OMPGPU
+  !$OMP END TARGET
+#else
   !$ACC END KERNELS
+#endif
   D1 = -1
   D2 = -1
   D2(:,2,:,:,3)=61
@@ -69,9 +100,25 @@ PROGRAM INIT_WRAPPER_NON_CONTIGUOUS_MULTI
   PRINT *, "begin 3 (should call FIELD_4RB_COPY_2D_DIM3_4_CONTIGUOUS)"
   CALL FIELD_NEW(W4, DATA=D1(:,:,4:8,:,3))
   CALL W4%GET_DEVICE_DATA_RDWR(W4PTR)
+#ifdef OMPGPU
+  !$OMP TARGET MAP(TO:W4PTR)
+#else
   !$ACC KERNELS DEFAULT(PRESENT)
-  W4PTR=31
+#endif
+  DO M = 1, SIZE(W4PTR, 4)
+    DO L = 1, SIZE(W4PTR, 3)
+      DO K = 1, SIZE(W4PTR, 2)
+        DO J = 1, SIZE(W4PTR, 1)
+          W4PTR(J, K, L, M) = 31
+        ENDDO
+      ENDDO
+    ENDDO
+  ENDDO
+#ifdef OMPGPU
+  !$OMP END TARGET
+#else
   !$ACC END KERNELS
+#endif
   D1 = -1
   D2 = -1
   D2(:,:,4:8,:,3)=31
@@ -83,9 +130,23 @@ PROGRAM INIT_WRAPPER_NON_CONTIGUOUS_MULTI
   PRINT *, "begin 4 (should call FIELD_3RB_COPY_2D_DIM1_2_CONTIGUOUS)"
   CALL FIELD_NEW(W3, DATA=D1(:,2,4:8,3:5,3))
   CALL W3%GET_DEVICE_DATA_RDWR(W3PTR)
+#ifdef OMPGPU
+  !$OMP TARGET MAP(TO:W3PTR)
+#else
   !$ACC KERNELS DEFAULT(PRESENT)
-  W3PTR=91
+#endif
+  DO K = 1, SIZE(W3PTR, 3)
+    DO J = 1, SIZE(W3PTR, 2)
+      DO I = 1, SIZE(W3PTR, 1)
+        W3PTR(I, J, K) = 91
+      ENDDO
+    ENDDO
+  ENDDO
+#ifdef OMPGPU
+  !$OMP END TARGET
+#else
   !$ACC END KERNELS
+#endif
   D1 = -1
   D2 = -1
   D2(:,2,4:8,3:5,3)=91
@@ -97,9 +158,21 @@ PROGRAM INIT_WRAPPER_NON_CONTIGUOUS_MULTI
   PRINT *, "begin 5 (should call FIELD_2RB_COPY_2D_DIM1_2_CONTIGUOUS)"
   CALL FIELD_NEW(W2, DATA=D1(:,2,4:8,8,3))
   CALL W2%GET_DEVICE_DATA_RDWR(W2PTR)
+#ifdef OMPGPU
+  !$OMP TARGET MAP(TO:W2PTR)
+#else
   !$ACC KERNELS DEFAULT(PRESENT)
-  W2PTR=12.1
+#endif
+  DO J = 1, SIZE(W2PTR, 2)
+    DO I = 1, SIZE(W2PTR, 1)
+      W2PTR(I, J) = 12.1
+    ENDDO
+  ENDDO
+#ifdef OMPGPU
+  !$OMP END TARGET
+#else
   !$ACC END KERNELS
+#endif
   D1 = -1
   D2 = -1
   D2(:,2,4:8,8,3)=12.1
@@ -111,9 +184,25 @@ PROGRAM INIT_WRAPPER_NON_CONTIGUOUS_MULTI
   PRINT *, "begin 6 (should call FIELD_4RB_COPY_2D_DIM2_4_CONTIGUOUS)"
   CALL FIELD_NEW(W4, DATA=D1(:,:,4,:,:))
   CALL W4%GET_DEVICE_DATA_RDWR(W4PTR)
+#ifdef OMPGPU
+  !$OMP TARGET MAP(TO:W4PTR)
+#else
   !$ACC KERNELS DEFAULT(PRESENT)
-  W4PTR=22.1
+#endif
+  DO M = 1, SIZE(W4PTR, 4)
+    DO L = 1, SIZE(W4PTR, 3)
+      DO K = 1, SIZE(W4PTR, 2)
+        DO J = 1, SIZE(W4PTR, 1)
+          W4PTR(J, K, L, M) = 22.1
+        ENDDO
+      ENDDO
+    ENDDO
+  ENDDO
+#ifdef OMPGPU
+  !$OMP END TARGET
+#else
   !$ACC END KERNELS
+#endif
   D1 = -1
   D2 = -1
   D2(:,:,4,:,:)=22.1
@@ -126,9 +215,27 @@ PROGRAM INIT_WRAPPER_NON_CONTIGUOUS_MULTI
   PRINT *, "begin 7 (should call FIELD_5RB_COPY_DIM5_CONTIGUOUS)"
   CALL FIELD_NEW(W5, DATA=D1(:,1:1,1:1,1:1,1:1))
   CALL W5%GET_DEVICE_DATA_RDWR(W5PTR)
+#ifdef OMPGPU
+  !$OMP TARGET MAP(TO:W5PTR)
+#else
   !$ACC KERNELS DEFAULT(PRESENT)
-  W5PTR=1.1
+#endif
+  DO M = 1, SIZE(W5PTR, 5)
+    DO L = 1, SIZE(W5PTR, 4)
+      DO K = 1, SIZE(W5PTR, 3)
+        DO J = 1, SIZE(W5PTR, 2)
+          DO I = 1, SIZE(W5PTR, 1)
+            W5PTR(I, J, K, L, M) = 1.1
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDDO
+  ENDDO
+#ifdef OMPGPU
+  !$OMP END TARGET
+#else
   !$ACC END KERNELS
+#endif
   D1 = -1
   D2 = -1
   D2(:,1:1,1:1,1:1,1:1)=1.1
@@ -140,9 +247,27 @@ PROGRAM INIT_WRAPPER_NON_CONTIGUOUS_MULTI
   PRINT *, "begin 8 (should call FIELD_5RB_COPY_2D_DIM3_5_CONTIGUOUS)"
   CALL FIELD_NEW(W5, DATA=D1(:3,1:1,3:3,:,2:4))
   CALL W5%GET_DEVICE_DATA_RDWR(W5PTR)
+#ifdef OMPGPU
+  !$OMP TARGET MAP(TO:W5PTR)
+#else
   !$ACC KERNELS DEFAULT(PRESENT)
-  W5PTR=1.2
+#endif
+  DO M = 1, SIZE(W5PTR, 5)
+    DO L = 1, SIZE(W5PTR, 4)
+      DO K = 1, SIZE(W5PTR, 3)
+        DO J = 1, SIZE(W5PTR, 2)
+          DO I = 1, SIZE(W5PTR, 1)
+            W5PTR(I, J, K, L, M) = 1.2
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDDO
+  ENDDO
+#ifdef OMPGPU
+  !$OMP END TARGET
+#else
   !$ACC END KERNELS
+#endif
   D1 = -1
   D2 = -1
   D2(:3,1:1,3:3,:,2:4)=1.2
@@ -154,9 +279,27 @@ PROGRAM INIT_WRAPPER_NON_CONTIGUOUS_MULTI
   PRINT *, "begin 9 (should call FIELD_5RB_COPY_2D_DIM3_5_CONTIGUOUS)"
   CALL FIELD_NEW(W5, DATA=D1(:,1:1,3:3,:,2:4))
   CALL W5%GET_DEVICE_DATA_RDWR(W5PTR)
+#ifdef OMPGPU
+  !$OMP TARGET MAP(TO:W5PTR)
+#else
   !$ACC KERNELS DEFAULT(PRESENT)
-  W5PTR=2.5
+#endif
+  DO M = 1, SIZE(W5PTR, 5)
+    DO L = 1, SIZE(W5PTR, 4)
+      DO K = 1, SIZE(W5PTR, 3)
+        DO J = 1, SIZE(W5PTR, 2)
+          DO I = 1, SIZE(W5PTR, 1)
+            W5PTR(I, J, K, L, M) = 2.5
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDDO
+  ENDDO
+#ifdef OMPGPU
+  !$OMP END TARGET
+#else
   !$ACC END KERNELS
+#endif
   D1 = -1
   D2 = -1
   D2(:,1:1,3:3,:,2:4)=2.5
@@ -168,9 +311,27 @@ PROGRAM INIT_WRAPPER_NON_CONTIGUOUS_MULTI
   PRINT *, "begin 10 (should call FIELD_5RB_COPY_2D_DIM2_4_CONTIGUOUS)"
   CALL FIELD_NEW(W5, DATA=D1(:,1:1,:,1:5,2:4))
   CALL W5%GET_DEVICE_DATA_RDWR(W5PTR)
+#ifdef OMPGPU
+  !$OMP TARGET MAP(TO:W5PTR)
+#else
   !$ACC KERNELS DEFAULT(PRESENT)
-  W5PTR=9.1
+#endif
+  DO M = 1, SIZE(W5PTR, 5)
+    DO L = 1, SIZE(W5PTR, 4)
+      DO K = 1, SIZE(W5PTR, 3)
+        DO J = 1, SIZE(W5PTR, 2)
+          DO I = 1, SIZE(W5PTR, 1)
+            W5PTR(I, J, K, L, M) = 9.1
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDDO
+  ENDDO
+#ifdef OMPGPU
+  !$OMP END TARGET
+#else
   !$ACC END KERNELS
+#endif
   D1 = -1
   D2 = -1
   D2(:,1:1,:,1:5,2:4)=9.1
@@ -182,9 +343,27 @@ PROGRAM INIT_WRAPPER_NON_CONTIGUOUS_MULTI
   PRINT *, "begin 11 (should call FIELD_5RB_COPY_2D_DIM2_4_CONTIGUOUS)"
   CALL FIELD_NEW(W5, DATA=D1(:,1:1,:,8:12,:))
   CALL W5%GET_DEVICE_DATA_RDWR(W5PTR)
+#ifdef OMPGPU
+  !$OMP TARGET MAP(TO:W5PTR)
+#else
   !$ACC KERNELS DEFAULT(PRESENT)
-  W5PTR=8.1
+#endif
+  DO M = 1, SIZE(W5PTR, 5)
+    DO L = 1, SIZE(W5PTR, 4)
+      DO K = 1, SIZE(W5PTR, 3)
+        DO J = 1, SIZE(W5PTR, 2)
+          DO I = 1, SIZE(W5PTR, 1)
+            W5PTR(I, J, K, L, M) = 8.1
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDDO
+  ENDDO
+#ifdef OMPGPU
+  !$OMP END TARGET
+#else
   !$ACC END KERNELS
+#endif
   D1 = -1
   D2 = -1
   D2(:,1:1,:,8:12,:)=8.1
@@ -196,9 +375,27 @@ PROGRAM INIT_WRAPPER_NON_CONTIGUOUS_MULTI
   PRINT *, "begin 12 (should call FIELD_5RB_COPY_2D_DIM1_5_CONTIGUOUS)"
   CALL FIELD_NEW(W5, DATA=D1(3:7,:,:,:,3:3))
   CALL W5%GET_DEVICE_DATA_RDWR(W5PTR)
+#ifdef OMPGPU
+  !$OMP TARGET MAP(TO:W5PTR)
+#else
   !$ACC KERNELS DEFAULT(PRESENT)
-  W5PTR=8.4
+#endif
+  DO M = 1, SIZE(W5PTR, 5)
+    DO L = 1, SIZE(W5PTR, 4)
+      DO K = 1, SIZE(W5PTR, 3)
+        DO J = 1, SIZE(W5PTR, 2)
+          DO I = 1, SIZE(W5PTR, 1)
+            W5PTR(I, J, K, L, M) = 8.4
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDDO
+  ENDDO
+#ifdef OMPGPU
+  !$OMP END TARGET
+#else
   !$ACC END KERNELS
+#endif
   D1 = -1
   D2 = -1
   D2(3:7,:,:,:,3:3)=8.4
@@ -210,9 +407,27 @@ PROGRAM INIT_WRAPPER_NON_CONTIGUOUS_MULTI
   PRINT *, "begin 13 (should call FIELD_5RB_COPY_2D_DIM1_5_CONTIGUOUS)"
   CALL FIELD_NEW(W5, DATA=D1(3:3,:,:,:,:))
   CALL W5%GET_DEVICE_DATA_RDWR(W5PTR)
+#ifdef OMPGPU
+  !$OMP TARGET MAP(TO:W5PTR)
+#else
   !$ACC KERNELS DEFAULT(PRESENT)
-  W5PTR=12
+#endif
+  DO M = 1, SIZE(W5PTR, 5)
+    DO L = 1, SIZE(W5PTR, 4)
+      DO K = 1, SIZE(W5PTR, 3)
+        DO J = 1, SIZE(W5PTR, 2)
+          DO I = 1, SIZE(W5PTR, 1)
+            W5PTR(I, J, K, L, M) = 12
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDDO
+  ENDDO
+#ifdef OMPGPU
+  !$OMP END TARGET
+#else
   !$ACC END KERNELS
+#endif
   D1 = -1
   D2 = -1
   D2(3:3,:,:,:,:)=12
@@ -224,9 +439,27 @@ PROGRAM INIT_WRAPPER_NON_CONTIGUOUS_MULTI
   PRINT *, "begin 14 (should call FIELD_5RB_COPY_2D_DIM1_2_CONTIGUOUS)"
   CALL FIELD_NEW(W5, DATA=D1(1:4,1:9:2,:,3:12:3,:))
   CALL W5%GET_DEVICE_DATA_RDWR(W5PTR)
+#ifdef OMPGPU
+  !$OMP TARGET MAP(TO:W5PTR)
+#else
   !$ACC KERNELS DEFAULT(PRESENT)
-  W5PTR=18
+#endif
+  DO M = 1, SIZE(W5PTR, 5)
+    DO L = 1, SIZE(W5PTR, 4)
+      DO K = 1, SIZE(W5PTR, 3)
+        DO J = 1, SIZE(W5PTR, 2)
+          DO I = 1, SIZE(W5PTR, 1)
+            W5PTR(I, J, K, L, M) = 18
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDDO
+  ENDDO
+#ifdef OMPGPU
+  !$OMP END TARGET
+#else
   !$ACC END KERNELS
+#endif
   D1 = -1
   D2 = -1
   D2(1:4,1:9:2,:,3:12:3,:)=18
@@ -238,9 +471,27 @@ PROGRAM INIT_WRAPPER_NON_CONTIGUOUS_MULTI
   PRINT *, "begin 15 (should call FIELD_5RB_COPY_2D_DIM1_2_CONTIGUOUS)"
   CALL FIELD_NEW(W5, DATA=D1(:,1:9:2,:,3:12:3,:))
   CALL W5%GET_DEVICE_DATA_RDWR(W5PTR)
+#ifdef OMPGPU
+  !$OMP TARGET MAP(TO:W5PTR)
+#else
   !$ACC KERNELS DEFAULT(PRESENT)
-  W5PTR=19
+#endif
+  DO M = 1, SIZE(W5PTR, 5)
+    DO L = 1, SIZE(W5PTR, 4)
+      DO K = 1, SIZE(W5PTR, 3)
+        DO J = 1, SIZE(W5PTR, 2)
+          DO I = 1, SIZE(W5PTR, 1)
+            W5PTR(I, J, K, L, M) = 19
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDDO
+  ENDDO
+#ifdef OMPGPU
+  !$OMP END TARGET
+#else
   !$ACC END KERNELS
+#endif
   D1 = -1
   D2 = -1
   D2(:,1:9:2,:,3:12:3,:)=19
@@ -250,19 +501,44 @@ PROGRAM INIT_WRAPPER_NON_CONTIGUOUS_MULTI
   PRINT *, ""
 
   PRINT *, "begin 16 (should call FIELD_5RB_COPY_2D_DIM3_4_CONTIGUOUS)"
-#ifdef _CUDA
+#if (defined(_CUDA) || defined(_HIP))
   CALL FIELD_NEW(W5, DATA=D1(:,:,:,3:12:3,:), MAP_DEVPTR=.FALSE.)
 #else
   CALL FIELD_NEW(W5, DATA=D1(:,:,:,3:12:3,:), MAP_DEVPTR=.TRUE.)
 #endif
   CALL W5%GET_DEVICE_DATA_RDWR(W5PTR)
+
+#ifdef OMPGPU
+#ifdef _CUDA
+  !$OMP TARGET IS_DEVICE_PTR(W5PTR)
+#elif defined(_HIP)
+  !$OMP TARGET HAS_DEVICE_ADDR(W5PTR)
+#else
+  !$OMP TARGET MAP(TO:W5PTR)
+#endif
+#else
 #ifdef _CUDA
   !$ACC KERNELS DEVICEPTR(W5PTR)
 #else
   !$ACC KERNELS PRESENT(W5PTR)
 #endif
-  W5PTR=19
+#endif
+  DO M = 1, SIZE(W5PTR, 5)
+    DO L = 1, SIZE(W5PTR, 4)
+      DO K = 1, SIZE(W5PTR, 3)
+        DO J = 1, SIZE(W5PTR, 2)
+          DO I = 1, SIZE(W5PTR, 1)
+            W5PTR(I, J, K, L, M) = 19
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDDO
+  ENDDO
+#ifdef OMPGPU
+  !$OMP END TARGET
+#else
   !$ACC END KERNELS
+#endif
   D1 = -1
   D2 = -1
   D2(:,:,:,3:12:3,:)=19

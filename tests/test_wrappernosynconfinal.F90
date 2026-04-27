@@ -28,7 +28,7 @@ DO JSOC = 1, 2
   PRINT *, " SYNC_ON_FINAL = ", LLSYNC_ON_FINAL (JSOF), " INITIALIZED = ", LLINITIALIZED (JSOC), " JINIT = ", JINIT
 
   CALL TEST_FIELD
-  CALL TEST_GANG
+  CALL TEST_STACK
 
 ENDDO
 ENDDO
@@ -44,7 +44,7 @@ REAL(KIND=JPRB), POINTER :: DD(:,:), DH (:,:)
 
 
 REAL(KIND=JPRB) :: ZVAL1, ZVAL2
-INTEGER(KIND=JPIM) :: IDIM1, IDIM2
+INTEGER(KIND=JPIM) :: IDIM1, IDIM2, I, J
 
 IF (LLINITIALIZED (JSOC)) THEN
   ZVAL1 =  7
@@ -78,9 +78,21 @@ IF ((LLINITIALIZED (JSOC) .OR. JINIT == 2) .NEQV. (W%STATS%TRANSFER_CPU_TO_GPU =
   CALL FIELD_ABORT ('A TRANSFER WAS EXPECTED')
 ENDIF
 
+#ifdef OMPGPU
+!$omp target map(to:DD) map(from:ZH)
+#else
 !$acc serial present (DD) copyout (ZH)
-ZH = DD
+#endif
+DO J = 1, IDIM2
+  DO I = 1, IDIM1
+    ZH(I,J) = DD(I,J)
+  ENDDO
+ENDDO
+#ifdef OMPGPU
+!$omp end target
+#else
 !$acc end serial
+#endif
 
 IF (LLINITIALIZED (JSOC) .OR. JINIT == 2) THEN
   IF (ANY (ZH /= ZVAL1)) THEN
@@ -94,9 +106,21 @@ ELSE
   ENDIF
 ENDIF
 
+#ifdef OMPGPU
+!$omp target map(to:DD)
+#else
 !$acc serial present (DD)
-DD = ZVAL2
+#endif
+DO J = 1, IDIM2
+  DO I = 1, IDIM1
+    DD(I,J) = ZVAL2
+  ENDDO
+ENDDO
+#ifdef OMPGPU
+!$omp end target
+#else
 !$acc end serial
+#endif
 
 CALL FIELD_DELETE (W)
 
@@ -120,16 +144,16 @@ DEALLOCATE (D)
 
 END SUBROUTINE
 
-SUBROUTINE TEST_GANG
+SUBROUTINE TEST_STACK
 
 CLASS(FIELD_4RD), POINTER :: YLF4
-TYPE(FIELD_3RD_PTR), ALLOCATABLE :: YLF3L (:)
+CLASS(FIELD_3RD), POINTER :: YLF3
 
 REAL (KIND=JPRD), ALLOCATABLE :: ZDATA4 (:,:,:,:), ZH (:,:,:,:)
 REAL (KIND=JPRD), POINTER :: ZD4 (:,:,:,:), ZD3 (:,:,:), ZH4 (:,:,:,:), ZH3 (:,:,:)
 
 REAL (KIND=JPRD) :: ZVAL1, ZVAL2, ZVAL3
-INTEGER (KIND=JPIM) :: IDIM1, IDIM2, IDIM3, IDIM4
+INTEGER (KIND=JPIM) :: IDIM1, IDIM2, IDIM3, IDIM4, I, J, K, L
 LOGICAL :: LLERROR
 
 IF (LLINITIALIZED (JSOC)) THEN
@@ -156,7 +180,7 @@ IF (JINIT == 1) THEN
   ZDATA4 = ZVAL1
 ENDIF
 
-CALL FIELD_NEW (YLF4, CHILDREN=YLF3L, PERSISTENT=.TRUE., DATA=ZDATA4, &
+CALL FIELD_NEW (YLF4, LSTACK=.TRUE., PERSISTENT=.TRUE., DATA=ZDATA4, &
     & SYNC_ON_FINAL=LLSYNC_ON_FINAL (JSOF), INITIALIZED=LLINITIALIZED (JSOC))
 
 IF (JINIT == 2) THEN
@@ -170,9 +194,25 @@ IF ((LLINITIALIZED (JSOC) .OR. JINIT == 2) .NEQV. (YLF4%STATS%TRANSFER_CPU_TO_GP
   CALL FIELD_ABORT ('A TRANSFER WAS EXPECTED')
 ENDIF
 
+#ifdef OMPGPU
+!$omp target map(to:ZD4) map(from:ZH)
+#else
 !$acc serial present (ZD4) copyout (ZH)
-ZH = ZD4
+#endif
+DO L = 1, IDIM4
+  DO K = 1, IDIM3
+    DO J = 1, IDIM2
+      DO I = 1, IDIM1
+        ZH(I,J,K,L) = ZD4(I,J,K,L)
+      ENDDO
+    ENDDO
+  ENDDO
+ENDDO
+#ifdef OMPGPU
+!$omp end target
+#else
 !$acc end serial
+#endif
 
 IF (LLINITIALIZED (JSOC) .OR. JINIT == 2) THEN
   IF (ANY (ZH /= ZVAL1)) THEN
@@ -186,18 +226,49 @@ ELSE
   ENDIF
 ENDIF
 
+#ifdef OMPGPU
+!$omp target map(to:ZD4)
+#else
 !$acc serial present (ZD4)
-ZD4 = ZVAL2
+#endif
+DO L = 1, IDIM4
+  DO K = 1, IDIM3
+    DO J = 1, IDIM2
+      DO I = 1, IDIM1
+        ZD4(I,J,K,L) = ZVAL2
+      ENDDO
+    ENDDO
+  ENDDO
+ENDDO
+#ifdef OMPGPU
+!$omp end target
+#else
 !$acc end serial
+#endif
 
-ZD3 => GET_DEVICE_DATA_RDWR (YLF3L (1)%PTR)
+CALL GET_STACK_MEMBER(YLF4, 1, YLF3)
+ZD3 => GET_DEVICE_DATA_RDWR (YLF3)
 
+#ifdef OMPGPU
+!$omp target map(to:ZD3)
+#else
 !$acc serial present (ZD3)
-ZD3 = ZVAL3
+#endif
+DO K = 1, SIZE(ZD3, 3)
+  DO J = 1, SIZE(ZD3, 2)
+    DO I = 1, SIZE(ZD3, 1)
+      ZD3(I,J,K) = ZVAL3
+    ENDDO
+  ENDDO
+ENDDO
+#ifdef OMPGPU
+!$omp end target
+#else
 !$acc end serial
+#endif
 
-DEALLOCATE (YLF3L)
 CALL FIELD_DELETE (YLF4)
+NULLIFY (YLF3)
 
 IF (LLSYNC_ON_FINAL (JSOF)) THEN
 
