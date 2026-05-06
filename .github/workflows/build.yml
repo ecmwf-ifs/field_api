@@ -235,7 +235,7 @@ jobs:
       if: contains( matrix.compiler, 'intel-modern' )
       run: |
         sudo apt update
-        sudo apt install intel-hpckit
+        sudo apt install intel-oneapi-toolkit
         source /opt/intel/oneapi/setvars.sh
         printenv >> $GITHUB_ENV
         .github/tools/install-hdf5.sh
