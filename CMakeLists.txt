@@ -96,6 +96,11 @@ ecbuild_add_option( FEATURE DELAYED
 	DEFAULT OFF
 )
 
+##Guard 0 sized allocations
+ecbuild_add_option( FEATURE GUARD_0_SIZE
+                    DESCRIPTION "Enable this option to guard 0 sized arrays in FIELD_ACCESS module"
+                    DEFAULT ON
+)
 
 ## fypp preprocessor flags
 if(HAVE_CUDA OR HAVE_HIPFORT)
@@ -103,6 +108,9 @@ if(HAVE_CUDA OR HAVE_HIPFORT)
 endif()
 if(fiat_FOUND)
   list( APPEND fypp_defines "-DWITH_FIAT")
+endif()
+if(HAVE_GUARD_0_SIZE)
+  list( APPEND fypp_defines "-DWITH_GUARD_0_SIZE")
 endif()
 
 ## build precision independent srcs
