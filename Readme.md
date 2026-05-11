@@ -51,6 +51,7 @@ Features of FIELD_API can be toggled by passing the following argument to the CM
 | HIPFORT | OFF | Enable the use of advanced functionality via the hipfort runtime API e.g. host memory pinning, fast strided copies, asynchronous data transfers, etc.|
 | GET_VIEW_ABORT | ON | If activated, get_view will abort when the data are not present on CPU. |
 | DELAYED | OFF | If activated, field owners will be delayed by default. |
+| GUARD_0_SIZE | ON | If activated, the module-level `GET_HOST_DATA_*`/`GET_DEVICE_DATA_*` accessors in `FIELD_ACCESS_MODULE` return a size-1 dummy pointer for 0-sized fields instead of the underlying 0-sized array. |
 | IO_SERIAL | OFF | Use serial HDF5 to read and write FieldAPI variables.  |
 | IO_PARALLEL | OFF | Use  HDF5 (rank defined by MPI) to read and write FieldAPI variables.  |
 

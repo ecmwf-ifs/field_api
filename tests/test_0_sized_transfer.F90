@@ -27,9 +27,15 @@ PROGRAM TEST_0_SIZED_TRANSFER
         ENDIF
 
         PTR => GET_HOST_DATA_RDONLY(O)
+#ifdef WITH_GUARD_0_SIZE
         IF( SIZE(PTR) /= 1 )THEN
           CALL FIELD_ABORT("ALLOCATION SHOULD BE OF SIZE==1")
         ENDIF
+#else
+        IF( SIZE(PTR) /= 0 )THEN
+          CALL FIELD_ABORT("ALLOCATION SHOULD BE OF SIZE==0")
+        ENDIF
+#endif
 
         !...Ensure data can be copied to device and back safely
         CALL O%SYNC_DEVICE_RDWR()

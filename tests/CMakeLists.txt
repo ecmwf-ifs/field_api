@@ -265,8 +265,9 @@ foreach(TEST_FILE ${TEST_FILES})
     target_compile_definitions( ${TEST_NAME}.x PRIVATE
                                 $<$<BOOL:${HAVE_IO}>:HDF5::HDF5>
                                 $<${HAVE_OMP_OFFLOAD}:OMPGPU>
-                                $<${HAVE_CUDA}:_CUDA> 
-                                $<${HAVE_HIPFORT}:_HIP> )
+                                $<${HAVE_CUDA}:_CUDA>
+                                $<${HAVE_HIPFORT}:_HIP>
+                                $<${HAVE_GUARD_0_SIZE}:WITH_GUARD_0_SIZE> )
 
     if( DEFAULT_PRECISION MATCHES sp )
        target_compile_definitions( ${TEST_NAME}.x PRIVATE PARKIND1_SINGLE )
