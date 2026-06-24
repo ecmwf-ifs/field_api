@@ -139,7 +139,7 @@ jobs:
             troika_user_secret: LUMI_CI_SSH_USER
             account_secret: LUMI_CI_PROJECT
             compiler: rocm-afar
-            cmake_options: -DENABLE_OMP_OFFLOAD=ON -DENABLE_DOUBLE_PRECISION=OFF
+            cmake_options: -DENABLE_OMP_OFFLOAD=ON
             sbatch_options: &sbatch_lumi_gpu |
               #SBATCH --time=00:30:00
               #SBATCH --nodes=1
@@ -158,7 +158,7 @@ jobs:
             troika_user_secret: LUMI_CI_SSH_USER
             account_secret: LUMI_CI_PROJECT
             compiler: rocm-afar
-            cmake_options: -DENABLE_OMP_OFFLOAD=ON -DENABLE_HIPFORT=ON -DENABLE_DOUBLE_PRECISION=OFF
+            cmake_options: -DENABLE_OMP_OFFLOAD=ON -DENABLE_HIPFORT=ON
             sbatch_options: *sbatch_lumi_gpu
             output_dir: /scratch/{0}/github-actions/field_api/${{ github.run_id }}/${{ github.run_attempt }}
             workdir: /scratch/{0}/github-actions/field_api/${{ github.run_id }}/${{ github.run_attempt }}

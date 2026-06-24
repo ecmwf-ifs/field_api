@@ -110,7 +110,7 @@ jobs:
             compiler_fc: flang-22
             python-version: '3.11'
             caching: true
-            cmake_options: "-DBUILD_SHARED_LIBS=OFF -DENABLE_DOUBLE_PRECISION=OFF -DENABLE_IO_PARALLEL=OFF"
+            cmake_options: "-DBUILD_SHARED_LIBS=OFF -DENABLE_IO_PARALLEL=OFF"
 
     runs-on: ${{ matrix.os }}
     steps:
