@@ -45,4 +45,4 @@ def getFieldTypeList (ranks=[1,2,3,4,5], kinds=kinds, hasView=None, ganged=None)
   return l
 
 def useParkind1 (kinds=kinds):
-  return 'USE PARKIND1, ONLY : ' + ', '.join (kinds)
+  return 'USE EC_PARKIND, ONLY : ' + ', '.join (kinds)

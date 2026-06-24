@@ -59,7 +59,6 @@ macro(field_api_add_object_library)
            ${_PAR_LIBRARIES}
            $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
            $<${fiat_FOUND}:fiat>
-           $<${fiat_FOUND}:parkind_${DEFAULT_PRECISION}>
            $<${HAVE_MPI}:MPI::MPI_Fortran>
            $<${HAVE_HIPFORT}:hipfort::hip>
            OpenMP::OpenMP_Fortran

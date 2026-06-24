@@ -154,7 +154,6 @@ foreach(prec ${precisions})
          ${obj_libs}
       PRIVATE_LIBS
          $<${fiat_FOUND}:fiat>
-         $<${fiat_FOUND}:parkind_${DEFAULT_PRECISION}>
          $<${HAVE_HIPFORT}:hipfort::hip>
          OpenMP::OpenMP_Fortran
          $<$<BOOL:${HAVE_IO}>:HDF5::HDF5>
