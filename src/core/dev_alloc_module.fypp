@@ -11,7 +11,7 @@ MODULE DEV_ALLOC_MODULE
 
 #:set fieldTypeList = fieldType.getFieldTypeList ()
 
-${fieldType.useParkind1 ()}$
+${fieldType.useParkind1 (kinds=['JPRM', 'JPRD', 'JPIM', 'JPLM', 'JPIB'])}$
 $:offload_macros.runtime_api_import()
 
 USE, INTRINSIC :: ISO_C_BINDING
