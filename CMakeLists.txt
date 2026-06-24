@@ -152,7 +152,6 @@ foreach(prec ${precisions})
       SOURCES ${prec_srcs}
       OBJECTS
          ${obj_libs}
-         field_api_defaults_${prec}
       PRIVATE_LIBS
          $<${fiat_FOUND}:fiat>
          $<${fiat_FOUND}:parkind_${prec}>
@@ -183,7 +182,7 @@ foreach(prec ${precisions})
   # add sub-component module directories to target
   field_api_target_add_module_dirs(
     TARGET     ${LIBNAME}_${prec}
-    LIBS       ${obj_libs} field_api_defaults_${prec}
+    LIBS       ${obj_libs}
   )
 
   if( prec MATCHES sp )
