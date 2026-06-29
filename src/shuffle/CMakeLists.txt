@@ -8,8 +8,8 @@
 # nor does it submit to any jurisdiction.
 
 
-list( APPEND ranksuff_srcs _shuffle _gather _shuffle_collapse2 _gather_collapse2)
-list( APPEND non_ranksuff_srcs field_shuffle_module field_shuffle_type_module field_gathscat_module field_gathscat_type_module field_gathscat_collapse2_module field_gathscat_collapse2_type_module)
+list( APPEND ranksuff_srcs _shuffle _gather _shuffle_collapse1 _gather_collapse1 _shuffle_collapse2 _gather_collapse2)
+list( APPEND non_ranksuff_srcs field_shuffle_module field_shuffle_type_module field_gathscat_module field_gathscat_type_module field_gathscat_collapse1_module field_gathscat_collapse1_type_module field_gathscat_collapse2_module field_gathscat_collapse2_type_module)
 
 
 ## expand ranksuff sources
