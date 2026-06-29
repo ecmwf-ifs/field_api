@@ -51,5 +51,4 @@ macro( field_api_get_lib_type )
     endif()
   endif()
 
-  set( field_api_lib_type STATIC )
 endmacro()
