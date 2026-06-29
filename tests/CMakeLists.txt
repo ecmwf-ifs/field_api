@@ -51,6 +51,7 @@ list(APPEND TEST_FILES
         final_wrapper_gpu.F90
         gather_scatter.F90
         gather_scatter_lastdim.F90
+        gather_scatter_collapse2.F90
         get_dims.F90
         get_stats.F90
         get_view.F90
