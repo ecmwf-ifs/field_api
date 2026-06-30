@@ -1,0 +1,394 @@
+#! (C) Copyright 2022- ECMWF.
+#! (C) Copyright 2022- Meteo-France.
+#!
+#! This software is licensed under the terms of the Apache Licence Version 2.0
+#! which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
+#! In applying this licence, ECMWF does not waive the privileges and immunities
+#! granted to it by virtue of its status as an intergovernmental organisation
+#! nor does it submit to any jurisdiction.
+
+MODULE FIELD_${RANK}$${SUFF}$_SHUFFLE_COLLAPSE${COLLAPSE}$_MODULE
+
+#:set fieldTypeList = fieldType.getFieldTypeList (ranks=[RANK], kinds=['JP' + SUFF], hasView=True)
+
+USE FIELD_${RANK}$${SUFF}$_MODULE
+USE FIELD_${RANK}$${SUFF}$_ACCESS_MODULE
+USE FIELD_${RANK}$${SUFF}$_FACTORY_MODULE
+USE FIELD_ABORT_MODULE
+
+#:if COLLAPSE == 2
+#:for ft in fieldTypeList
+#:if ft.rank >= COLLAPSE + 1
+#:set gathered_name = ft.name.replace(str(ft.rank), str(ft.rank - 1))
+USE ${gathered_name}$_MODULE
+USE ${gathered_name}$_ACCESS_MODULE
+USE ${gathered_name}$_FACTORY_MODULE
+#:endif
+#:endfor
+#:endif
+
+${fieldType.useParkind1 ()}$
+
+IMPLICIT NONE
+
+PRIVATE
+
+#:for ft in fieldTypeList
+#:if ft.rank >= COLLAPSE + 1
+
+#:for what in ['DEVICE', 'HOST']
+#:for mode in ['RDONLY', 'RDWR']
+
+INTERFACE PAIR_GATHER_COLLAPSE${COLLAPSE}$_${what}$_DATA_${mode}$
+  MODULE PROCEDURE :: PAIR_${ft.name}$_GATHER_COLLAPSE${COLLAPSE}$_${what}$_DATA_${mode}$
+END INTERFACE PAIR_GATHER_COLLAPSE${COLLAPSE}$_${what}$_DATA_${mode}$
+
+PUBLIC :: PAIR_GATHER_COLLAPSE${COLLAPSE}$_${what}$_DATA_${mode}$
+
+#:endfor
+#:endfor
+
+INTERFACE PAIR_SCATTER_COLLAPSE${COLLAPSE}$_DATA
+  MODULE PROCEDURE :: PAIR_${ft.name}$_SCATTER_COLLAPSE${COLLAPSE}$_DATA
+END INTERFACE PAIR_SCATTER_COLLAPSE${COLLAPSE}$_DATA
+
+PUBLIC :: PAIR_SCATTER_COLLAPSE${COLLAPSE}$_DATA
+
+TYPE ${ft.name}$_SHUFFLE_PAIR_COLLAPSE${COLLAPSE}$
+  INTEGER (KIND=JPIM) :: IMODE = -1
+  INTEGER (KIND=JPIM) :: IWHAT = -1
+  CLASS (${ft.name}$), POINTER :: YLSCAT => NULL ()
+#:if COLLAPSE == 1
+  CLASS (${ft.name}$), POINTER :: YLGATH => NULL ()
+#:elif COLLAPSE == 2
+  CLASS (${gathered_name}$), POINTER :: YLGATH => NULL ()
+#:endif
+  TYPE (${ft.name}$_SHUFFLE_PAIR_COLLAPSE${COLLAPSE}$), POINTER :: NEXT => NULL ()
+END TYPE ${ft.name}$_SHUFFLE_PAIR_COLLAPSE${COLLAPSE}$
+
+PUBLIC :: ${ft.name}$_SHUFFLE_PAIR_COLLAPSE${COLLAPSE}$
+
+#:endif
+#:endfor
+
+INTEGER (KIND=JPIM), PARAMETER :: NRDWR = 0, NRDONLY = 1, NHOST = 2, NDEVICE = 3
+INTEGER (KIND=JPIM), PARAMETER :: NLONDIM = 1
+#:if COLLAPSE == 2
+INTEGER (KIND=JPIM), PARAMETER :: NLEVDIM = 2
+#:endif
+INTEGER (KIND=JPIM), PARAMETER :: NBLKDIM = ${COLLAPSE + 1}$
+
+CONTAINS
+
+#:for ft in fieldTypeList
+#:if ft.rank >= COLLAPSE + 1
+
+#:if COLLAPSE == 1
+#:set gathered_shape = ft.shape
+#:set gathered_rank = ft.rank
+#:elif COLLAPSE == 2
+#:set gathered_name = ft.name.replace(str(ft.rank), str(ft.rank - 1))
+#:set gathered_rank = ft.rank - 1
+#:set gathered_shape = ','.join([':'] * gathered_rank)
+#:endif
+
+#:set src_ind_list = list(map(lambda i: "J" + str(i), range(2, ft.rank)))
+#:set src_ind_str = ', '.join(src_ind_list)
+#:if len(src_ind_list) > 0
+#:set src_ind_comma = src_ind_str + ', '
+#:else
+#:set src_ind_comma = ''
+#:endif
+
+#:if COLLAPSE == 1
+#:set tgt_ind_list = list(map(lambda i: "J" + str(i), range(2, ft.rank)))
+#:elif COLLAPSE == 2
+#:set tgt_ind_list = list(map(lambda i: "J" + str(i), range(3, ft.rank)))
+#:endif
+#:set tgt_ind_str = ', '.join(tgt_ind_list)
+#:if len(tgt_ind_list) > 0
+#:set tgt_ind_comma = tgt_ind_str + ', '
+#:else
+#:set tgt_ind_comma = ''
+#:endif
+
+#:for what in ['DEVICE', 'HOST']
+#:for mode in ['RDONLY', 'RDWR']
+
+SUBROUTINE PAIR_${ft.name}$_GATHER_COLLAPSE${COLLAPSE}$_${what}$_DATA_${mode}$ (YDPAIR, LDNULL, LDFULL, KLON, KGPBLKS, YDFINDS, PTR, YLF, KBLKMIN, KBLKMAX) 
+
+USE FIELD_3IM_MODULE
+USE FIELD_3IM_ACCESS_MODULE
+USE FIELD_3IM_FACTORY_MODULE
+
+TYPE (${ft.name}$_SHUFFLE_PAIR_COLLAPSE${COLLAPSE}$), POINTER      :: YDPAIR
+LOGICAL,                                   INTENT (IN) :: LDNULL, LDFULL
+INTEGER (KIND=JPIM),                       INTENT (IN) :: KLON, KGPBLKS
+CLASS (FIELD_3IM),                POINTER              :: YDFINDS 
+${ft.type}$,                      POINTER              :: PTR(${gathered_shape}$)
+CLASS (${ft.name}$),              POINTER, OPTIONAL    :: YLF
+INTEGER (KIND=JPIM),                       INTENT (IN) :: KBLKMIN
+INTEGER (KIND=JPIM),                       INTENT (IN) :: KBLKMAX
+
+${ft.type}$, POINTER :: ZTRG(${gathered_shape}$), ZTRS(${ft.shape}$)
+#:if COLLAPSE == 2
+${ft.type}$, POINTER :: ZSRC(${ft.shape}$)
+#:endif
+#:if COLLAPSE == 1
+${ft.type}$, POINTER :: PTR1(${ft.shape}$)
+#:endif
+TYPE (${ft.name}$_SHUFFLE_PAIR_COLLAPSE${COLLAPSE}$), POINTER :: YLPAIR
+#:if COLLAPSE == 1
+CLASS (${ft.name}$), POINTER :: YLGATH_DUMM
+#:elif COLLAPSE == 2
+CLASS (${gathered_name}$), POINTER :: YLGATH_DUMM
+#:endif
+INTEGER (KIND=JPIM) :: ILBOUNDS (${gathered_rank}$), IUBOUNDS (${gathered_rank}$)
+INTEGER (KIND=JPIM), POINTER :: INDS (:,:,:)
+
+IF (LDNULL) THEN
+
+  ! Return dummy pointer
+  YLGATH_DUMM => NULL ()
+  PTR => GET_${what}$_DATA_${mode}$ (YLGATH_DUMM)
+
+ELSEIF (LDFULL) THEN
+
+#:if COLLAPSE == 1
+  ! Return pointer on packed array
+  PTR => GET_${what}$_DATA_${mode}$ (YLF)
+
+  ! Set last lbound to 1
+
+  ILBOUNDS = LBOUND (PTR)
+
+  PTR1 => PTR (${','.join ([':'] * (ft.rank-1))}$, KBLKMIN:KBLKMAX)
+
+  PTR (${','.join (list (map (lambda i: "ILBOUNDS(" + str (i) + "):", range (1, ft.rank))))}$, 1:) => PTR1
+#:elif COLLAPSE == 2
+  CALL FIELD_ABORT ('LDFULL SHOULD NEVER BE TRUE FOR COLLAPSE2')
+#:endif
+
+ELSE
+
+#:if COLLAPSE == 1
+  PTR => GET_${what}$_DATA_RDONLY (YLF)
+#:elif COLLAPSE == 2
+  ZSRC => GET_${what}$_DATA_RDONLY (YLF)
+#:endif
+
+  ALLOCATE (YLPAIR)
+  YLPAIR%IMODE = N${mode}$
+  YLPAIR%IWHAT = N${what}$
+  YLPAIR%NEXT => YDPAIR
+  YDPAIR => YLPAIR
+  YLPAIR%YLSCAT => YLF
+
+#:if COLLAPSE == 1
+  ILBOUNDS = LBOUND (PTR)
+  IUBOUNDS = UBOUND (PTR)
+
+  ILBOUNDS (1) = 1
+  IUBOUNDS (1) = KLON
+
+  ILBOUNDS (${ft.rank}$) = 1
+  IUBOUNDS (${ft.rank}$) = KGPBLKS
+#:elif COLLAPSE == 2
+  ILBOUNDS (1) = 1
+  IUBOUNDS (1) = KLON
+
+#:for i in range(3, ft.rank)
+  ILBOUNDS (${i - 1}$) = LBOUND (ZSRC, ${i}$)
+  IUBOUNDS (${i - 1}$) = UBOUND (ZSRC, ${i}$)
+#:endfor
+
+  ILBOUNDS (${gathered_rank}$) = 1
+  IUBOUNDS (${gathered_rank}$) = KGPBLKS
+#:endif
+
+  CALL FIELD_NEW (YLPAIR%YLGATH, LBOUNDS=ILBOUNDS, UBOUNDS=IUBOUNDS, PERSISTENT=.TRUE.)
+
+  INDS => GET_${what}$_DATA_RDONLY (YDFINDS)
+  ZTRS => GET_${what}$_DATA_RDONLY (YLPAIR%YLSCAT)
+  ZTRG => GET_${what}$_DATA_RDWR   (YLPAIR%YLGATH)
+
+  CALL PAIR_${ft.name}$_COLLAPSE${COLLAPSE}$_${what}$_${mode}$ (INDS)
+
+  ! Return pointer on packed array
+  PTR => GET_${what}$_DATA_${mode}$ (YLPAIR%YLGATH)
+
+ENDIF
+
+
+CONTAINS
+
+SUBROUTINE PAIR_${ft.name}$_COLLAPSE${COLLAPSE}$_${what}$_${mode}$ (KNDS)
+
+INTEGER (KIND=JPIM), INTENT (IN)  :: KNDS (:,:,:)
+INTEGER (KIND=JPIM) :: JLONS, JBLKS, JLONG, JBLKG
+#:if COLLAPSE == 2
+INTEGER (KIND=JPIM) :: JLEVS
+#:endif
+
+#:if len(tgt_ind_list) > 0
+INTEGER (KIND=JPIM) :: ${tgt_ind_str}$
+#:endif
+
+#:if what == 'DEVICE'
+$:offload_macros.parallel_gang_loop(present=['ZTRG', 'ZTRS', 'KNDS'])
+#:elif what == 'HOST'
+!$OMP PARALLEL DO PRIVATE (${tgt_ind_comma}$JBLKG, JLONG, JBLKS, JLONS${', JLEVS' if COLLAPSE == 2 else ''}$)
+#:endif
+DO JBLKG = 1, SIZE (KNDS, 3)
+#:if what == 'DEVICE'
+#:if COLLAPSE == 1
+$:offload_macros.parallel_vector_loop(private=['JLONG', 'JBLKS', 'JLONS'])
+#:elif COLLAPSE == 2
+$:offload_macros.parallel_vector_loop(private=['JLONG', 'JBLKS', 'JLONS', 'JLEVS'])
+#:endif
+#:endif
+  DO JLONG = 1, SIZE (KNDS, 2)
+    JLONS = KNDS (NLONDIM, JLONG, JBLKG)
+#:if COLLAPSE == 2
+    JLEVS = KNDS (NLEVDIM, JLONG, JBLKG)
+#:endif
+    JBLKS = KNDS (NBLKDIM, JLONG, JBLKG)
+    IF (JLONS > 0) THEN
+#:if COLLAPSE == 1
+#:for i in range(2, ft.rank)
+      DO J${i}$ = LBOUND (ZTRG, ${i}$), UBOUND (ZTRG, ${i}$)
+#:endfor
+        ZTRG (JLONG, ${src_ind_comma}$JBLKG) = ZTRS (JLONS, ${src_ind_comma}$JBLKS)
+#:for i in reversed(range(2, ft.rank))
+      ENDDO
+#:endfor
+#:elif COLLAPSE == 2
+#:for i in range(3, ft.rank)
+      DO J${i}$ = LBOUND (ZTRG, ${i - 1}$), UBOUND (ZTRG, ${i - 1}$)
+#:endfor
+        ZTRG (JLONG, ${tgt_ind_comma}$JBLKG) = ZTRS (JLONS, JLEVS, ${tgt_ind_comma}$JBLKS)
+#:for i in reversed(range(3, ft.rank))
+      ENDDO
+#:endfor
+#:endif
+    ENDIF
+  ENDDO
+ENDDO
+
+END SUBROUTINE
+
+END SUBROUTINE PAIR_${ft.name}$_GATHER_COLLAPSE${COLLAPSE}$_${what}$_DATA_${mode}$
+
+#:endfor
+#:endfor
+
+SUBROUTINE PAIR_${ft.name}$_SCATTER_COLLAPSE${COLLAPSE}$_DATA (YDPAIR, YDFINDS)
+
+USE FIELD_3IM_MODULE
+USE FIELD_3IM_ACCESS_MODULE
+USE FIELD_3IM_FACTORY_MODULE
+
+TYPE (${ft.name}$_SHUFFLE_PAIR_COLLAPSE${COLLAPSE}$), POINTER    :: YDPAIR
+CLASS (FIELD_3IM),               POINTER              :: YDFINDS 
+
+TYPE (${ft.name}$_SHUFFLE_PAIR_COLLAPSE${COLLAPSE}$), POINTER :: YLPAIR
+${ft.type}$, POINTER :: PTRG(${gathered_shape}$), PTRS(${ft.shape}$)
+INTEGER (KIND=JPIM), POINTER :: INDS (:,:,:)
+
+DO WHILE (ASSOCIATED (YDPAIR))
+
+  YLPAIR => YDPAIR%NEXT
+
+  ! Scatter back results
+  IF (YDPAIR%IMODE == NRDWR) THEN
+    IF (YDPAIR%IWHAT == NDEVICE) THEN
+
+      INDS => GET_DEVICE_DATA_RDONLY (YDFINDS)
+      PTRG => GET_DEVICE_DATA_RDONLY (YDPAIR%YLGATH)
+      PTRS => GET_DEVICE_DATA_RDWR   (YDPAIR%YLSCAT)
+
+      CALL ${ft.name}$_SCATTER_COLLAPSE${COLLAPSE}$_DEVICE_KERNEL (INDS)
+
+    ELSEIF (YDPAIR%IWHAT == NHOST) THEN
+
+      INDS => GET_HOST_DATA_RDONLY (YDFINDS)
+      PTRG => GET_HOST_DATA_RDONLY (YDPAIR%YLGATH)
+      PTRS => GET_HOST_DATA_RDWR   (YDPAIR%YLSCAT)
+
+      CALL ${ft.name}$_SCATTER_COLLAPSE${COLLAPSE}$_HOST_KERNEL (INDS)
+
+    ENDIF
+  ENDIF
+
+  CALL FIELD_DELETE (YDPAIR%YLGATH)
+  DEALLOCATE (YDPAIR)
+  NULLIFY (YDPAIR)
+
+  YDPAIR => YLPAIR
+ENDDO
+
+CONTAINS
+
+#:for what in ['DEVICE', 'HOST']
+SUBROUTINE ${ft.name}$_SCATTER_COLLAPSE${COLLAPSE}$_${what}$_KERNEL (KNDS)
+
+INTEGER (KIND=JPIM), INTENT (IN) :: KNDS (:,:,:)
+INTEGER (KIND=JPIM) :: JLONS, JBLKS, JLONG, JBLKG
+#:if COLLAPSE == 2
+INTEGER (KIND=JPIM) :: JLEVS
+#:endif
+
+#:if len(tgt_ind_list) > 0
+INTEGER (KIND=JPIM) :: ${tgt_ind_str}$
+#:endif
+
+#:if what == 'DEVICE'
+$:offload_macros.parallel_gang_loop(present=['PTRG', 'PTRS', 'KNDS'])
+#:elif what == 'HOST'
+!$OMP PARALLEL DO PRIVATE (${tgt_ind_comma}$JBLKG, JLONG, JBLKS, JLONS${', JLEVS' if COLLAPSE == 2 else ''}$)
+#:endif
+DO JBLKG = 1, SIZE (KNDS, 3)
+#:if what == 'DEVICE'
+#:if COLLAPSE == 1
+$:offload_macros.parallel_vector_loop(private=['JLONG', 'JBLKS', 'JLONS'])
+#:elif COLLAPSE == 2
+$:offload_macros.parallel_vector_loop(private=['JLONG', 'JBLKS', 'JLONS', 'JLEVS'])
+#:endif
+#:endif
+  DO JLONG = 1, SIZE (KNDS, 2)
+    JLONS = KNDS (NLONDIM, JLONG, JBLKG)
+#:if COLLAPSE == 2
+    JLEVS = KNDS (NLEVDIM, JLONG, JBLKG)
+#:endif
+    JBLKS = KNDS (NBLKDIM, JLONG, JBLKG)
+    IF (JLONS > 0) THEN
+#:if COLLAPSE == 1
+#:for i in range(2, ft.rank)
+      DO J${i}$ = LBOUND (PTRG, ${i}$), UBOUND (PTRG, ${i}$)
+#:endfor
+        PTRS (JLONS, ${src_ind_comma}$JBLKS) = PTRG (JLONG, ${src_ind_comma}$JBLKG) 
+#:for i in reversed(range(2, ft.rank))
+      ENDDO
+#:endfor
+#:elif COLLAPSE == 2
+#:for i in range(3, ft.rank)
+      DO J${i}$ = LBOUND (PTRG, ${i - 1}$), UBOUND (PTRG, ${i - 1}$)
+#:endfor
+        PTRS (JLONS, JLEVS, ${tgt_ind_comma}$JBLKS) = PTRG (JLONG, ${tgt_ind_comma}$JBLKG) 
+#:for i in reversed(range(3, ft.rank))
+      ENDDO
+#:endfor
+#:endif
+    ENDIF
+  ENDDO
+ENDDO
+
+END SUBROUTINE
+
+#:endfor
+END SUBROUTINE PAIR_${ft.name}$_SCATTER_COLLAPSE${COLLAPSE}$_DATA
+
+#:endif
+#:endfor
+
+END MODULE FIELD_${RANK}$${SUFF}$_SHUFFLE_COLLAPSE${COLLAPSE}$_MODULE
