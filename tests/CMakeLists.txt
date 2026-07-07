@@ -63,6 +63,7 @@ list(APPEND TEST_FILES
         gpu_to_cpu.F90
         gpu_to_cpu_delayed_init_value.F90
         gpu_to_cpu_init_value.F90
+        import_field_array_and_jpim.F90
         init_owner.F90
         init_owner2.F90
         init_owner_0_size.F90
