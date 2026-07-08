@@ -39,4 +39,8 @@ ${fieldType.useParkind1 ()}$
 
 IMPLICIT NONE
 
+PRIVATE
+
+PUBLIC :: LOAD, SAVE, COPY, WIPE, HOST
+
 END MODULE
