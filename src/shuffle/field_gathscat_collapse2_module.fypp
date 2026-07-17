@@ -7,18 +7,18 @@
 #! granted to it by virtue of its status as an intergovernmental organisation
 #! nor does it submit to any jurisdiction.
 
-MODULE FIELD_GATHSCAT_COLLAPSE${COLLAPSE}$_MODULE
+MODULE FIELD_GATHSCAT_COLLAPSE2_MODULE
 
 #:set fieldTypeList = fieldType.getFieldTypeList (hasView=True)
 
 USE FIELD_ACCESS_MODULE
 USE FIELD_FACTORY_MODULE
-USE FIELD_GATHSCAT_COLLAPSE${COLLAPSE}$_TYPE_MODULE
+USE FIELD_GATHSCAT_COLLAPSE2_TYPE_MODULE
 ${fieldType.useParkind1 ()}$
 
 #:for ft in fieldTypeList
-#:if ft.rank >= COLLAPSE + 1
-USE ${ft.name}$_GATHER_COLLAPSE${COLLAPSE}$_MODULE
+#:if ft.rank >= 3
+USE ${ft.name}$_GATHER_COLLAPSE2_MODULE
 #:endif
 #:endfor
 
@@ -27,15 +27,15 @@ IMPLICIT NONE
 
 PRIVATE
 
-PUBLIC :: FIELD_GATHSCAT_COLLAPSE${COLLAPSE}$
+PUBLIC :: FIELD_GATHSCAT_COLLAPSE2
 
 #:for what in ['DEVICE', 'HOST']
 #:for mode in ['RDONLY', 'RDWR']
 
 INTERFACE GATHER_${what}$_DATA_${mode}$
 #:for ft in fieldTypeList
-#:if ft.rank >= COLLAPSE + 1
-  MODULE PROCEDURE ${ft.name}$_GATHER_COLLAPSE${COLLAPSE}$_${what}$_DATA_${mode}$
+#:if ft.rank >= 3
+  MODULE PROCEDURE ${ft.name}$_GATHER_COLLAPSE2_${what}$_DATA_${mode}$
 #:endif
 #:endfor
 END INTERFACE GATHER_${what}$_DATA_${mode}$
@@ -44,8 +44,8 @@ PUBLIC :: GATHER_${what}$_DATA_${mode}$
 
 INTERFACE SGATHER_${what}$_DATA_${mode}$
 #:for ft in fieldTypeList
-#:if ft.rank >= COLLAPSE + 1
-  MODULE PROCEDURE S${ft.name}$_GATHER_COLLAPSE${COLLAPSE}$_${what}$_DATA_${mode}$
+#:if ft.rank >= 3
+  MODULE PROCEDURE S${ft.name}$_GATHER_COLLAPSE2_${what}$_DATA_${mode}$
 #:endif
 #:endfor
 END INTERFACE SGATHER_${what}$_DATA_${mode}$
@@ -56,4 +56,4 @@ PUBLIC :: SGATHER_${what}$_DATA_${mode}$
 #:endfor
 
 
-END MODULE FIELD_GATHSCAT_COLLAPSE${COLLAPSE}$_MODULE
+END MODULE FIELD_GATHSCAT_COLLAPSE2_MODULE

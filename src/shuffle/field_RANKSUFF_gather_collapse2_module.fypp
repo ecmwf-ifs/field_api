@@ -7,31 +7,31 @@
 #! granted to it by virtue of its status as an intergovernmental organisation
 #! nor does it submit to any jurisdiction.
 
-MODULE FIELD_${RANK}$${SUFF}$_GATHER_COLLAPSE${COLLAPSE}$_MODULE
+MODULE FIELD_${RANK}$${SUFF}$_GATHER_COLLAPSE2_MODULE
 
 #:set fieldTypeList = fieldType.getFieldTypeList (ranks=[RANK], kinds=['JP' + str (SUFF)], hasView=True)
 
 USE FIELD_${RANK}$${SUFF}$_MODULE
 USE FIELD_${RANK}$${SUFF}$_ACCESS_MODULE
 USE FIELD_${RANK}$${SUFF}$_FACTORY_MODULE
-USE FIELD_GATHSCAT_COLLAPSE${COLLAPSE}$_TYPE_MODULE
-USE FIELD_${RANK}$${SUFF}$_SHUFFLE_COLLAPSE${COLLAPSE}$_MODULE
+USE FIELD_GATHSCAT_COLLAPSE2_TYPE_MODULE
+USE FIELD_${RANK}$${SUFF}$_SHUFFLE_COLLAPSE2_MODULE
 ${fieldType.useParkind1 ()}$
 
 IMPLICIT NONE
 
 PRIVATE
 
-PUBLIC :: FIELD_GATHSCAT_COLLAPSE${COLLAPSE}$
+PUBLIC :: FIELD_GATHSCAT_COLLAPSE2
 
 #:for what in ['DEVICE', 'HOST']
 #:for mode in ['RDONLY', 'RDWR']
 
 #:for ft in fieldTypeList
-#:if ft.rank >= COLLAPSE + 1
+#:if ft.rank >= 3
 
-PUBLIC :: ${ft.name}$_GATHER_COLLAPSE${COLLAPSE}$_${what}$_DATA_${mode}$
-PUBLIC :: S${ft.name}$_GATHER_COLLAPSE${COLLAPSE}$_${what}$_DATA_${mode}$
+PUBLIC :: ${ft.name}$_GATHER_COLLAPSE2_${what}$_DATA_${mode}$
+PUBLIC :: S${ft.name}$_GATHER_COLLAPSE2_${what}$_DATA_${mode}$
 
 #:endif
 #:endfor
@@ -42,59 +42,49 @@ PUBLIC :: S${ft.name}$_GATHER_COLLAPSE${COLLAPSE}$_${what}$_DATA_${mode}$
 CONTAINS
 
 #:for ft in fieldTypeList
-#:if ft.rank >= COLLAPSE + 1
+#:if ft.rank >= 3
 
-#:if COLLAPSE == 1
-#:set gathered_shape = ft.shape
-#:elif COLLAPSE == 2
 #:set gathered_rank = ft.rank - 1
 #:set gathered_shape = ','.join([':'] * gathered_rank)
-#:endif
 
 #:for what in ['DEVICE', 'HOST']
 #:for mode in ['RDONLY', 'RDWR']
 
-FUNCTION ${ft.name}$_GATHER_COLLAPSE${COLLAPSE}$_${what}$_DATA_${mode}$ (SELF, YLF) RESULT (PTR)
+FUNCTION ${ft.name}$_GATHER_COLLAPSE2_${what}$_DATA_${mode}$ (SELF, YLF) RESULT (PTR)
 
-CLASS (FIELD_GATHSCAT_COLLAPSE${COLLAPSE}$)           :: SELF
+CLASS (FIELD_GATHSCAT_COLLAPSE2)           :: SELF
 CLASS (${ft.name}$),   POINTER, INTENT (IN) :: YLF
 
 ${ft.type}$, POINTER :: PTR(${gathered_shape}$)
 
-CALL S${ft.name}$_GATHER_COLLAPSE${COLLAPSE}$_${what}$_DATA_${mode}$ (SELF, PTR, YLF)
+CALL S${ft.name}$_GATHER_COLLAPSE2_${what}$_DATA_${mode}$ (SELF, PTR, YLF)
 
-END FUNCTION ${ft.name}$_GATHER_COLLAPSE${COLLAPSE}$_${what}$_DATA_${mode}$
+END FUNCTION ${ft.name}$_GATHER_COLLAPSE2_${what}$_DATA_${mode}$
 
-SUBROUTINE S${ft.name}$_GATHER_COLLAPSE${COLLAPSE}$_${what}$_DATA_${mode}$ (SELF, PTR, YLF) 
+SUBROUTINE S${ft.name}$_GATHER_COLLAPSE2_${what}$_DATA_${mode}$ (SELF, PTR, YLF) 
 
 USE FIELD_${RANK}$${SUFF}$_ACCESS_MODULE
 
-CLASS (FIELD_GATHSCAT_COLLAPSE${COLLAPSE}$)           :: SELF
+CLASS (FIELD_GATHSCAT_COLLAPSE2)           :: SELF
 ${ft.type}$,           POINTER             :: PTR(${gathered_shape}$)
 CLASS (${ft.name}$),   POINTER, OPTIONAL   :: YLF
 
-#:if COLLAPSE == 2
 ${ft.type}$,           POINTER             :: PTR1(${ft.shape}$)
-#:endif
 
 IF (PRESENT (YLF)) THEN
 
-  CALL PAIR_GATHER_COLLAPSE${COLLAPSE}$_${what}$_DATA_${mode}$ (SELF%${ft.name}$_C${COLLAPSE}$LIST, SELF%LNULL, SELF%LFULL, &
+  CALL PAIR_GATHER_COLLAPSE2_${what}$_DATA_${mode}$ (SELF%${ft.name}$_C2LIST, SELF%LNULL, SELF%LFULL, &
   & SELF%KLON_G, SELF%KGPBLKS_G, SELF%YLFINDS, PTR, YLF, SELF%KBLKMIN, SELF%KBLKMAX)
 
 ELSE
 
 
-#:if COLLAPSE == 2
   CALL SGET_${what}$_DATA_${mode}$ (PTR1, YLF)
   PTR => PTR1 (${gathered_shape}$, 1)
-#:elif COLLAPSE == 1
-  CALL SGET_${what}$_DATA_${mode}$ (PTR, YLF)
-#:endif
 
 ENDIF
 
-END SUBROUTINE S${ft.name}$_GATHER_COLLAPSE${COLLAPSE}$_${what}$_DATA_${mode}$
+END SUBROUTINE S${ft.name}$_GATHER_COLLAPSE2_${what}$_DATA_${mode}$
 
 #:endfor
 #:endfor
@@ -102,4 +92,4 @@ END SUBROUTINE S${ft.name}$_GATHER_COLLAPSE${COLLAPSE}$_${what}$_DATA_${mode}$
 #:endif
 #:endfor
 
-END MODULE FIELD_${RANK}$${SUFF}$_GATHER_COLLAPSE${COLLAPSE}$_MODULE
+END MODULE FIELD_${RANK}$${SUFF}$_GATHER_COLLAPSE2_MODULE
