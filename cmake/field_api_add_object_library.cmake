@@ -28,7 +28,6 @@
 # ---------------
 #
 # :LIBNAME:       Library name.
-# :PREC:          Precision for which to build object library.
 # :OBJECTS:       Object libraries to include. Only target
 #                 objects will be included, other link-time
 #                 information is not propagated.
@@ -41,14 +40,10 @@
 macro(field_api_add_object_library)
 
     set( options )
-    set( oneValueArgs LIBNAME PREC )
+    set( oneValueArgs LIBNAME )
     set( multiValueArgs OBJECTS SRCS DEFINITIONS LIBRARIES )
 
     cmake_parse_arguments( _PAR "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
-
-    if( NOT DEFINED _PAR_PREC )
-       set( _PAR_PREC ${DEFAULT_PRECISION} )
-    endif()
 
     ecbuild_add_library(
         TARGET ${_PAR_LIBNAME}
@@ -64,7 +59,6 @@ macro(field_api_add_object_library)
            ${_PAR_LIBRARIES}
            $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
            $<${fiat_FOUND}:fiat>
-           $<${fiat_FOUND}:parkind_${_PAR_PREC}>
            $<${HAVE_MPI}:MPI::MPI_Fortran>
            $<${HAVE_HIPFORT}:hipfort::hip>
            OpenMP::OpenMP_Fortran

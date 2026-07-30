@@ -37,4 +37,10 @@ ${fieldType.useParkind1 ()}$
 
 IMPLICIT NONE
 
+PRIVATE
+
+#:for ft in fieldTypeListOT + fieldTypeListRM + fieldTypeListRB + fieldTypeListRD
+PUBLIC :: ${ft.name}$_ARRAY
+#:endfor
+
 END MODULE

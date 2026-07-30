@@ -11,8 +11,6 @@ MODULE FIELD_ACCESS_MODULE
 
 #:set fieldTypeList = fieldType.getFieldTypeList ()
 
-${fieldType.useParkind1 ()}$
-
 #:for ft in fieldTypeList
 USE ${ft.name}$_ACCESS_MODULE
 #:endfor
