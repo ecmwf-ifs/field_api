@@ -52,7 +52,6 @@ list(APPEND TEST_FILES
         gather_scatter.F90
         gather_scatter_lastdim.F90
         gather_scatter_collapse2.F90
-        gather_scatter_collapse2_lastdim.F90
         get_dims.F90
         get_stats.F90
         get_view.F90
@@ -129,8 +128,17 @@ if(fiat_FOUND)
 endif()
 
 #Place-holder for failing tests
-set(FAILING_TEST_FILES
-	)
+if(CMAKE_Fortran_COMPILER_ID MATCHES "Cray")
+  list(APPEND ABOR1_TEST_FILES
+        gather_scatter_collapse2_lastdim.F90
+  )
+else()
+  list(APPEND TEST_FILES
+        gather_scatter_collapse2_lastdim.F90
+  )
+  set(FAILING_TEST_FILES
+  )
+endif()
 
 #These tests will call abor1
 list(APPEND ABOR1_TEST_FILES
