@@ -60,13 +60,22 @@ END FUNCTION ${ft.name}$_GATHER_${what}$_DATA_${mode}$
 
 SUBROUTINE S${ft.name}$_GATHER_${what}$_DATA_${mode}$ (SELF, PTR, YLF) 
 
+USE FIELD_${RANK}$${SUFF}$_ACCESS_MODULE
+
 CLASS (FIELD_SHUFFLE)                      :: SELF
 ${ft.type}$,           POINTER             :: PTR(${ft.shape}$)
 CLASS (${ft.name}$),   POINTER, OPTIONAL   :: YLF
 
+IF (PRESENT (YLF)) THEN
 
-CALL PAIR_GATHER_${what}$_DATA_${mode}$ (SELF%${ft.name}$_LIST, SELF%LNULL, SELF%LFULL, &
-& SELF%KLON_G, SELF%KGPBLKS_G, SELF%YLFINDS, PTR, YLF, SELF%KBLKMIN, SELF%KBLKMAX)
+  CALL PAIR_GATHER_${what}$_DATA_${mode}$ (SELF%${ft.name}$_LIST, SELF%LNULL, SELF%LFULL, &
+  & SELF%KLON_G, SELF%KGPBLKS_G, SELF%YLFINDS, PTR, YLF, SELF%KBLKMIN, SELF%KBLKMAX)
+
+ELSE
+
+  CALL SGET_${what}$_DATA_${mode}$ (PTR, YLF)
+
+ENDIF
 
 END SUBROUTINE S${ft.name}$_GATHER_${what}$_DATA_${mode}$
 
