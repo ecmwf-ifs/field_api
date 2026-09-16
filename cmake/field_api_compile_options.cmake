@@ -44,4 +44,14 @@ macro( field_api_compile_options )
     list(APPEND FIELD_API_COMPILE_DEFINITIONS IS_LLVM_FLANG)
   endif()
 
+<<<<<<< fix/intel-19-recursive
+if(CMAKE_Fortran_COMPILER_ID MATCHES Intel)
+  ecbuild_add_fortran_flags("-check nocontiguous" BUILD DEBUG)
+      if (CMAKE_Fortran_COMPILER_VERSION VERSION_LESS "20.0")
+        message(STATUS "Adding -recursive for Intel Fortran < 20")
+        ecbuild_add_fortran_flags("-recursive")
+    endif()
+endif()
+=======
 endmacro()
+>>>>>>> main
