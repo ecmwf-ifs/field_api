@@ -38,7 +38,7 @@ jobs:
           - linux intel-classic
           - linux intel-modern
           - macos gnu
-          - macos flang-22
+          - linux flang-22
         get_view_abort: [ON,OFF]
         delayed: [ON,OFF]
 
@@ -101,16 +101,16 @@ jobs:
             python-version: '3.11'
             caching: true
 
-          - name: macos flang-22
-            # Xcode compiler requires empty environment variables, so we pass null (~) here
-            os: macos-15
-            compiler: clang-17
-            compiler_cc: ~
-            compiler_cxx: ~
+          - name: linux flang-22
+            os: ubuntu-24.04
+            compiler: flang-22
+            compiler_cc: clang-22
+            compiler_cxx: clang++-22
             compiler_fc: flang-22
             python-version: '3.11'
             caching: true
-            cmake_options: "-DBUILD_SHARED_LIBS=OFF -DENABLE_IO_PARALLEL=OFF"
+            openmpi_version: '5.0.7'
+            cmake_options: "-DBUILD_SHARED_LIBS=OFF -DENABLE_IO_PARALLEL=OFF -DMPI_SLOTS=4 -DMPI_ARGS=--oversubscribe"
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -142,15 +142,6 @@ jobs:
           brew install open-mpi
           brew install coreutils
           brew install hdf5
-          if [[ "${{ matrix.name }}" =~ flang ]]; then
-            brew install llvm@22
-            brew install libomp
-            brew install flang
-            export LIBRARY_PATH="/opt/homebrew/opt/libomp/lib:$LIBRARY_PATH"
-            export LIBRARY_PATH="/opt/homebrew/opt/libomp/include:$LIBRARY_PATH"
-            echo "LIBRARY_PATH=/opt/homebrew/opt/libomp/lib:$LIBRARY_PATH" >> $GITHUB_ENV
-            echo "LIBRARY_PATH=/opt/homebrew/opt/libomp/include:$LIBRARY_PATH" >> $GITHUB_ENV
-          fi
         else
           sudo apt-get update
           if [[ "${{ matrix.compiler }}" =~ gnu ]]; then
@@ -162,6 +153,17 @@ jobs:
         fi
 
         printenv
+
+    - name: Install flang compiler
+      if: contains( matrix.compiler, 'flang' )
+      shell: bash -eux {0}
+      run: |
+        sudo apt-get install -y wget gpg software-properties-common ninja-build
+        wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/apt.llvm.org.gpg
+        echo "deb [signed-by=/usr/share/keyrings/apt.llvm.org.gpg] https://apt.llvm.org/noble/ llvm-toolchain-noble-22 main" | sudo tee /etc/apt/sources.list.d/llvm.list
+        sudo apt-get update
+        sudo apt-get install -y clang-22 flang-22 libomp-22-dev
+        echo "CACHE_SUFFIX=${CACHE_SUFFIX}-llvm_flang_22-mpi_${{ matrix.openmpi_version }}" >> $GITHUB_ENV
 
     - name: Cache Dependencies
       # There seems to be a problem with cached NVHPC dependencies, leading to SIGILL perhaps due to slightly different architectures
@@ -251,6 +253,26 @@ jobs:
         .github/tools/install-hdf5.sh
         echo "HDF5_ROOT=${GITHUB_WORKSPACE}/hdf5-install"    >> $GITHUB_ENV
         echo "CACHE_SUFFIX=$CC-$($CC -dumpversion)" >> $GITHUB_ENV
+
+    - name: Install OpenMPI for flang
+      if: contains( matrix.compiler, 'flang' )
+      shell: bash -eux {0}
+      run: |
+        # Fortran modules from Ubuntu's gfortran-built OpenMPI are not compatible with flang.
+        MPI_PREFIX="${DEPS_DIR}/openmpi"
+        if [[ ! -x "${MPI_PREFIX}/bin/mpifort" ]]; then
+          MPI_VERSION="${{ matrix.openmpi_version }}"
+          MPI_SOURCE="${RUNNER_TEMP}/openmpi-${MPI_VERSION}"
+          mkdir -p "${MPI_SOURCE}"
+          curl --fail --location "https://www.open-mpi.org/software/ompi/v${MPI_VERSION%.*}/downloads/openmpi-${MPI_VERSION}.tar.gz" | tar xz --strip-components=1 -C "${MPI_SOURCE}"
+          cd "${MPI_SOURCE}"
+          FCFLAGS=-fPIC CFLAGS=-fPIC FFLAGS=-fPIC ./configure --prefix="${MPI_PREFIX}"
+          make -j4
+          make install
+        fi
+        echo "MPI_HOME=${MPI_PREFIX}" >> $GITHUB_ENV
+        echo "${MPI_PREFIX}/bin" >> $GITHUB_PATH
+        echo "LD_LIBRARY_PATH=${MPI_PREFIX}/lib:${LD_LIBRARY_PATH:-}" >> $GITHUB_ENV
 
     - name: Build & Test
       id: build-test
