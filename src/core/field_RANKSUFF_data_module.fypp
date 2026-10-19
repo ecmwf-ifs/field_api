@@ -134,6 +134,9 @@ CONTAINS
 $:offload_macros.c_devptr_decl(symbols=['DEVPTR'], indent=4)
 
 
+    ! Empty members have neither a block origin nor a payload to copy.
+    IF (SIZE(HST) == 0) RETURN
+
     OFFSET = 0
 $:offload_macros.get_device_id(dev_id='DEV_ID', indent=4)
 $:offload_macros.get_host_id(hst_id='HST_ID', indent=4)
@@ -144,15 +147,19 @@ $:offload_macros.get_host_id(hst_id='HST_ID', indent=4)
   #:set ar = ', '.join ([':'] * d  + list (map (lambda i: 'J' + str (i+1), range (d, ft.rank))))
   #:set lbdiff = lambda i: f'LBOUND(DEV,{i}) - LBOUND (HST,{i})'
   #:set ard = ', '.join ([':'] * d  + ['J' + str(i+1) + ' + ' + lbdiff(i+1) for i in range (d, ft.rank)])
+  #:set arh0 = ', '.join ([f'LBOUND(HST,{i+1})' for i in range(d)] + ['J' + str(i+1) for i in range(d, ft.rank)])
+  #:set ard0 = ', '.join ([f'LBOUND(DEV,{i+1})' for i in range(d)] + ['J' + str(i+1) + ' + ' + lbdiff(i+1) for i in range(d, ft.rank)])
   #:set indent = '  ' * (ft.rank - e)
 #ifdef WITH_GPU_OFFLOAD
+    ! Use scalar block origins: array-section arguments can be packed into
+    ! host temporaries, which are not device addresses and are unsafe async.
     ${indent}$  IF(MAP_DEVPTR)THEN
 $:offload_macros.host_data(use_device=['DEV'], indent=ft.rank - e)
-    ${indent}$    DEVPTR = ${offload_macros.devptr_cloc(f'DEV ({ard})')}$
+    ${indent}$    DEVPTR = ${offload_macros.devptr_cloc(f'DEV ({ard0})')}$
 $:offload_macros.end_host_data(indent=ft.rank - e)
     ${indent}$  ELSE
 $:offload_macros.data_deviceptr(symbols=['DEVPTR', 'DEV'], indent=ft.rank - e)
-    ${indent}$    DEVPTR = ${offload_macros.devptr_cloc(f'DEV ({ard})')}$
+    ${indent}$    DEVPTR = ${offload_macros.devptr_cloc(f'DEV ({ard0})')}$
 $:offload_macros.end_data_deviceptr(indent=ft.rank - e)
     ${indent}$  ENDIF
 #endif
@@ -164,11 +171,11 @@ $:offload_macros.end_data_deviceptr(indent=ft.rank - e)
     ${indent}$  IF (KDIR == NH2D) THEN
 #ifdef WITH_GPU_OFFLOAD
     ${indent}$    IF(PRESENT(QUEUE))THEN
-$:offload_macros.memcpy_to_device_async(dev='DEVPTR', host=f'HST ({ar})', size='ISIZE', queue='QUEUE', offset='OFFSET', &
+$:offload_macros.memcpy_to_device_async(dev='DEVPTR', host=f'HST ({arh0})', size='ISIZE', queue='QUEUE', offset='OFFSET', &
 &                                       dev_id='DEV_ID', hst_id='HST_ID', return_val='ERR', stream='STREAMS(QUEUE)%STREAM', &
 &                                       indent=ft.rank - e + 10)
     ${indent}$    ELSE
-$:offload_macros.memcpy_to_device(dev='DEVPTR', host=f'HST ({ar})', size='ISIZE', offset='OFFSET', &
+$:offload_macros.memcpy_to_device(dev='DEVPTR', host=f'HST ({arh0})', size='ISIZE', offset='OFFSET', &
 &                                 dev_id='DEV_ID', hst_id='HST_ID', return_val='ERR', indent=ft.rank - e + 10)
     ${indent}$    ENDIF
 #else
@@ -177,11 +184,11 @@ $:offload_macros.memcpy_to_device(dev='DEVPTR', host=f'HST ({ar})', size='ISIZE'
     ${indent}$  ELSEIF (KDIR == ND2H) THEN
 #ifdef WITH_GPU_OFFLOAD
     ${indent}$    IF(PRESENT(QUEUE))THEN
-$:offload_macros.memcpy_from_device_async(dev='DEVPTR', host=f'HST ({ar})', size='ISIZE', queue='QUEUE', offset='OFFSET', &
+$:offload_macros.memcpy_from_device_async(dev='DEVPTR', host=f'HST ({arh0})', size='ISIZE', queue='QUEUE', offset='OFFSET', &
 &                                         dev_id='DEV_ID', hst_id='HST_ID', return_val='ERR', stream='STREAMS(QUEUE)%STREAM', &
 &                                         indent=ft.rank - e + 10)
     ${indent}$    ELSE
-$:offload_macros.memcpy_from_device(dev='DEVPTR', host=f'HST ({ar})', size='ISIZE', offset='OFFSET', &
+$:offload_macros.memcpy_from_device(dev='DEVPTR', host=f'HST ({arh0})', size='ISIZE', offset='OFFSET', &
 &                                   dev_id='DEV_ID', hst_id='HST_ID', return_val='ERR', indent=ft.rank - e + 10)
     ${indent}$    ENDIF
 #else
