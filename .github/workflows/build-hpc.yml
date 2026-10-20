@@ -79,8 +79,6 @@ jobs:
               #SBATCH --cpus-per-task=8
               #SBATCH --partition=dev-g
               #SBATCH --account={0}
-            output_dir: /scratch/{0}/github-actions/field_api/lumi-c/${{ github.run_id }}/${{ github.run_attempt }}
-            workdir: /scratch/{0}/github-actions/field_api/lumi-c/${{ github.run_id }}/${{ github.run_attempt }}
             cmake_toolchain: -DCMAKE_TOOLCHAIN_FILE=arch/eurohpc/lumi/cray-cpu/20.0.0/toolchain.cmake
             envfile: arch/eurohpc/lumi/cray-cpu/20.0.0/env.sh
 
@@ -148,8 +146,6 @@ jobs:
               #SBATCH --gpus-per-task=1
               #SBATCH --partition=dev-g
               #SBATCH --account={0}
-            output_dir: /scratch/{0}/github-actions/field_api/${{ github.run_id }}/${{ github.run_attempt }}
-            workdir: /scratch/{0}/github-actions/field_api/${{ github.run_id }}/${{ github.run_attempt }}
             cmake_toolchain: &rocm_afar_toolchain -DCMAKE_TOOLCHAIN_FILE=arch/eurohpc/lumi/rocm-afar/22.2/toolchain.cmake
             envfile: &rocm_afar_envfile arch/eurohpc/lumi/rocm-afar/22.2/env.sh
 
@@ -160,8 +156,6 @@ jobs:
             compiler: rocm-afar
             cmake_options: -DENABLE_OMP_OFFLOAD=ON -DENABLE_HIPFORT=ON
             sbatch_options: *sbatch_lumi_gpu
-            output_dir: /scratch/{0}/github-actions/field_api/${{ github.run_id }}/${{ github.run_attempt }}
-            workdir: /scratch/{0}/github-actions/field_api/${{ github.run_id }}/${{ github.run_attempt }}
             cmake_toolchain: *rocm_afar_toolchain
             envfile: *rocm_afar_envfile
 
@@ -169,6 +163,9 @@ jobs:
 
     env:
       GH_TOKEN: ${{ github.token }}
+      # Isolate every matrix job and rerun on the remote filesystem.
+      OUTPUT_DIR: ${{ format('/scratch/{0}/github-actions/field_api/{1}/{2}/{3}', secrets[matrix.account_secret || matrix.troika_user_secret], github.run_id, strategy.job-index, github.run_attempt) }}
+      WORKDIR: ${{ format('/scratch/{0}/github-actions/field_api/{1}/{2}/{3}', secrets[matrix.account_secret || matrix.troika_user_secret], github.run_id, strategy.job-index, github.run_attempt) }}
 
     steps:
       - uses: ecmwf-actions/reusable-workflows/ci-hpc-generic@v2
@@ -176,8 +173,8 @@ jobs:
           site: ${{ matrix.site }}
           troika_user: ${{ secrets[matrix.troika_user_secret] }}
           sbatch_options: ${{ format(matrix.sbatch_options, secrets[matrix.account_secret]) }}
-          output_dir: ${{ format(matrix.output_dir, secrets[matrix.account_secret]) || '' }}
-          workdir: ${{ format(matrix.workdir, secrets[matrix.account_secret]) || '' }}
+          output_dir: ${{ env.OUTPUT_DIR }}
+          workdir: ${{ env.WORKDIR }}
           template_data: |
             cmake_options:
               - ${{ matrix.cmake_options }}
