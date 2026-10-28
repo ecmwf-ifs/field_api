@@ -34,6 +34,10 @@ macro( field_api_compile_options )
   
   if(CMAKE_Fortran_COMPILER_ID MATCHES Intel)
     ecbuild_add_fortran_flags("-check nocontiguous" BUILD DEBUG)
+    if (CMAKE_Fortran_COMPILER_VERSION VERSION_LESS "20.0")
+        ecbuild_info("Adding -recursive for Intel Fortran < 20")
+        ecbuild_add_fortran_flags("-recursive")
+    endif()
   endif()
 
   unset( FIELD_API_COMPILE_DEFINITIONS )
