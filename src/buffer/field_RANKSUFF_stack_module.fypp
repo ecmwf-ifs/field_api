@@ -48,6 +48,9 @@ CONTAINS
 #:for method in ['SET', 'ADD', 'REMOVE']
   PROCEDURE :: ${method}$_STATUS => ${ftn}$_STACK_${type}$_${method}$_STATUS
 #:endfor
+#:if ft.rank > 2
+  PROCEDURE :: GET_VIEW => ${ftn}$_STACK_${type}$_GET_VIEW
+#:endif
 #:for what in ['HOST', 'DEVICE']
   PROCEDURE :: GET_${what}$_DATA => ${ftn}$_STACK_${type}$_GET_${what}$_DATA
 #:endfor
@@ -336,6 +339,46 @@ CONTAINS
   END SUBROUTINE ${ftn}$_STACK_OWNER_INIT
 
 #:for type in ['WRAPPER', 'OWNER']
+#:if ft.rank > 2
+  FUNCTION ${ftn}$_STACK_${type}$_GET_VIEW(SELF, BLOCK_INDEX, ZERO) RESULT(VIEW_PTR)
+    CLASS(${ftn}$_STACK_${type}$) :: SELF
+    INTEGER(KIND=JPIM), INTENT(IN) :: BLOCK_INDEX
+    LOGICAL, OPTIONAL, INTENT(IN) :: ZERO
+    ${ft.type}$, POINTER :: VIEW_PTR(${ft.viewShape}$)
+    ${ft.type}$, POINTER :: CHILD_VIEW_0(${','.join([':'] * (ft.viewRank - 1))}$)
+    ${ft.type}$, POINTER :: CHILD_VIEW_1(${ft.viewShape}$)
+    INTEGER(KIND=JPIM) :: IFIELD
+    LOGICAL :: STAT
+
+    CALL ${ftn}$_STACK_CHECK_CHILDREN_STATUS(SELF%MEMBERS, SELF%ISTATUS, STAT)
+
+    IF (.NOT. STAT) THEN
+      DO IFIELD = 1, SIZE(SELF%MEMBERS)
+        ASSOCIATE(FIELD => SELF%MEMBERS(IFIELD)%PTR)
+          SELECT TYPE(FIELD)
+          CLASS IS(${ftn}$)
+            CHILD_VIEW_1 => FIELD%GET_VIEW(BLOCK_INDEX)
+          CLASS IS(FIELD_${RANK-1}$${SUFF}$)
+            CHILD_VIEW_0 => FIELD%GET_VIEW(BLOCK_INDEX)
+          END SELECT
+        END ASSOCIATE
+      ENDDO
+
+      ! The members are host-ready; do not let stale parent freshness trigger
+      ! a whole-buffer copy over their newly synchronized host data.
+      CALL SELF%ADD_STATUS(NHSTFRESH)
+      CALL SELF%REMOVE_STATUS(UNINITIALIZED_CPU)
+      CALL SELF%SET_DEVICE_DIRTY()
+    ENDIF
+
+    VIEW_PTR => SELF%${ftn}$_${type}$%GET_VIEW(BLOCK_INDEX, ZERO=ZERO)
+
+    ! The parent-component call bypasses the stack's SET_STATUS override.
+    CALL SELF%SET_STATUS(SELF%GET_STATUS())
+
+  END FUNCTION ${ftn}$_STACK_${type}$_GET_VIEW
+#:endif
+
 #:for method in ['SET', 'ADD', 'REMOVE']
   SUBROUTINE ${ftn}$_STACK_${type}$_${method}$_STATUS (SELF, KSTATUS)
     CLASS(${ftn}$_STACK_${type}$) :: SELF
