@@ -45,7 +45,15 @@ CONTAINS
   PROCEDURE :: FINAL => ${ftn}$_STACK_${type}$_FINAL
   PROCEDURE :: CREATE_DEVICE_DATA => ${ftn}$_STACK_${type}$_CREATE_DEVICE_DATA
   PROCEDURE :: DELETE_DEVICE_DATA => ${ftn}$_STACK_${type}$_DELETE_DEVICE_DATA
-  PROCEDURE :: SET_STATUS => ${ftn}$_STACK_${type}$_SET_STATUS
+#:for method in ['SET', 'ADD', 'REMOVE']
+  PROCEDURE :: ${method}$_STATUS => ${ftn}$_STACK_${type}$_${method}$_STATUS
+#:endfor
+#:if ft.rank > 2
+  PROCEDURE :: GET_VIEW => ${ftn}$_STACK_${type}$_GET_VIEW
+#:endif
+#:for what in ['HOST', 'DEVICE']
+  PROCEDURE :: GET_${what}$_DATA => ${ftn}$_STACK_${type}$_GET_${what}$_DATA
+#:endfor
 END TYPE ${ftn}$_STACK_${type}$
 
 PUBLIC :: ${ftn}$_STACK_${type}$
@@ -160,6 +168,19 @@ CONTAINS
       END SUBROUTINE STACK_MEMBER_INIT_1
 
   END SUBROUTINE INIT_MEMBERS
+
+  SUBROUTINE ${ftn}$_STACK_CHECK_CHILDREN_STATUS(MEMBERS, ISTATUS, STAT)
+   TYPE(FIELD_BASIC_PTR), INTENT(INOUT):: MEMBERS(:)
+   INTEGER(KIND=JPIM), INTENT(IN) :: ISTATUS
+   LOGICAL, INTENT(OUT) :: STAT
+   INTEGER(KIND=JPIM) :: I
+
+   STAT = .TRUE.
+   DO I=1,SIZE(MEMBERS)
+      IF(MEMBERS(I)%PTR%ISTATUS /= ISTATUS) STAT = .FALSE.
+   ENDDO
+
+  END SUBROUTINE ${ftn}$_STACK_CHECK_CHILDREN_STATUS
 
   SUBROUTINE CREATE_MEMBER_DEVICE_DATA(DEVPTR, MEMBERS, MEMBER_MAP, LBOUNDS, MEMBER_LBOUNDS)
     ${ft.type}$, INTENT(IN) :: DEVPTR(${ft.shape}$)
@@ -318,19 +339,63 @@ CONTAINS
   END SUBROUTINE ${ftn}$_STACK_OWNER_INIT
 
 #:for type in ['WRAPPER', 'OWNER']
-  SUBROUTINE ${ftn}$_STACK_${type}$_SET_STATUS (SELF, KSTATUS)
+#:if ft.rank > 2
+  FUNCTION ${ftn}$_STACK_${type}$_GET_VIEW(SELF, BLOCK_INDEX, ZERO) RESULT(VIEW_PTR)
+    CLASS(${ftn}$_STACK_${type}$) :: SELF
+    INTEGER(KIND=JPIM), INTENT(IN) :: BLOCK_INDEX
+    LOGICAL, OPTIONAL, INTENT(IN) :: ZERO
+    ${ft.type}$, POINTER :: VIEW_PTR(${ft.viewShape}$)
+    ${ft.type}$, POINTER :: CHILD_VIEW_0(${','.join([':'] * (ft.viewRank - 1))}$)
+    ${ft.type}$, POINTER :: CHILD_VIEW_1(${ft.viewShape}$)
+    INTEGER(KIND=JPIM) :: IFIELD
+    LOGICAL :: STAT
+
+    CALL ${ftn}$_STACK_CHECK_CHILDREN_STATUS(SELF%MEMBERS, SELF%ISTATUS, STAT)
+
+    IF (.NOT. STAT) THEN
+      DO IFIELD = 1, SIZE(SELF%MEMBERS)
+        ASSOCIATE(FIELD => SELF%MEMBERS(IFIELD)%PTR)
+          SELECT TYPE(FIELD)
+          CLASS IS(${ftn}$)
+            CHILD_VIEW_1 => FIELD%GET_VIEW(BLOCK_INDEX)
+          CLASS IS(FIELD_${RANK-1}$${SUFF}$)
+            CHILD_VIEW_0 => FIELD%GET_VIEW(BLOCK_INDEX)
+          END SELECT
+        END ASSOCIATE
+      ENDDO
+
+      ! The members are host-ready; do not let stale parent freshness trigger
+      ! a whole-buffer copy over their newly synchronized host data.
+      CALL SELF%ADD_STATUS(NHSTFRESH)
+      CALL SELF%REMOVE_STATUS(UNINITIALIZED_CPU)
+      CALL SELF%SET_DEVICE_DIRTY()
+    ENDIF
+
+    VIEW_PTR => SELF%${ftn}$_${type}$%GET_VIEW(BLOCK_INDEX, ZERO=ZERO)
+
+    ! The parent-component call bypasses the stack's SET_STATUS override.
+    CALL SELF%SET_STATUS(SELF%GET_STATUS())
+
+  END FUNCTION ${ftn}$_STACK_${type}$_GET_VIEW
+#:endif
+
+#:for method in ['SET', 'ADD', 'REMOVE']
+  SUBROUTINE ${ftn}$_STACK_${type}$_${method}$_STATUS (SELF, KSTATUS)
     CLASS(${ftn}$_STACK_${type}$) :: SELF
     INTEGER (KIND=JPIM), INTENT (IN) :: KSTATUS
 
     INTEGER (KIND=JPIM) :: JFLD
 
-    CALL SELF%${ftn}$_${type}$%SET_STATUS (KSTATUS)
+    ! Use the parent component so ADD/REMOVE cannot dispatch back through
+    ! the stack's SET_STATUS and overwrite unrelated member status bits.
+    CALL SELF%${ftn}$_${type}$%${method}$_STATUS (KSTATUS)
 
     DO JFLD = 1, SIZE (SELF%MEMBERS)
-      CALL SELF%MEMBERS(JFLD)%PTR%SET_STATUS (KSTATUS)
+      CALL SELF%MEMBERS(JFLD)%PTR%${method}$_STATUS (KSTATUS)
     ENDDO
 
-  END SUBROUTINE ${ftn}$_STACK_${type}$_SET_STATUS
+  END SUBROUTINE ${ftn}$_STACK_${type}$_${method}$_STATUS
+#:endfor
 
   SUBROUTINE ${ftn}$_STACK_${type}$_CREATE_DEVICE_DATA (SELF)
     CLASS(${ftn}$_STACK_${type}$) :: SELF
@@ -369,9 +434,21 @@ CONTAINS
     USE FIELD_STATISTICS_MODULE
 
     CLASS(${ftn}$_STACK_${type}$) :: SELF
-    ${ft.type}$, POINTER :: PTR(${ft.shape}$)
     INTEGER (KIND=JPIM) :: JFLD
     CLASS(FIELD_BASIC), POINTER :: YLF => NULL()
+
+#:if type == 'WRAPPER'
+    IF (SELF%SYNC_ON_FINAL) THEN
+      ! Synchronize while member freshness and device pointers are intact.
+      DO JFLD = 1, SIZE (SELF%MEMBERS)
+        CALL SELF%MEMBERS(JFLD)%PTR%SYNC_HOST_RDONLY()
+      ENDDO
+
+      ! Prevent the underlying wrapper finalizer from copying the whole device
+      ! buffer over newer host-only member data using stale parent freshness.
+      CALL SELF%ADD_STATUS(NHSTFRESH)
+    ENDIF
+#:endif
 
     DO JFLD = 1, SIZE (SELF%MEMBERS)
       YLF => SELF%MEMBERS(JFLD)%PTR
@@ -402,6 +479,70 @@ CONTAINS
     DEALLOCATE (SELF%MEMBER_RANKS)
 
   END SUBROUTINE ${ftn}$_STACK_${type}$_FINAL
+
+  #:for what in ['HOST', 'DEVICE']
+  SUBROUTINE ${ftn}$_STACK_${type}$_GET_${what}$_DATA(SELF, MODE, PTR, QUEUE)
+    CLASS(${ftn}$_STACK_${type}$)                 :: SELF
+    INTEGER (KIND=JPIM),           INTENT(IN)    :: MODE
+    ${ft.type}$, POINTER,          INTENT(INOUT) :: PTR(${ft.shape}$)
+    INTEGER (KIND=JPIM), OPTIONAL, INTENT(IN)    :: QUEUE
+  
+    LOGICAL :: STAT
+    INTEGER(KIND=JPIM) :: IFIELD
+    INTEGER(KIND=JPIM) :: LBOUNDS(${ft.rank}$)
+    ${ft.type}$, POINTER :: CHILD_PTR_0(${ft.viewShape}$)
+    ${ft.type}$, POINTER :: CHILD_PTR_1(${ft.shape}$)
+  
+    CALL ${ftn}$_STACK_CHECK_CHILDREN_STATUS(SELF%MEMBERS, SELF%ISTATUS, STAT)
+  
+    ! If the MEMBERS all have the same ISTATUS as the BUFFER, then we can safely
+    ! exchange data on a per STACK basis. Otherwise, data exchange must be done
+    ! on a per field basis
+    IF(STAT)THEN
+    #:if type == 'OWNER'
+      CALL SELF%${ftn}$_OWNER_GET_${what}$_DATA(MODE, PTR, QUEUE=QUEUE)
+    #:else
+      CALL SELF%${ftn}$_GET_${what}$_DATA(MODE, PTR, QUEUE=QUEUE)
+    #:endif
+    ELSE
+      DO IFIELD=1,SIZE(SELF%MEMBERS)
+         ASSOCIATE(FIELD => SELF%MEMBERS(IFIELD)%PTR)
+
+         SELECT TYPE(FIELD)
+         CLASS IS(${ftn}$)
+            CALL FIELD%GET_${what}$_DATA(MODE, CHILD_PTR_1, QUEUE=QUEUE)
+         CLASS IS(FIELD_${RANK-1}$${SUFF}$)
+            CALL FIELD%GET_${what}$_DATA(MODE, CHILD_PTR_0, QUEUE=QUEUE)
+         END SELECT
+
+         END ASSOCIATE
+      ENDDO
+  
+  #:if what == 'HOST'
+      LBOUNDS = LBOUND(SELF%PTR)
+      PTR(${ft.lbptr}$) => SELF%PTR (${','.join(':' for _ in range(ft.rank))}$)
+  #:else
+      LBOUNDS = LBOUND(SELF%DEVPTR)
+      PTR(${ft.lbptr}$) => SELF%DEVPTR (${','.join(':' for _ in range(ft.rank))}$)
+  #:endif
+    ENDIF
+  
+  #:if what == 'HOST'
+    CALL SELF%ADD_STATUS (NHSTFRESH)
+  #:else
+    CALL SELF%ADD_STATUS (NDEVFRESH)
+  #:endif
+  
+    IF (IAND (MODE, NWR) /= 0) THEN
+  #:if what == 'HOST'
+      CALL SELF%REMOVE_STATUS (NDEVFRESH)
+  #:else
+      CALL SELF%REMOVE_STATUS (NHSTFRESH)
+  #:endif
+    ENDIF
+  
+  END SUBROUTINE ${ftn}$_STACK_${type}$_GET_${what}$_DATA
+#:endfor
 #:endfor
 
 #:endfor
