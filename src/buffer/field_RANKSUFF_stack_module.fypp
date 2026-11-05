@@ -45,7 +45,9 @@ CONTAINS
   PROCEDURE :: FINAL => ${ftn}$_STACK_${type}$_FINAL
   PROCEDURE :: CREATE_DEVICE_DATA => ${ftn}$_STACK_${type}$_CREATE_DEVICE_DATA
   PROCEDURE :: DELETE_DEVICE_DATA => ${ftn}$_STACK_${type}$_DELETE_DEVICE_DATA
-  PROCEDURE :: SET_STATUS => ${ftn}$_STACK_${type}$_SET_STATUS
+#:for method in ['SET', 'ADD', 'REMOVE']
+  PROCEDURE :: ${method}$_STATUS => ${ftn}$_STACK_${type}$_${method}$_STATUS
+#:endfor
 #:for what in ['HOST', 'DEVICE']
   PROCEDURE :: GET_${what}$_DATA => ${ftn}$_STACK_${type}$_GET_${what}$_DATA
 #:endfor
@@ -334,19 +336,23 @@ CONTAINS
   END SUBROUTINE ${ftn}$_STACK_OWNER_INIT
 
 #:for type in ['WRAPPER', 'OWNER']
-  SUBROUTINE ${ftn}$_STACK_${type}$_SET_STATUS (SELF, KSTATUS)
+#:for method in ['SET', 'ADD', 'REMOVE']
+  SUBROUTINE ${ftn}$_STACK_${type}$_${method}$_STATUS (SELF, KSTATUS)
     CLASS(${ftn}$_STACK_${type}$) :: SELF
     INTEGER (KIND=JPIM), INTENT (IN) :: KSTATUS
 
     INTEGER (KIND=JPIM) :: JFLD
 
-    CALL SELF%${ftn}$_${type}$%SET_STATUS (KSTATUS)
+    ! Use the parent component so ADD/REMOVE cannot dispatch back through
+    ! the stack's SET_STATUS and overwrite unrelated member status bits.
+    CALL SELF%${ftn}$_${type}$%${method}$_STATUS (KSTATUS)
 
     DO JFLD = 1, SIZE (SELF%MEMBERS)
-      CALL SELF%MEMBERS(JFLD)%PTR%SET_STATUS (KSTATUS)
+      CALL SELF%MEMBERS(JFLD)%PTR%${method}$_STATUS (KSTATUS)
     ENDDO
 
-  END SUBROUTINE ${ftn}$_STACK_${type}$_SET_STATUS
+  END SUBROUTINE ${ftn}$_STACK_${type}$_${method}$_STATUS
+#:endfor
 
   SUBROUTINE ${ftn}$_STACK_${type}$_CREATE_DEVICE_DATA (SELF)
     CLASS(${ftn}$_STACK_${type}$) :: SELF
@@ -479,20 +485,16 @@ CONTAINS
     ENDIF
   
   #:if what == 'HOST'
-    IF (IAND (SELF%GET_STATUS (), NHSTFRESH) == 0) THEN
-      CALL SELF%SET_STATUS (IOR (SELF%GET_STATUS (), NHSTFRESH))
-    ENDIF
+    CALL SELF%ADD_STATUS (NHSTFRESH)
   #:else
-    IF (IAND (SELF%GET_STATUS (), NDEVFRESH) == 0) THEN
-      CALL SELF%SET_STATUS (IOR (SELF%GET_STATUS (), NDEVFRESH))
-    ENDIF
+    CALL SELF%ADD_STATUS (NDEVFRESH)
   #:endif
   
     IF (IAND (MODE, NWR) /= 0) THEN
   #:if what == 'HOST'
-      CALL SELF%SET_STATUS (IAND (SELF%GET_STATUS(), NOT (NDEVFRESH)))
+      CALL SELF%REMOVE_STATUS (NDEVFRESH)
   #:else
-      CALL SELF%SET_STATUS (IAND (SELF%GET_STATUS(), NOT (NHSTFRESH)))
+      CALL SELF%REMOVE_STATUS (NHSTFRESH)
   #:endif
     ENDIF
   
