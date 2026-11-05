@@ -385,9 +385,21 @@ CONTAINS
     USE FIELD_STATISTICS_MODULE
 
     CLASS(${ftn}$_STACK_${type}$) :: SELF
-    ${ft.type}$, POINTER :: PTR(${ft.shape}$)
     INTEGER (KIND=JPIM) :: JFLD
     CLASS(FIELD_BASIC), POINTER :: YLF => NULL()
+
+#:if type == 'WRAPPER'
+    IF (SELF%SYNC_ON_FINAL) THEN
+      ! Synchronize while member freshness and device pointers are intact.
+      DO JFLD = 1, SIZE (SELF%MEMBERS)
+        CALL SELF%MEMBERS(JFLD)%PTR%SYNC_HOST_RDONLY()
+      ENDDO
+
+      ! Prevent the underlying wrapper finalizer from copying the whole device
+      ! buffer over newer host-only member data using stale parent freshness.
+      CALL SELF%ADD_STATUS(NHSTFRESH)
+    ENDIF
+#:endif
 
     DO JFLD = 1, SIZE (SELF%MEMBERS)
       YLF => SELF%MEMBERS(JFLD)%PTR
